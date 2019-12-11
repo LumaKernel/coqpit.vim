@@ -6,6 +6,12 @@ import signal
 
 from collections import deque, namedtuple
 
+import sys
+# TODO : this is temporary way...
+# for Windows, files including Unicode
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 Ok = namedtuple('Ok', ['val', 'msg'])
 Err = namedtuple('Err', ['err'])
 
