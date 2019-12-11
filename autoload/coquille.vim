@@ -1,4 +1,3 @@
-let s:coq_running=0
 let s:current_dir=expand("<sfile>:p:h") 
 
 if !exists('coquille_auto_move')
@@ -42,8 +41,6 @@ function! coquille#ShowPanels()
 endfunction
 
 function! coquille#KillSession()
-    let s:coq_running = 0
-
     execute 'bdelete' . s:goal_buf
     execute 'bdelete' . s:info_buf
     py coquille.kill_coqtop()
@@ -83,12 +80,8 @@ function! coquille#CoqideMapping()
 endfunction
 
 function! coquille#Launch(...)
-    if s:coq_running == 1
-        echo "Coq is already running"
-    else
-        let s:coq_running = 1
-
         " initialize the plugin (launch coqtop)
+        let id = bufnr("%")
         py coquille.launch_coq(*vim.eval("map(copy(a:000),'expand(v:val)')"))
 
         " make the different commands accessible

@@ -220,12 +220,15 @@ def restart_coq(*args):
               , 'on'
               ]
     try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         if os.name == 'nt':
             coqtop = subprocess.Popen(
                 options + list(args)
               , stdin = subprocess.PIPE
               , stdout = subprocess.PIPE
               , stderr = subprocess.STDOUT
+              , startupinfo=si
             )
         else:
             coqtop = subprocess.Popen(
