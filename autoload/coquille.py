@@ -122,7 +122,7 @@ def coq_next():
 
     send_until_fail()
 
-    if (vim.eval('g:coquille_auto_move') == 'true'):
+    if ('coquille_auto_move' in vim.vars and vim.vars['coquille_auto_move'] == 1):
         goto_last_sent_dot()
 
 def coq_raw_query(*args):
