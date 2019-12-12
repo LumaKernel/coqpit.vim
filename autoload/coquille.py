@@ -319,6 +319,7 @@ def send_until_fail():
         message = _between(message_range['start'], message_range['stop'])
 
         response = CT.advance(message, encoding)
+        print(response)
 
         if response is None:
             vim.command("call coquille#KillSession()")

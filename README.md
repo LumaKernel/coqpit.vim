@@ -21,6 +21,8 @@ TODO
   * Reset window
   * CoqToCursor with ceiling (now, flooring)
 * Fix bugs
+* Highlighting Erros in Editor
+* Python2 to Python3 ... ? ( Is it needed ? )
 
 
 ---

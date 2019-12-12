@@ -4,10 +4,31 @@ import subprocess
 import xml.etree.ElementTree as ET
 import signal
 import vim
+import time
 
 from collections import deque, namedtuple
 
 import sys
+
+# TODO
+# - バッファごとに CoqTop インスタンス CT を作ります
+# - CT に センテンス (ドットで終わるひとかたまり) を投げていきます
+# - メッセージとメッセージレベルのセットが帰ってきます
+# - error レベルのメッセージが含まれていたなら，
+#   CTを操っていた側で，最初に出てきた手前で止めます
+#   (ここは CoqIDE と同じで止めずに後ろの方にカーソルがあるように振る舞うべき? )
+# - 操作側でエラーの表示などをします．センテンス は バッファ上のどこなのか，
+#   という情報があるわけですから，それと組み合わせてエラー表示します
+# - CT は 問い合わせ Goal にも答えます
+# - 
+
+# TODO rename
+class CoqTopDriver:
+    def __init__():
+        pass
+    def restart():
+        pass
+
 
 Ok = namedtuple('Ok', ['val', 'msg'])
 Err = namedtuple('Err', ['err'])
@@ -32,7 +53,8 @@ def parse_response(xml):
     if xml.get('val') == 'good':
         return Ok(parse_value(xml[0]), None)
     elif xml.get('val') == 'fail':
-        print('err: %s' % ET.tostring(xml))
+        # this can easily happen when Goals is called with errors
+        # print('err: %s' % ET.tostring(xml))
         return Err(parse_error(xml))
     else:
         assert False, 'expected "good" or "fail" in <value>'
@@ -175,19 +197,33 @@ def get_answer():
         try:
             data += os.read(fd, 0x4000)
             try:
+                time.sleep(.3)
+                print(data)
                 elt = ET.fromstring('<coqtoproot>' + escape(data) + '</coqtoproot>')
                 shouldWait = True
                 valueNode = None
                 messageNode = None
+                isError = False
+
                 for c in elt:
                     if c.tag == 'value':
                         shouldWait = False
                         valueNode = c
+                    # TODO : can reach ???
                     if c.tag == 'message':
+                        print("reached!!!!")
                         if messageNode is not None:
                             messageNode = messageNode + "\n\n" + parse_value(c[2])
                         else:
                             messageNode = parse_value(c[2])
+                    if c.tag == 'feedback':
+                        for fc in c:
+                            if fc.tag == 'feedback_content' and 'val' in fc and fc.val == 'message':
+                                mes = "[" + fc[0][0].val + "] " + fc[0][2]
+                                if messageNode is not None:
+                                    messageNode = messageNode + "\n\n" + mes
+                                else:
+                                    messageNode = mes
                 if shouldWait:
                     continue
                 else:
@@ -276,6 +312,7 @@ def advance(cmd, encoding = 'utf-8'):
     states = states_dict[coquille_id] = states_dict.get(coquille_id, [])
     state_id = state_ids.get(coquille_id, None)
     r = call('Add', ((cmd, -1), (cur_state(), True)), encoding)
+    print(r)
     if r is None:
         return r
     if isinstance(r, Err):
@@ -297,6 +334,7 @@ def rewind(step = 1):
     return call('Edit_at', state_id)
 
 def query(cmd, encoding = 'utf-8'):
+    # TODO : this unicode is needed?
     r = call('Query', (unicode(cmd), cur_state()), encoding)
     return r
 
