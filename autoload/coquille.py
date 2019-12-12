@@ -199,6 +199,7 @@ def show_goal():
     if response.msg is not None:
         info_msg = response.msg
 
+    # TODO : check proof mode
     if response.val.val is None:
         buff.append('No goals.')
         return

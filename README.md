@@ -12,7 +12,15 @@ WIP
 TODO
 ----
 
-* 
+* Clearify dependencies
+  * python version
+  * Coq version
+* Multiple buffer support
+  * one buffer to one goal-window and one info-window
+* More flexible settings
+  * Reset window
+  * CoqToCursor with ceiling (now, flooring)
+* Fix bugs
 
 
 ---
