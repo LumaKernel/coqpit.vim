@@ -64,9 +64,7 @@ def coq_rewind(steps=1):
     if steps < 1 or encountered_dots == []:
         return
 
-    if CT.coqtop is None:
-        print("Error: Coqtop isn't running. Are you sure you called :CoqLaunch?")
-        return
+    # TODO coqtop living check
 
     response = CT.rewind(steps)
 
@@ -89,9 +87,7 @@ def coq_rewind(steps=1):
         goto_last_sent_dot()
 
 def coq_to_cursor():
-    if CT.coqtop is None:
-        print("Error: Coqtop isn't running. Are you sure you called :CoqLaunch?")
-        return
+    # TODO coqtop living check
 
     sync()
 
@@ -113,9 +109,7 @@ def coq_to_cursor():
         send_until_fail()
 
 def coq_next():
-    if CT.coqtop is None:
-        print("Error: Coqtop isn't running. Are you sure you called :CoqLaunch?")
-        return
+    # TODO coqtop living check
 
     sync()
 
@@ -135,9 +129,7 @@ def coq_raw_query(*args):
     clear_info()
 
     global info_msg
-    if CT.coqtop is None:
-        print("Error: Coqtop isn't running. Are you sure you called :CoqLaunch?")
-        return
+    # TODO coqtop living check
 
     raw_query = ' '.join(args)
 
@@ -284,11 +276,12 @@ def reset_color():
         error_at = None
 
 def rewind_to(line, col):
-    if CT.coqtop is None:
-        print('Internal error: vimbufsync is still being called but coqtop\
-                appears to be down.')
-        print('Please report.')
-        return
+    # TODO coqtop living check
+    # if CT.coqtop is None:
+    #     print('Internal error: vimbufsync is still being called but coqtop\
+    #             appears to be down.')
+    #     print('Please report.')
+    #     return
 
     predicate = lambda x: x <= (line, col)
     lst = filter(predicate, encountered_dots)

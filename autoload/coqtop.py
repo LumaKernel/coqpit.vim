@@ -3,14 +3,11 @@ import re
 import subprocess
 import xml.etree.ElementTree as ET
 import signal
+import vim
 
 from collections import deque, namedtuple
 
 import sys
-# TODO : this is temporary way...
-# for Windows, files including Unicode
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 Ok = namedtuple('Ok', ['val', 'msg'])
 Err = namedtuple('Err', ['err'])
@@ -95,6 +92,7 @@ def parse_error(xml):
     return ET.fromstring(re.sub(r"<state_id val=\"\d+\" />", '', ET.tostring(xml)))
 
 def build(tag, val=None, children=()):
+    coquille_id = vim.eval("b:coquille_id")
     attribs = {'val': val} if val is not None else {}
     xml = ET.Element(tag, attribs)
     xml.extend(children)
@@ -110,7 +108,7 @@ def encode_value(v):
         xml = build('bool', str(v).lower())
         xml.text = str(v)
         return xml
-    elif isinstance(v, str):
+    elif isinstance(v, str) or isinstance(v, unicode):
         xml = build('string')
         xml.text = v
         return xml
@@ -119,7 +117,7 @@ def encode_value(v):
         xml.text = str(v)
         return xml
     elif isinstance(v, StateId):
-        return build('state_id', str(v.id))
+        return build('state_id', unicode(str(v.id), 'utf-8'))
     elif isinstance(v, list):
         return build('list', None, [encode_value(c) for c in v])
     elif isinstance(v, Option):
@@ -141,20 +139,22 @@ def encode_value(v):
     else:
         assert False, 'unrecognized type in encode_value: %r' % (type(v),)
 
-coqtop = None
-states = []
-state_id = None
-root_state = None
+coqtops = {}
+states_dict = {}
+state_ids = {}
+root_states = {}
 
 def kill_coqtop():
-    global coqtop
+    coquille_id = vim.eval("b:coquille_id")
+    global coqtops
+    coqtop = coqtops.get(coquille_id, None)
     if coqtop:
         try:
             coqtop.terminate()
             coqtop.communicate()
         except OSError:
             pass
-        coqtop = None
+        del coqtops[coquille_id]
 
 def ignore_sigint():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -166,6 +166,9 @@ def escape(cmd):
               .replace("&#41;", ')')
 
 def get_answer():
+    coquille_id = vim.eval("b:coquille_id")
+    global coqtops
+    coqtop = coqtops.get(coquille_id, None)
     fd = coqtop.stdout.fileno()
     data = ''
     while True:
@@ -207,10 +210,18 @@ def call(name, arg, encoding='utf-8'):
     return response
 
 def send_cmd(cmd):
+    coquille_id = vim.eval("b:coquille_id")
+    global coqtops
+    coqtop = coqtops.get(coquille_id, None)
     coqtop.stdin.write(cmd)
 
 def restart_coq(*args):
-    global coqtop, root_state, state_id
+    global coqtops, root_states, state_ids
+    coquille_id = vim.eval("b:coquille_id")
+    print("id", coquille_id)
+    coqtop = coqtops.get(coquille_id, None)
+    root_state = root_states.get(coquille_id, None)
+    state_id = state_ids.get(coquille_id, None)
     if coqtop: kill_coqtop()
     options = [ 'coqtop'
               , '-ideslave'
@@ -223,7 +234,7 @@ def restart_coq(*args):
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         if os.name == 'nt':
-            coqtop = subprocess.Popen(
+            coqtops[coquille_id] = subprocess.Popen(
                 options + list(args)
               , stdin = subprocess.PIPE
               , stdout = subprocess.PIPE
@@ -231,7 +242,7 @@ def restart_coq(*args):
               , startupinfo=si
             )
         else:
-            coqtop = subprocess.Popen(
+            coqtops[coquille_id] = subprocess.Popen(
                 options + list(args)
               , stdin = subprocess.PIPE
               , stdout = subprocess.PIPE
@@ -240,8 +251,8 @@ def restart_coq(*args):
 
         r = call('Init', Option(None))
         assert isinstance(r, Ok)
-        root_state = r.val
-        state_id = r.val
+        root_states[coquille_id] = r.val
+        state_ids[coquille_id] = r.val
     except OSError:
         print("Error: couldn't launch coqtop")
 
@@ -249,36 +260,51 @@ def launch_coq(*args):
     restart_coq(*args)
 
 def cur_state():
+    coquille_id = vim.eval("b:coquille_id")
+    global states_dict, root_states, state_ids
+    states = states_dict[coquille_id] = states_dict.get(coquille_id, [])
+    root_state = root_states.get(coquille_id, None)
+    state_id = state_ids.get(coquille_id, None)
     if len(states) == 0:
         return root_state
     else:
         return state_id
 
 def advance(cmd, encoding = 'utf-8'):
-    global state_id
+    coquille_id = vim.eval("b:coquille_id")
+    global states_dict, state_ids
+    states = states_dict[coquille_id] = states_dict.get(coquille_id, [])
+    state_id = state_ids.get(coquille_id, None)
     r = call('Add', ((cmd, -1), (cur_state(), True)), encoding)
     if r is None:
         return r
     if isinstance(r, Err):
         return r
     states.append(state_id)
-    state_id = r.val[0]
+    state_ids[coquille_id] = r.val[0]
     return r
 
 def rewind(step = 1):
-    global states, state_id
+    coquille_id = vim.eval("b:coquille_id")
+    global states_dict, state_ids
+    states = states_dict[coquille_id] = states_dict.get(coquille_id, [])
+    root_state = root_states.get(coquille_id, None)
+    state_id = state_ids.get(coquille_id, None)
     assert step <= len(states)
     idx = len(states) - step
-    state_id = states[idx]
-    states = states[0:idx]
+    state_ids[coquille_id] = states[idx]
+    states_dict[coquille_id] = states[0:idx]
     return call('Edit_at', state_id)
 
 def query(cmd, encoding = 'utf-8'):
-    r = call('Query', (cmd, cur_state()), encoding)
+    r = call('Query', (unicode(cmd), cur_state()), encoding)
     return r
 
 def goals():
     return call('Goal', ())
 
 def read_states():
+    coquille_id = vim.eval("b:coquille_id")
+    global states_dict
+    states = states_dict[coquille_id] = states_dict.get(coquille_id, [])
     return states
