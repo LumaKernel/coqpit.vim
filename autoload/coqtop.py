@@ -110,14 +110,14 @@ def encode_value(v):
         return xml
     elif isinstance(v, str) or isinstance(v, unicode):
         xml = build('string')
-        xml.text = v
+        xml.text = unicode(v, 'utf-8')
         return xml
     elif isinstance(v, int):
         xml = build('int')
         xml.text = str(v)
         return xml
     elif isinstance(v, StateId):
-        return build('state_id', unicode(str(v.id), 'utf-8'))
+        return build('state_id', str(v.id))
     elif isinstance(v, list):
         return build('list', None, [encode_value(c) for c in v])
     elif isinstance(v, Option):
