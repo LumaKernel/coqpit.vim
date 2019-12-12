@@ -177,6 +177,7 @@ def show_goal():
     global info_msg
 
     buff = None
+    # TODO : use b:goal_buf
     for b in vim.buffers:
         if re.match(".*Goals$", b.name):
             buff = b
@@ -189,6 +190,11 @@ def show_goal():
         vim.command("call coquille#KillSession()")
         print('ERROR: the Coq process died')
         return
+
+    if isinstance(response, CT.Err):
+        return
+
+    assert isinstance(response, CT.Ok)
 
     if response.msg is not None:
         info_msg = response.msg
