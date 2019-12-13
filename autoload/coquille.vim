@@ -1,28 +1,8 @@
 let s:current_dir=expand("<sfile>:p:h") 
 
-if !exists('coquille_auto_move')
-    let g:coquille_auto_move="false"
+if !exists('g:coquille_auto_move')
+    let g:coquille_auto_move = 0
 endif
-
-try
-    py import sys, vim
-catch /E319:/
-    if !exists('s:warned')
-        echo "vim doesn't support python. Turn off coquille"
-        let s:warned = 1
-    endif
-    function! coquille#Register()
-    endfunction
-    finish
-endtry
-
-
-" Load vimbufsync if not already done
-call vimbufsync#init()
-
-py if not vim.eval("s:current_dir") in sys.path:
-\    sys.path.append(vim.eval("s:current_dir")) 
-py import coquille
 
 function! coquille#ResetPanels()
   " open the Goals & Infos panels before going back to the main window
@@ -51,13 +31,13 @@ endfunction
 function! coquille#KillSession()
     execute 'bdelete' . s:goal_buf
     execute 'bdelete' . s:info_buf
-    py coquille.kill_coqtop()
+    py3 coquille.kill_coqtop()
 
     setlocal ei=InsertEnter
 endfunction
 
 function! coquille#RawQuery(...)
-    py coquille.coq_raw_query(*vim.eval("a:000"))
+    py3 coquille.coq_raw_query(*vim.eval("a:000"))
 endfunction
 
 function! coquille#FNMapping()
@@ -97,13 +77,13 @@ function! coquille#Launch(...)
   let b:coquille_id = bufnr("%")
   let b:coquille_running = 1
 
-  py coquille.launch_coq(*vim.eval("map(copy(a:000),'expand(v:val)')"))
+  py3 coquille.launch_coq(*vim.eval("map(copy(a:000),'expand(v:val)')"))
 
   " make the different commands accessible
-  command! -buffer GotoDot py coquille.goto_last_sent_dot()
-  command! -buffer CoqNext py coquille.coq_next()
-  command! -buffer CoqUndo py coquille.coq_rewind()
-  command! -buffer CoqToCursor py coquille.coq_to_cursor()
+  command! -buffer GotoDot py3 coquille.goto_last_sent_dot()
+  command! -buffer CoqNext py3 coquille.coq_next()
+  command! -buffer CoqUndo py3 coquille.coq_rewind()
+  command! -buffer CoqToCursor py3 coquille.coq_to_cursor()
   command! -buffer CoqRearrange call coquille#ResetPanels()
   command! -buffer CoqKill call coquille#KillSession()
 
@@ -118,7 +98,7 @@ function! coquille#Launch(...)
   " delete some part of your buffer. So the highlighting will be wrong, but
   " nothing really problematic will happen, as sync will be called the next
   " time you explicitly call a command (be it 'rewind' or 'interp')
-  au InsertEnter <buffer> py coquille.sync()
+  au InsertEnter <buffer> py3 coquille.sync()
 endfunction
 
 function! coquille#Register()
