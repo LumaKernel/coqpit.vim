@@ -8,7 +8,7 @@
 let s:CoqTopDriver = {}
 
 function! s:CoqTopDriver.new(args = []) abort
-  call self.restart(args)
+  call self.restart(a:args)
   return self
 endfunction
 
@@ -201,7 +201,7 @@ endfunction
 " Export
 
 function! coquille#coqtop#makeInstance(args = [])
-  return s:CoqTopDriver.new(args)
+  return s:CoqTopDriver.new(a:args)
 endfunction
 
 function! coquille#coqtop#isExecutable()

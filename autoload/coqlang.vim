@@ -2,18 +2,23 @@
 " Coq Langugage
 " =============
 
+
+
+
 let s:NOT_WHITESPACE_regex = '\v\S&[^\n\r]'
 let s:COMMENT_START_regex = '\v\(\*'
 let s:COMMENT_END_regex = '\v\*\)'
 let s:STRING_DELIM_regex = '\v"'
+let s:DOT_regex = '\v\.'
 
 
-" library as a language, Coq
+" library for Coq as a language
 
 " type Pos = [line, pos] : [int]
 " type Range = {start: Pos, end: Pos}
 "   NOTE: (left inclusive, right exclusive)
 " type null = ** only v:null **
+
 
 
 " Return range corresponding to one sentense.
@@ -24,15 +29,52 @@ let s:STRING_DELIM_regex = '\v"'
 "
 " return Range | null
 " getNextSentenceRange(content, from_pos) {{{
-function coqlang#getNextSentenceRange(content, from_pos) abort
+function! coqlang#getNextSentenceRange(content, from_pos) abort
   let [line, col] = a:from_pos
-  let end_pos = coqlang#findNextSentencePos(a:content, a:from_pos)
-  if type(end_pos) == type(v:null)
+  let end_pos = coqlang#nextSentencePos(a:content, a:from_pos)
+  if type(end_pos) == v:t_none
     return v:null
   endif
 
   return {"start": a:from_pos, "stop": end_pos}
 endfunction  " }}}
+
+
+
+" TODO
+" content : [string]
+" from_pos : Pos | null
+"
+" return Pos | null
+" skipBlanks(content, from_pos) {{{
+function! coqlang#skipBlanks(content, from_pos) abort
+  if type(a:from_pos) == v:t_none
+    return v:null
+  endif
+
+  let [line, col] = a:from_pos
+  let linenum = len(a:content)
+
+
+  " reference : https://coq.inria.fr/refman/language/gallina-specification-language.html
+  let blanks = ["\t", "\n", ' ']
+
+  while line < linenum
+    if col < len(a:content[line])
+      if count(blanks, a:content[line][col])
+        let col += 1
+      else
+        break
+      endif
+    else
+      let line += 1
+      let col = 0
+    endif
+  endwhile
+
+  return [line, col]
+endfunction  " }}}
+
 
 
 " Find next sentence after from_pos inclusive.
@@ -43,111 +85,184 @@ endfunction  " }}}
 " Return v:null if never close sentence.
 "
 " Examples:
-"   - findNextSentencePos(["hi."], [0, 0]) == [0, 3]
-"   - findNextSentencePos([" hello."], [0, 0]) == [0, 7]
-"   - findNextSentencePos(["(* oh... *)","--."], [0, 3]) == [1, 2]
+"   - nextSentencePos(["hi."], [0, 0]) == [0, 3]
+"   - nextSentencePos([" hello."], [0, 0]) == [0, 7]
+"   - nextSentencePos(["(* oh... *)","--."], [0, 3]) == [1, 2]
 "
 "
 " content : [string]
-" from_pos : Pos
+" from_pos : Pos | null
 "
 " return Pos | null
-" findNextSentencePos(content, from_pos) {{{
-function coqlang#findNextSentencePos(content, from_pos) abort
-  let [line, col] = a:from_pos
-  let end_pos = s:findNextSentencePos(line, col)
+" nextSentencePos(content, from_pos) {{{
+function! coqlang#nextSentencePos(content, from_pos) abort
+  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(from_pos) == v:t_none
+    return v:null
+  endif
 
+  let [line, col] = from_pos
+
+  " reference : https://coq.inria.fr/refman/proof-engine/proof-handling.html
   let braces = ['{', '}']
   let bullets = ['-', '+', '*']
 
-  let blen = len(a:content)
-  
+  " -- check whether encountering bullets or braces
+  "  simply, we assume these as sentence even if outside proof mode
+  "  it works well
 
-  while line < blen
-      \ && match(a:content[line][col:], s:NOT_WHITESPACE_regex) == -1
-    let line += 1
-    let col = 0
-  endwhile
+  if count(braces, a:content[line][col])
+    return [line, col + 1]
+  endif
+  if count(bullets, a:content[line][col])
+    let bullet = a:content[line][col]
+    while bullet == a:content[line][col+1]
+      let col += 1
+    endwhile
+    return [line, col + 1]
+  endif
 
-  if line >= blen
-    return v:null
+  " -- skip commentary when encountered it
+  "  before finding the sentence beginning
+  let tail_len = len(a:content[line]) - col
 
-  " FIXME: keeping the stripped line would be
-  while a:content[line][col] == ' '
-    let col += 1  " more efficient. " TODO : what ?
+  if a:content[line][col:col+2] == '(*'
+    let com_end = coqlang#skipComment(content, [line, col + 2])
 
-    " Then we check if the first character of the chunk is a bullet.
-    " Intially I did that only when I was sure to be in a proof (by looking in
-    " [encountered_dots] whether I was after a "collapsable" chunk or not), but
-    "   1/ that didn't play well with coq_to_cursor (as the "collapsable chunk"
-    "      might not have been sent/detected yet).
-    "   2/ The bullet chars can never be used at the *beginning* of a chunk
-    "      outside of a proof. So the check was unecessary.
-
-    if count(brances, a:content[line][col])
-      return [line, col + 1]
-    endif
-    if count(bullets, a:content[line][col])
-      let bullet = a:content[line][col]
-      while bullet == a:content[line][col+1]
-        let col += 1
-      endwhile
-      return [line, col + 1]
+    if type(com_end) == v:t_none
+      return v:null
     endif
 
-    " We might have a commentary before the bullet, we should be skiping it and
-    " keep on looking.
-    let tail_len = len(a:content[line]) - col
+    return coqlang#nextSentencePos(a:content, com_end)
+  endif
 
-    if (tail_len - 1 > 0) && a:content[line][col] == '(' && a:content[line][col + 1] == '*'
-      com_end = coqlang#skipComment(line, [col + 2, 1])
-
-      if type(com_end) == type(v:null)
-        return v:null
-
-      return coqlang#findNextSentencePos(a:content, com_end)
-
-    " If the chunk doesn't start with a bullet, we look for a dot.
-
-    return _find_dot_after(line, col)
-
+  return coqlang#nextDot(a:content, [line, col])
 endfunction  " }}}
 
 
-" Find next position whose nested level is zero.
+" Find next position whose nested level is zero. (exclusive)
 " Return v:null if never close.
 "
 " Examples:
 "   - skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
 "   - skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
-"   - skipComment([" (* *) hello"], [0, 3], 1) == [0, 6]
-"   - skipComment([" (* ", "(*", "*)*)--"], [0, 3], 1) == [2, 4]
-"   - skipComment([' (* " "" "*) "" " *) hello'], [0, 3], 1) == [0, 20]
+"   - skipComment([" (* *) hello"], [0, 3]) == [0, 6]
+"   - skipComment([" (* ", "(*", "*)*)--"], [0, 3]) == [2, 4]
+"   - skipComment([' (* " "" "*) "" " *) hello'], [0, 3]) == [0, 20]
 "
 "
 " content : [string]
-" from_pos : Pos
-" nested : int
+" from_pos : Pos | null
+" nested = 1 : int
 "
 " return Pos | null
 " skipComment(content, from_pos, nested) {{{
-function coqlang#skipComment(content, from_pos, nested = 1) abort
+function! coqlang#skipComment(content, from_pos, nested = 1) abort
+  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(from_pos) == v:t_none
+    return v:null
+  endif
+
+
   if a:nested == 0
     return a:from_pos
   endif
 
-  let blen = len(a:content)
+  let [line, col] = a:from_pos
 
-  if line >= blen
+  let trail = a:content[line][col:]
+
+  let next = sort([
+    \   [match(trail, s:COMMENT_START_regex), 0],
+    \   [match(trail, s:COMMENT_END_regex), 1],
+    \   [match(trail, s:STRING_DELIM_regex), 2]
+    \ ])
+
+    for token in next
+    if token[0] != -1
+      let col += token[0]
+      if token[1] == 0
+        " comment start (*
+        return coqlang#skipComment(a:content, [line, col + 2], a:nested + 1)
+      elseif token[1] == 1
+        " comment end *)
+        return coqlang#skipComment(a:content, [line, col + 2], a:nested - 1)
+      elseif token[1] == 2
+        " string start "
+        let pos = coqlang#skipString(a:content, [line, col + 1])
+        return coqlang#skipComment(a:content, pos, a:nested)
+      endif
+    endif
+  endfor
+  return coqlang#skipComment(a:content, [line + 1, 0], a:nested)
+endfunction  " }}}
+
+
+" Find next position where string ends. (exclusive)
+" Return v:null if never close.
+"
+" Examples:
+"   - skipString(['" "yo.'], [0, 1]) == [0, 3]
+"   - skipString([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
+"
+"
+" content : [string]
+" from_pos : Pos | null
+"
+" return Pos | null
+" skipString(content, from_pos) {{{
+function! coqlang#skipString(content, from_pos) abort
+  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(from_pos) == v:t_none
     return v:null
   endif
 
-  let line_str = a:content[line][col:]
+  let [line, col] = a:from_pos
+
+  let trail = a:content[line][col:]
+
+  let str_end = match(trail, s:STRING_DELIM_regex)
+
+  if str_end != -1
+    let col += str_end
+    if len(trail) > str_end + 1 && trail[str_end + 1] == '"'
+      return coqlang#skipString(a:content, [line, col + 2])
+    else
+      return [line, col + 1]
+    endif
+  endif
+
+  return coqlang#skipString(a:content, [line + 1, 0])
+endfunction  " }}}
+
+
+" Find next position where dot appears. (exclusive)
+" Return v:null if never appears.
+"
+" Examples:
+"   - nextDot(["Hi."], [0, 0]) == [0, 3]
+"   - nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 8]
+"
+"
+" content : [string]
+" from_pos : Pos | null
+"
+" return Pos | null
+" nextDot(content, from_pos) {{{
+function! coqlang#nextDot(content, from_pos) abort
+  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(from_pos) == v:t_none
+    return v:null
+  endif
+
+  let [line, col] = a:from_pos
+
+  let trail = a:content[line][col:]
 
   let next = sort([
-    \   [match(line_str, s:COMMENT_START_regex), 0],
-    \   [match(line_str, s:COMMENT_END_regex), 1],
-    \   [match(line_str, s:STRING_DELIM_regex), 2]
+    \   [match(trail, s:COMMENT_START_regex), 0],
+    \   [match(trail, s:STRING_DELIM_regex), 1],
+    \   [match(trail, s:DOT_regex), 2]
     \ ])
 
   for token in next
@@ -155,58 +270,37 @@ function coqlang#skipComment(content, from_pos, nested = 1) abort
       let col += token[0]
       if token[1] == 0
         " comment start (*
-        return skipComment(a:content, [line, col + 2], a:nested - 1)
+        let com_end = coqlang#skipComment(a:content, [line, col + 2])
+        return coqlang#nextDot(a:content, com_end)
       elseif token[1] == 1
-        " comment end *)
-        return skipComment(a:content, [line, col + 2], a:nested + 1)
-      elseif token[1] == 2
         " string start "
-        let pos = skipString(a:content, [line, col + 1])
-        return skipComment(a:content, pos, a:nested)
+        let com_end = coqlang#skipString(a:content, [line, col + 1])
+        return coqlang#nextDot(a:content, com_end)
+      elseif token[1] == 2
+        " dot
+        return [line, col + 1]
       endif
     endif
   endfor
-  return skipComment(a:content, [line + 1, 0], a:nested)
+  return coqlang#nextDot(a:content, [line + 1, 0])
 endfunction  " }}}
 
 
-" Find next position where string ends.
-" Return v:null if never close.
-"
-" Examples:
-"   - skipString(["hi (**) ."], [0, 0], 0) == [0, 0]
-"   - skipString([" (* *) hello"], [0, 0], 0) == [0, 0]
-"   - skipString([" (* *) hello"], [0, 3], 1) == [0, 6]
-"   - skipString([" (* ", "(*", "*)*)--"], [0, 3], 1) == [2, 4]
-"   - skipString([' (* " "" "*) "" " *) hello'], [0, 3], 1) == [0, 20]
-"
-"
-" content : [string]
-" from_pos : Pos
-"
-" return Pos | null
-" skipString(content, from_pos) {{{
-function coqlang#skipString(content, from_pos) abort
+function! coqlang#Test()
+  call assert_equal(coqlang#nextSentencePos(["hi."], [0, 0]), [0, 3])
+  call assert_equal(coqlang#nextSentencePos([" hello."], [0, 0]), [0, 7])
+  call assert_equal(coqlang#nextSentencePos(["(* oh... *)","--."], [0, 3]), [1, 2])
 
-  let blen = len(a:content)
+  call assert_equal(coqlang#skipComment(["hi (**) ."], [0, 0], 0), [0, 0])
+  call assert_equal(coqlang#skipComment([" (* *) hello"], [0, 0], 0), [0, 0])
+  call assert_equal(coqlang#skipComment([" (* *) hello"], [0, 3]), [0, 6])
+  call assert_equal(coqlang#skipComment([" (* ", "(*", "*)*)--"], [0, 3]), [2, 4])
+  call assert_equal(coqlang#skipComment([' (* " "" "*) "" " *) hello'], [0, 3]), [0, 20])
 
-  if line >= blen
-    return v:null
-  endif
+  call assert_equal(coqlang#skipString(['" "yo.'], [0, 1]), [0, 3])
+  call assert_equal(coqlang#skipString([' " ""', ' "" " hi'], [0, 2]), [1, 5])
 
-  let line_str = a:content[line][col:]
-
-  let str_end = match(line_str, s:STRING_DELIM_regex)
-
-  if str_end != -1
-    let col += str_end
-    if len(line_str) > col + 1 && line_str[col + 1] == '"'
-      return skipString(a:content, [line, col + 2])
-    else
-      return [line, col + 1]
-    endif
-  endif
-
-  return skipString(a:content, [line + 1, 0])
-endfunction  " }}}
+  call assert_equal(coqlang#nextDot(["Hi."], [0, 0]), [0, 3])
+  call assert_equal(coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]), [1, 8])
+endfunction
 
