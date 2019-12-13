@@ -1,20 +1,20 @@
 " ==============================================================
 " ------------------------ CoqTopDriver ------------------------
 " ==============================================================
-" LastUpdate : 2019/12/13
 
 " + support for Coq 8.7
 
 
 let s:CoqTopDriver = {}
 
-function! s:CoqTopDriver.new()
-  call self.restart()
+function! s:CoqTopDriver.new(args = []) abort
+  call self.restart(args)
   return self
 endfunction
 
 " restart {{{
-function! s:CoqTopDriver.restart()
+function! s:CoqTopDriver.restart(args = []) abort
+  " TODO : user args
   let self.states = []
   silent! unlet self.root_state
   silent! unlet self.state_id
@@ -47,7 +47,7 @@ function! s:CoqTopDriver.restart()
 endfunction " }}}
 
 " out callback {{{
-function! s:CoqTopDriver._out_cb(channel, msg)
+function! s:CoqTopDriver._out_cb(channel, msg) abort
   echom a:msg
 
   let self.waiting = 0
@@ -59,11 +59,11 @@ function! s:CoqTopDriver._out_cb(channel, msg)
 endfunction
 " }}}
 
-function! s:CoqTopDriver._initiated()
+function! s:CoqTopDriver._initiated() abort
   return exists("self.root_state")
 endfunction
 
-function! s:CoqTopDriver._process_queue()
+function! s:CoqTopDriver._process_queue() abort
   if !self._initiated() || self.waiting
     return
   endif
@@ -73,22 +73,22 @@ function! s:CoqTopDriver._process_queue()
   endif
 endfunction
 
-function! s:CoqTopDriver._err_cb(channel, msg)
+function! s:CoqTopDriver._err_cb(channel, msg) abort
   echoerr a:msg
 endfunction
 
-function! s:CoqTopDriver.running()
+function! s:CoqTopDriver.running() abort
   return exists("self.job") && exists("self.channel")
 endfunction
 
-function! s:CoqTopDriver.kill()
+function! s:CoqTopDriver.kill() abort
   if self.running()
     call job_stop(self.job, "term")
     unlet self.job
   endif
 endfunction
 
-function! s:CoqTopDriver._call(msg, cb)
+function! s:CoqTopDriver._call(msg, cb) abort
   if self.waiting
     return
   endif
@@ -99,7 +99,7 @@ function! s:CoqTopDriver._call(msg, cb)
   endif
 endfunction
 
-function! s:CoqTopDriver.currentState()
+function! s:CoqTopDriver.currentState() abort
   if len(self.states) == 0
     return self.root_state
   else
@@ -109,12 +109,12 @@ endfunction
 
 
 "  send Init < init > {{{
-function! s:CoqTopDriver._init()
+function! s:CoqTopDriver._init() abort
   call self._call(
     \ '<call val="Init"><option val="none"/></call>'
     \ , self._sendInitCallback)
 endfunction
-function! s:CoqTopDriver._sendInitCallback(xml)
+function! s:CoqTopDriver._sendInitCallback(xml) abort
   let self.state_id = a:xml.find("state_id").attr.val
   let self.root_state = self.state_id
   call self._process_queue()
@@ -123,7 +123,7 @@ endfunction
 
 
 " send Add < send sentence > {{{
-function! s:CoqTopDriver.sendSentence(sentence)
+function! s:CoqTopDriver.sendSentence(sentence) abort
   call self._call('
   \ <call val="Add">
   \   <pair>
@@ -139,7 +139,7 @@ function! s:CoqTopDriver.sendSentence(sentence)
   \ </call>
   \', self._sendAddCallback)
 endfunction
-function! s:CoqTopDriver._sendAddCallback(xml)
+function! s:CoqTopDriver._sendAddCallback(xml) abort
   if exists("self.info_cb")
     " TODO
     " call self.info_cb(level, msg)
@@ -149,17 +149,17 @@ endfunction
 
 
 " send Goal < update Goals > {{{
-function! s:CoqTopDriver.goals()
+function! s:CoqTopDriver.goals() abort
   call self._call(
     \ '<call val="Goal"><unit /></call>'
     \ , self._sendGoalCallback)
 endfunction
-function! s:CoqTopDriver._sendGoalCallback(xml)
+function! s:CoqTopDriver._sendGoalCallback(xml) abort
 endfunction
 " }}}
 
 
-function! s:CoqTopDriver.queueSentence(sentence)
+function! s:CoqTopDriver.queueSentence(sentence) abort
   call add(self.sentenceQueue, sentence)
   call self._process_queue()
 endfunction
@@ -200,8 +200,8 @@ endfunction
 
 " Export
 
-function! coquille#coqtop#makeInstance()
-  return s:CoqTopDriver.new()
+function! coquille#coqtop#makeInstance(args = [])
+  return s:CoqTopDriver.new(args)
 endfunction
 
 function! coquille#coqtop#isExecutable()

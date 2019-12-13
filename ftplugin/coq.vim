@@ -1,2 +1,2 @@
-call coquille#Register()
+call coquille#register()
 
