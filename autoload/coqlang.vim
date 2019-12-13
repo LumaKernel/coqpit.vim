@@ -24,15 +24,14 @@ let s:STRING_DELIM_regex = '\v"'
 "
 " return Range | null
 " getNextSentenceRange(content, from_pos) {{{
-function coquille#coqlang#
-    \getNextSentenceRange(content, from_pos) abort
-  let [line, col] = from_pos
-  let end_pos = coquille#coqlang#findNextSentencePos(content, from_pos)
+function coqlang#getNextSentenceRange(content, from_pos) abort
+  let [line, col] = a:from_pos
+  let end_pos = coqlang#findNextSentencePos(a:content, a:from_pos)
   if type(end_pos) == type(v:null)
     return v:null
   endif
 
-  return {"start": from_pos, "stop": end_pos}
+  return {"start": a:from_pos, "stop": end_pos}
 endfunction  " }}}
 
 
@@ -54,19 +53,18 @@ endfunction  " }}}
 "
 " return Pos | null
 " findNextSentencePos(content, from_pos) {{{
-function coquille#coqlang#
-    \findNextSentencePos(content, from_pos) abort
-  let [line, col] = from_pos
+function coqlang#findNextSentencePos(content, from_pos) abort
+  let [line, col] = a:from_pos
   let end_pos = s:findNextSentencePos(line, col)
 
   let braces = ['{', '}']
   let bullets = ['-', '+', '*']
 
-  let blen = len(content)
+  let blen = len(a:content)
   
 
   while line < blen
-      \ && match(content[line][col:], s:NOT_WHITESPACE_regex) == -1
+      \ && match(a:content[line][col:], s:NOT_WHITESPACE_regex) == -1
     let line += 1
     let col = 0
   endwhile
@@ -75,7 +73,7 @@ function coquille#coqlang#
     return v:null
 
   " FIXME: keeping the stripped line would be
-  while content[line][col] == ' '
+  while a:content[line][col] == ' '
     let col += 1  " more efficient. " TODO : what ?
 
     " Then we check if the first character of the chunk is a bullet.
@@ -86,12 +84,12 @@ function coquille#coqlang#
     "   2/ The bullet chars can never be used at the *beginning* of a chunk
     "      outside of a proof. So the check was unecessary.
 
-    if count(brances, content[line][col])
+    if count(brances, a:content[line][col])
       return [line, col + 1]
     endif
-    if count(bullets, content[line][col])
-      let bullet = content[line][col]
-      while bullet == content[line][col+1]
+    if count(bullets, a:content[line][col])
+      let bullet = a:content[line][col]
+      while bullet == a:content[line][col+1]
         let col += 1
       endwhile
       return [line, col + 1]
@@ -99,15 +97,15 @@ function coquille#coqlang#
 
     " We might have a commentary before the bullet, we should be skiping it and
     " keep on looking.
-    let tail_len = len(content[line]) - col
+    let tail_len = len(a:content[line]) - col
 
-    if (tail_len - 1 > 0) && content[line][col] == '(' && content[line][col + 1] == '*'
-      com_end = coquille#coqlang#skipComment(line, [col + 2, 1])
+    if (tail_len - 1 > 0) && a:content[line][col] == '(' && a:content[line][col + 1] == '*'
+      com_end = coqlang#skipComment(line, [col + 2, 1])
 
       if type(com_end) == type(v:null)
         return v:null
 
-      return coquille#coqlang#findNextSentencePos(content, com_end)
+      return coqlang#findNextSentencePos(a:content, com_end)
 
     " If the chunk doesn't start with a bullet, we look for a dot.
 
@@ -133,19 +131,18 @@ endfunction  " }}}
 "
 " return Pos | null
 " skipComment(content, from_pos, nested) {{{
-function coquille#coqlang#
-    \skipComment(content, from_pos, nested = 1) abort
-  if nested == 0
-    return from_pos
+function coqlang#skipComment(content, from_pos, nested = 1) abort
+  if a:nested == 0
+    return a:from_pos
   endif
 
-  let blen = len(content)
+  let blen = len(a:content)
 
   if line >= blen
     return v:null
   endif
 
-  let line_str = content[line][col:]
+  let line_str = a:content[line][col:]
 
   let next = sort([
     \   [match(line_str, s:COMMENT_START_regex), 0],
@@ -158,18 +155,18 @@ function coquille#coqlang#
       let col += token[0]
       if token[1] == 0
         " comment start (*
-        return skipComment(content, [line, col + 2], nested - 1)
+        return skipComment(a:content, [line, col + 2], a:nested - 1)
       elseif token[1] == 1
         " comment end *)
-        return skipComment(content, [line, col + 2], nested + 1)
+        return skipComment(a:content, [line, col + 2], a:nested + 1)
       elseif token[1] == 2
         " string start "
-        let pos = skipString(content, [line, col + 1])
-        return skipComment(content, pos, nested)
+        let pos = skipString(a:content, [line, col + 1])
+        return skipComment(a:content, pos, a:nested)
       endif
     endif
   endfor
-  return skipComment(content, [line + 1, 0], nested)
+  return skipComment(a:content, [line + 1, 0], a:nested)
 endfunction  " }}}
 
 
@@ -186,32 +183,30 @@ endfunction  " }}}
 "
 " content : [string]
 " from_pos : Pos
-" nested : int
 "
 " return Pos | null
 " skipString(content, from_pos) {{{
-function coquille#coqlang#
-    \skipString(content, from_pos) abort
+function coqlang#skipString(content, from_pos) abort
 
-  let blen = len(content)
+  let blen = len(a:content)
 
   if line >= blen
     return v:null
   endif
 
-  let line_str = content[line][col:]
+  let line_str = a:content[line][col:]
 
   let str_end = match(line_str, s:STRING_DELIM_regex)
 
   if str_end != -1
     let col += str_end
     if len(line_str) > col + 1 && line_str[col + 1] == '"'
-      return skipString(content, [line, col + 2])
+      return skipString(a:content, [line, col + 2])
     else
       return [line, col + 1]
     endif
   endif
 
-  return skipString(content, [line + 1, 0])
+  return skipString(a:content, [line + 1, 0])
 endfunction  " }}}
 

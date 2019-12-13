@@ -7,14 +7,14 @@ let s:IDE = {}
 function! s:IDE.new(bufnr, args = []) abort
   " TODO : Use argss
 
-  let self.handling_bufnr = bufnr
+  let self.handling_bufnr = a:bufnr
 
   let self.GoalBuffers = []
   let self.InfoBuffers = []
 
   let self.sentencePosList = []
 
-  let self.CoqTopDriver = coquille#coqtop#makeInstance(args)
+  let self.CoqTopDriver = coquille#coqtop#makeInstance(a:args)
   call self.CoqTopDriver.setGoalCallback(self._goalCallback)
   call self.CoqTopDriver.setInfoCallback(self._infoCallback)
 
@@ -34,11 +34,11 @@ endfunction
 " -- public
 
 function! s:IDE.addGoalBuffer(bufnr) abort
-  call add(self.GoalBuffers, bufnr)
+  call add(self.GoalBuffers, a:bufnr)
 endfunction
 
 function! s:IDE.addInfoBuffer(bufnr) abort
-  call add(self.InfoBuffers, bufnr)
+  call add(self.InfoBuffers, a:bufnr)
 endfunction
 
 " return [string]
@@ -62,7 +62,7 @@ endfunction
 function! s:IDE.cursorNext() abort
   let content = self.getContent()
   let cursor = self.getCursor()
-  let sentense_range = coquille#coqlang#getNextSentenceRange(content, cursor)
+  let sentense_range = coqlang#getNextSentenceRange(content, cursor)
   
   if type(sentense_range) == type(v:null)
     return
@@ -84,24 +84,15 @@ endfunction
 
 function! s:IDE.move(pos) abort
   if focusing()
-    let [line, col] = pos
+    let [line, col] = a:pos
     call cursor(line, col + 1)
   endif
 endfunction
 
 
-
-" internal
-
-
-" -- test
-if 1
-endif
-
-
 " export
 
 function! coquille#ide#makeInstance(bufnr, args = []) abort
-  return s:IDE.new(bufnr, args)
+  return s:IDE.new(a:bufnr, a:args)
 endfunction
 
