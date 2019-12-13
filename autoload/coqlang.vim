@@ -70,6 +70,10 @@ function! coqlang#skipBlanks(content, from_pos) abort
     endif
   endwhile
 
+  if line >= linenum
+    return v:null
+  endif
+
   return [line, col]
 endfunction  " }}}
 
@@ -94,12 +98,12 @@ endfunction  " }}}
 " return Pos | null
 " nextSentencePos(content, from_pos) {{{
 function! coqlang#nextSentencePos(content, from_pos) abort
-  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(from_pos) == v:t_none
+  let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(nonblank_pos) == v:t_none
     return v:null
   endif
 
-  let [line, col] = from_pos
+  let [line, col] = nonblank_pos
 
   " reference : https://coq.inria.fr/refman/proof-engine/proof-handling.html
   let braces = ['{', '}']
@@ -114,7 +118,7 @@ function! coqlang#nextSentencePos(content, from_pos) abort
   endif
   if count(bullets, a:content[line][col])
     let bullet = a:content[line][col]
-    while bullet == a:content[line][col+1]
+    while bullet == a:content[line][col + 1]
       let col += 1
     endwhile
     return [line, col + 1]
@@ -156,17 +160,16 @@ endfunction  " }}}
 " return Pos | null
 " skipComment(content, from_pos, nested) {{{
 function! coqlang#skipComment(content, from_pos, nested = 1) abort
-  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(from_pos) == v:t_none
-    return v:null
-  endif
-
-
   if a:nested == 0
     return a:from_pos
   endif
 
-  let [line, col] = a:from_pos
+  let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(nonblank_pos) == v:t_none
+    return v:null
+  endif
+
+  let [line, col] = nonblank_pos
 
   let trail = a:content[line][col:]
 
@@ -210,12 +213,12 @@ endfunction  " }}}
 " return Pos | null
 " skipString(content, from_pos) {{{
 function! coqlang#skipString(content, from_pos) abort
-  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(from_pos) == v:t_none
+  let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(nonblank_pos) == v:t_none
     return v:null
   endif
 
-  let [line, col] = a:from_pos
+  let [line, col] = nonblank_pos
 
   let trail = a:content[line][col:]
 
@@ -248,12 +251,12 @@ endfunction  " }}}
 " return Pos | null
 " nextDot(content, from_pos) {{{
 function! coqlang#nextDot(content, from_pos) abort
-  let from_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(from_pos) == v:t_none
+  let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if type(nonblank_pos) == v:t_none
     return v:null
   endif
 
-  let [line, col] = a:from_pos
+  let [line, col] = nonblank_pos
 
   let trail = a:content[line][col:]
 

@@ -57,10 +57,10 @@ function! s:IDE.getContent(range = v:null) abort
 
   call assert_true(spos[0] < epos[0] || (spos[0] == epos[0] && spos[1] <= epos[1]))
 
-  let lines = getbufline(self.handling_bufnr, sline + 1, eline + 1)
+  let lines = getbufline(self.handling_bufnr, sline + 1, eline + 2)
 
-  let lines[eline] = lines[eline][:ecol]
-  let lines[sline] = lines[sline][scol:]
+  let lines[eline-sline] = lines[eline-sline][:ecol]
+  let lines[0] = lines[0][scol:]
 
   return lines
 endfunction
@@ -143,12 +143,13 @@ function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={})
     return []
   endif
 
+  echom a:range
   let ids = []
   if sline == eline
-    call add(ids, matchaddpos(a:group, [sline + 1, scol + 1, ecol - scol], a:priority, a:id, a:dict))
+    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol + 1]], a:priority, a:id, a:dict))
   else
-    call add(ids, matchaddpos(a:group, [sline + 1, scol + 1, a:maxlen], a:priority, a:id, a:dict))
-    call add(ids, matchaddpos(a:group, [eline + 1, 1, ecol - 1], a:priority, a:id, a:dict))
+    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], a:priority, a:id, a:dict))
+    call add(ids, matchaddpos(a:group, [[eline + 1, 1, ecol]], a:priority, a:id, a:dict))
     let ids += s:matchaddlines(a:group, range(sline + 1, eline - 1), a:priority, a:id, a:dict)
   endif
   return ids
@@ -156,8 +157,9 @@ endfunction
 
 function! s:matchaddlines(group, lines, priority=10, id=-1, dict={})
   let ids = []
+  echom a:lines
   for line in a:lines
-    call add(ids, matchaddpos(a:group, [line + 1], a:priority, a:id, a:dict))
+    call add(ids, matchaddpos(a:group, [[line + 1]], a:priority, a:id, a:dict))
   endfor
   return ids
 endfunction
