@@ -1,6 +1,6 @@
-" ==============================================================
-" ------------------------ CoqTopDriver ------------------------
-" ==============================================================
+" ============
+" CoqTopDriver
+" ============
 
 " + support for Coq 8.7
 
@@ -19,7 +19,7 @@ function! s:CoqTopDriver.restart(args = []) abort
   silent! unlet self.root_state
   silent! unlet self.state_id
 
-  let self.sentenceQueue = []
+  let self.sentenceQueue = []  " : List<[Sentence, any]>
   let self.waiting = 0
 
   let coqtop_cmd = [
@@ -53,7 +53,7 @@ function! s:CoqTopDriver._out_cb(channel, msg) abort
   let self.waiting = 0
 
   let xml = webapi#xml#parse(a:msg)
-  let g:gxml = xml  " for debug
+  let g:gxml = xml  " TODO : FOR DEUBG
 
   call self.cb(xml)
 endfunction
@@ -69,7 +69,7 @@ function! s:CoqTopDriver._process_queue() abort
   endif
   if len(self.sentenceQueue) > 0
     let front = remove(self.sentenceQueue, 0)
-    call self.sendSentence(front)
+    call self.sendSentence(front[0], front[1])
   endif
 endfunction
 
@@ -123,16 +123,17 @@ endfunction
 
 
 " send Add < send sentence > {{{
-function! s:CoqTopDriver.sendSentence(sentence) abort
+function! s:CoqTopDriver.sendSentence(sentence, payload = v:null) abort
+  let self.payload = a:payload
   call self._call('
   \ <call val="Add">
   \   <pair>
   \     <pair>
-  \       ' . s:createElement("string", {}, sentence) . '
+  \       ' . s:createElement("string", {}, a:sentence).toString() . '
   \       <int>-1</int>
   \     </pair>
   \   <pair>
-  \   ' . s:createElement("state_id", {"val": self.currentState()}) . '
+  \   ' . s:createElement("state_id", {"val": self.currentState()}).toString() . '
   \   <bool val="false"/>
   \   </pair>
   \   </pair>
@@ -142,8 +143,9 @@ endfunction
 function! s:CoqTopDriver._sendAddCallback(xml) abort
   if exists("self.info_cb")
     " TODO
-    " call self.info_cb(level, msg)
+    " call self.info_cb(level, msg, self.payload)
   endif
+  let self.payload = v:null
 endfunction
 " }}}
 
@@ -159,8 +161,8 @@ endfunction
 " }}}
 
 
-function! s:CoqTopDriver.queueSentence(sentence) abort
-  call add(self.sentenceQueue, sentence)
+function! s:CoqTopDriver.queueSentence(sentence, payload = v:null) abort
+  call add(self.sentenceQueue, [a:sentence, a:payload])
   call self._process_queue()
 endfunction
 
@@ -175,14 +177,14 @@ endfunction
 "   - 3 : error
 "   - 4 : fatal
 function! s:CoqTopDriver.setInfoCallback(info_cb)
-  self.info_cb = a:info_cb
+  let self.info_cb = a:info_cb
 endfunction
 
 
 " set callback function for Goals
 " cb : (xml) => any
 function! s:CoqTopDriver.setGoalCallback(goal_cb)
-  self.goal_cb = a:goal_cb
+  let self.goal_cb = a:goal_cb
 endfunction
 
 
@@ -190,9 +192,9 @@ endfunction
 
 function! s:createElement(name, attr, ...)
   let element = webapi#xml#createElement("string")
-  element.attr = a:attr
+  let element.attr = a:attr
   if a:0
-    element.value(a:000[0])
+    call element.value(a:000[0])
   endif
   return element
 endfunction

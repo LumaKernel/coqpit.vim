@@ -3,8 +3,6 @@
 " =============
 
 
-
-
 let s:NOT_WHITESPACE_regex = '\v\S&[^\n\r]'
 let s:COMMENT_START_regex = '\v\(\*'
 let s:COMMENT_END_regex = '\v\*\)'
@@ -15,7 +13,7 @@ let s:DOT_regex = '\v\.'
 " library for Coq as a language
 
 " type Pos = [line, pos] : [int]
-" type Range = {start: Pos, end: Pos}
+" type Range = [start, end] : [Pos]
 "   NOTE: (left inclusive, right exclusive)
 " type null = ** only v:null **
 
@@ -28,15 +26,15 @@ let s:DOT_regex = '\v\.'
 " from_pos : Pos
 "
 " return Range | null
-" getNextSentenceRange(content, from_pos) {{{
-function! coqlang#getNextSentenceRange(content, from_pos) abort
+" nextSentenceRange(content, from_pos) {{{
+function! coqlang#nextSentenceRange(content, from_pos) abort
   let [line, col] = a:from_pos
   let end_pos = coqlang#nextSentencePos(a:content, a:from_pos)
   if type(end_pos) == v:t_none
     return v:null
   endif
 
-  return {"start": a:from_pos, "stop": end_pos}
+  return [a:from_pos, end_pos]
 endfunction  " }}}
 
 
@@ -284,6 +282,7 @@ function! coqlang#nextDot(content, from_pos) abort
   endfor
   return coqlang#nextDot(a:content, [line + 1, 0])
 endfunction  " }}}
+
 
 
 function! coqlang#Test()

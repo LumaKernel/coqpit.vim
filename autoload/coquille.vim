@@ -1,3 +1,7 @@
+" ========
+" coquille
+" ========
+
 let s:current_dir=expand("<sfile>:p:h") 
 
 if !exists('g:coquille_auto_move')
@@ -71,15 +75,15 @@ endfunction
 " restart coquille IDE
 function! coquille#launch(...)
   if exists("b:coquille#IDE")
-    silent! call b:coquille#IDE.kill()
+    silent! call b:coquilleIDE.kill()
   endif
 
-  let b:coquille#IDE = coquille#ide#makeInstance(a:000)
+  let b:coquilleIDE = coquille#ide#makeInstance(bufnr('%'), a:000)
   let b:coquille_running = 1
 
   " make the different commands accessible
   " command! -buffer GotoDot py3 coquille.goto_last_sent_dot()
-  " command! -buffer CoqNext py3 coquille.coq_next()
+  command! -buffer CoqNext call b:coquilleIDE.cursorNext()
   " command! -buffer CoqUndo py3 coquille.coq_rewind()
   " command! -buffer CoqToCursor py3 coquille.coq_to_cursor()
   command! -buffer CoqRearrange call coquille#resetPanels()
@@ -97,13 +101,21 @@ endfunction
 function! coquille#register()
   " TODO : add auto-launch optoin
 
-  hi default CheckedByCoq ctermbg=17 guibg=LightGreen
-  hi default SentToCoq ctermbg=60 guibg=LimeGreen
-  hi link CoqError Error
+  function! s:defineColorScheme()
+    if g:colors_name is "hybrid"
+      hi default CheckedByCoq guibg=#111130
+      hi default SentToCoq guibg=#336633
+    endif
+    hi default CheckedByCoq ctermbg=17 guibg=LightGreen
+    hi default SentToCoq ctermbg=60 guibg=LimeGreen
+  endfunction
 
-  let b:checked = -1
-  let b:sent    = -1
-  let b:errors  = -1
+  augroup cs
+    autocmd!
+    autocmd ColorScheme * :call <SID>defineColorScheme()
+  augroup END
+
+  hi link CoqError Error
 
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
 endfunction
