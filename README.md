@@ -1,11 +1,10 @@
 Coquille
 ========
 
-[![Build Status](https://travis-ci.org/the-lambda-church/coquille.svg?branch=pathogen-bundle)](https://travis-ci.org/the-lambda-church/coquille)
+<!-- TODO : build status --!>
 
 WIP
 ---
-
 
 
 
@@ -23,12 +22,23 @@ TODO
 * Fix bugs
 * Highlighting Erros in Editor
 * Python2 to Python3 ... ? ( Is it needed ? )
-
+  * write in vim script !!
 
 ---
 
 Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
 favorite editor.
+
+
+Dependencies
+------------
+
+- [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
+- Coq 3.7
+
+
+---
+
 
 Installation
 ------------
