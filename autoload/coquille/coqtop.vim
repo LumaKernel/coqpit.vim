@@ -41,21 +41,33 @@ function! s:CoqTopDriver.restart(args = []) abort
   let job_options.err_cb = self._err_cb
 
   let self.job = job_start(coqtop_cmd, job_options)
-  let self.channel = job_getchannel(self.job)
+  " let self.channel = job_getchannel(self.job)
 
+  if !self.running()
+    echoerr "coqtop is not running"
+  endif
   call self._init()
 endfunction " }}}
 
-" out callback {{{
+" callback {{{
 function! s:CoqTopDriver._out_cb(channel, msg) abort
+  " TODO : FOR DEBUG
+  echom "got!!"
   echom a:msg
-
-  let self.waiting = 0
 
   let xml = webapi#xml#parse(a:msg)
   let g:gxml = xml  " TODO : FOR DEUBG
 
   call self.cb(xml)
+
+  let self.waiting = 0
+  call self._process_queue()
+endfunction
+
+function! s:CoqTopDriver._err_cb(channel, msg) abort
+  " TODO
+  echom "error!!"
+  echoerr a:msg
 endfunction
 " }}}
 
@@ -73,12 +85,11 @@ function! s:CoqTopDriver._process_queue() abort
   endif
 endfunction
 
-function! s:CoqTopDriver._err_cb(channel, msg) abort
-  echoerr a:msg
-endfunction
-
 function! s:CoqTopDriver.running() abort
-  return exists("self.job") && exists("self.channel")
+  return
+    \ exists("self.job")
+    \ && type(self.job) == v:t_job
+    \ && job_status(self.job) == "run"
 endfunction
 
 function! s:CoqTopDriver.kill() abort
@@ -92,10 +103,15 @@ function! s:CoqTopDriver._call(msg, cb) abort
   if self.waiting
     return
   endif
+
+  " TODO : FOR DEBUG
+  echom "send!!"
+  echom a:msg
+
   if self.running()
     let self.waiting = 1
     let self.cb = a:cb
-    call ch_sendraw(self.channel, a:msg)
+    call ch_sendraw(self.job, a:msg . "\n")
   endif
 endfunction
 
@@ -115,6 +131,7 @@ function! s:CoqTopDriver._init() abort
     \ , self._sendInitCallback)
 endfunction
 function! s:CoqTopDriver._sendInitCallback(xml) abort
+  echom "Init Callback"
   let self.state_id = a:xml.find("state_id").attr.val
   let self.root_state = self.state_id
   call self._process_queue()
@@ -126,24 +143,55 @@ endfunction
 function! s:CoqTopDriver.sendSentence(sentence, payload = v:null) abort
   let self.payload = a:payload
   call self._call('
-  \ <call val="Add">
-  \   <pair>
-  \     <pair>
-  \       ' . s:createElement("string", {}, a:sentence).toString() . '
-  \       <int>-1</int>
-  \     </pair>
-  \   <pair>
-  \   ' . s:createElement("state_id", {"val": self.currentState()}).toString() . '
-  \   <bool val="false"/>
-  \   </pair>
-  \   </pair>
-  \ </call>
+    \<call val="Add">
+      \<pair>
+        \<pair>
+          \' . s:createElement("string", {}, a:sentence).toString() . '
+          \<int>-1</int>
+        \</pair>
+        \<pair>
+          \' . s:createElement("state_id", {"val": self.currentState()}).toString() . '
+          \<bool val="false"/>
+        \</pair>
+      \</pair>
+    \</call>
   \', self._sendAddCallback)
 endfunction
 function! s:CoqTopDriver._sendAddCallback(xml) abort
-  if exists("self.info_cb")
-    " TODO
-    " call self.info_cb(level, msg, self.payload)
+  echom "Add Callback"
+  if a:xml.attr.val == "good"
+    let new_state_id = a:xml.find("state_id").attr.val
+    call add(self.states, new_state_id)
+    let self.state_id = new_state_id
+    if exists("self.info_cb")
+      call self.info_cb("", "", v:null, self.payload)
+    endif
+  else
+    let level = ""
+    let msg = ""
+    let err_loc = v:null
+
+    let attr = a:xml.attr
+    if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
+      let err_loc = [attr['loc_s'], attr['loc_e']]
+    endif
+
+    if !empty(a:xml.find("pp"))
+      if len(a:xml.find("pp").child)
+        let level = "error"
+        let msg = a:xml.find("pp").child[0]
+      endif
+    endif
+
+    if level == ""
+      let level = "error"
+      " TODO
+      let msg = "[CoqTopDriver] something unexpected happen"
+    endif
+
+    if exists("self.info_cb")
+      call self.info_cb(level, msg, err_loc, self.payload)
+    endif
   endif
   let self.payload = v:null
 endfunction
@@ -157,6 +205,7 @@ function! s:CoqTopDriver.goals() abort
     \ , self._sendGoalCallback)
 endfunction
 function! s:CoqTopDriver._sendGoalCallback(xml) abort
+  echom "Goal Callback"
 endfunction
 " }}}
 
@@ -168,14 +217,16 @@ endfunction
 
 
 " set callback function for Infos
-" cb : (message_level, message) => any
-" - message_levels
-"   TODO
-"   - 0 : debug
-"   - 1 : info
-"   - 2 : warning
-"   - 3 : error
-"   - 4 : fatal
+" cb : (
+"   message_level: string,
+"   message: string,
+"   location: [start, end] | null,
+"   payload: any,
+" ) => any
+" - message levels
+"   - error
+"   - warning
+"   - info
 function! s:CoqTopDriver.setInfoCallback(info_cb)
   let self.info_cb = a:info_cb
 endfunction
@@ -190,8 +241,8 @@ endfunction
 
 " internal functions
 
-function! s:createElement(name, attr, ...)
-  let element = webapi#xml#createElement("string")
+function! s:createElement(name, attr, ...) abort
+  let element = webapi#xml#createElement(a:name)
   let element.attr = a:attr
   if a:0
     call element.value(a:000[0])
