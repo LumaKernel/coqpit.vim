@@ -8,13 +8,13 @@ if !exists('g:coquille_auto_move')
     let g:coquille_auto_move = 0
 endif
 
-function! coquille#resetPanels()
+function! coquille#resetPanels() abort
   if exists("b:goal_buf") && buffer_name(b:goal_buf) == "Goals"
-    silent! execute 'bdelete' . s:goal_buf
+    silent! execute 'bdelete' . b:goal_buf
   endif
 
   if exists("b:info_buf") && buffer_name(b:info_buf) == "Infos"
-    silent! execute 'bdelete' . s:info_buf
+    silent! execute 'bdelete' . b:info_buf
   endif
 
   let l:winnr = winnr()
@@ -22,13 +22,18 @@ function! coquille#resetPanels()
     setlocal buftype=nofile
     setlocal filetype=coq-goals
     setlocal noswapfile
-    let b:goal_buf = bufnr("%")
+    let l:goal_buf = bufnr("%")
   rightbelow new Infos
     setlocal buftype=nofile
     setlocal filetype=coq-infos
     setlocal noswapfile
-    let b:info_buf = bufnr("%")
+    let l:info_buf = bufnr("%")
   execute l:winnr . 'winc w'
+  
+  let b:goal_buf = l:goal_buf
+  let b:info_buf = l:info_buf
+  call b:coquilleIDE.addGoalBuffer(b:goal_buf)
+  call b:coquilleIDE.addInfoBuffer(b:info_buf)
 endfunction
 
 function! coquille#killSession()

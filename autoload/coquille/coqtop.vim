@@ -19,6 +19,7 @@ function! s:CoqTopDriver.restart(args = []) abort
   silent! unlet self.root_state
   silent! unlet self.state_id
 
+  let self.payloads = []
   let self.sentenceQueue = []  " : List<[Sentence, any]>
   let self.waiting = 0
 
@@ -49,18 +50,18 @@ function! s:CoqTopDriver.restart(args = []) abort
   call self._init()
 endfunction " }}}
 
-" callback {{{
+" callback for job object {{{
 function! s:CoqTopDriver._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
   echom "got!!"
   echom a:msg
+  let self.waiting = 0
 
-  let xml = webapi#xml#parse(a:msg)
+  let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
 
   call self.cb(xml)
 
-  let self.waiting = 0
   call self._process_queue()
 endfunction
 
@@ -71,18 +72,10 @@ function! s:CoqTopDriver._err_cb(channel, msg) abort
 endfunction
 " }}}
 
+" -- process information
+
 function! s:CoqTopDriver._initiated() abort
   return exists("self.root_state")
-endfunction
-
-function! s:CoqTopDriver._process_queue() abort
-  if !self._initiated() || self.waiting
-    return
-  endif
-  if len(self.sentenceQueue) > 0
-    let front = remove(self.sentenceQueue, 0)
-    call self.sendSentence(front[0], front[1])
-  endif
 endfunction
 
 function! s:CoqTopDriver.running() abort
@@ -99,6 +92,20 @@ function! s:CoqTopDriver.kill() abort
   endif
 endfunction
 
+
+" -- core functions
+
+function! s:CoqTopDriver._process_queue() abort
+  if !self._initiated() || self.waiting
+    return
+  endif
+  if len(self.sentenceQueue) > 0
+    let front = remove(self.sentenceQueue, 0)
+    call self.sendSentence(front[0], front[1])
+  endif
+endfunction
+
+
 function! s:CoqTopDriver._call(msg, cb) abort
   if self.waiting
     return
@@ -112,6 +119,29 @@ function! s:CoqTopDriver._call(msg, cb) abort
     let self.waiting = 1
     let self.cb = a:cb
     call ch_sendraw(self.job, a:msg . "\n")
+  endif
+endfunction
+
+
+" interacting with 
+
+" reporting info to CoqTop user
+function! s:CoqTopDriver.info(state_id, level, msg, err_loc)
+  if exists("self.info_cb")
+    call self.info_cb(a:state_id, a:level, a:msg, a:err_loc, self.payloads[0])
+  endif
+endfunction
+
+" reporting result (of sending sentences) to CoqTop user
+function! s:CoqTopDriver.result(state_id, is_err, msg, err_loc)
+  if exists("self.result_cb")
+    call self.result_cb(a:state_id, a:is_err, a:msg, a:err_loc, self.payloads[0])
+  endif
+endfunction
+
+function! s:CoqTopDriver.goal(goals)
+  if exists("self.goal_cb")
+    call self.goal_cb(a:goals)
   endif
 endfunction
 
@@ -135,13 +165,12 @@ function! s:CoqTopDriver._sendInitCallback(xml) abort
   let self.state_id = a:xml.find("state_id").attr.val
   let self.root_state = self.state_id
   call self._process_queue()
-endfunction
-" }}}
+endfunction  " }}}
 
 
 " send Add < send sentence > {{{
 function! s:CoqTopDriver.sendSentence(sentence, payload = v:null) abort
-  let self.payload = a:payload
+  call add(self.payloads, a:payload)
   call self._call('
     \<call val="Add">
       \<pair>
@@ -159,60 +188,87 @@ function! s:CoqTopDriver.sendSentence(sentence, payload = v:null) abort
 endfunction
 function! s:CoqTopDriver._sendAddCallback(xml) abort
   echom "Add Callback"
-  if a:xml.attr.val == "good"
-    let new_state_id = a:xml.find("state_id").attr.val
+  let value = a:xml.find("value")
+  let new_state_id = value.find("state_id").attr.val
+  if value.attr.val == "good"
     call add(self.states, new_state_id)
     let self.state_id = new_state_id
-    if exists("self.info_cb")
-      call self.info_cb("", "", v:null, self.payload)
-    endif
+    call self.result(new_state_id, 0, '', v:null)
   else
-    let level = ""
-    let msg = ""
+    let msg = ''
     let err_loc = v:null
 
-    let attr = a:xml.attr
+    let attr = value.attr
     if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
       let err_loc = [attr['loc_s'], attr['loc_e']]
     endif
 
-    if !empty(a:xml.find("pp"))
-      if len(a:xml.find("pp").child)
-        let level = "error"
-        let msg = a:xml.find("pp").child[0]
+    if !empty(value.find('pp'))
+      if len(value.find('pp').child)
+        let msg = s:unescape(a:xml.find('pp').child[0])
       endif
     endif
 
-    if level == ""
-      let level = "error"
-      " TODO
-      let msg = "[CoqTopDriver] something unexpected happen"
-    endif
-
-    if exists("self.info_cb")
-      call self.info_cb(level, msg, err_loc, self.payload)
-    endif
+    call self.result(new_state_id, 1, msg, err_loc)
   endif
-  let self.payload = v:null
-endfunction
-" }}}
+  call remove(self.payloads, 0)
+endfunction  " }}}
 
 
 " send Goal < update Goals > {{{
-function! s:CoqTopDriver.goals() abort
+function! s:CoqTopDriver.refreshGoalInfo(payload = v:null) abort
+  call add(self.payloads, a:payload)
   call self._call(
     \ '<call val="Goal"><unit /></call>'
     \ , self._sendGoalCallback)
 endfunction
 function! s:CoqTopDriver._sendGoalCallback(xml) abort
-  echom "Goal Callback"
-endfunction
-" }}}
+  let error_found = 0
+  for feedback in a:xml.findAll('feedback')
+    let content = feedback.find('feedback_content')
+    if content.attr.val == 'message'
+      let state_id = feedback.find('state_id').attr.val
+      let level = content.find('message_level').attr.val
+      let msg = s:unescape(content.find('pp').child[0])
+      let err_loc = v:null
+
+      if level == 'error'
+        let error_found = 1
+      endif
+
+      let loc = content.find("loc")
+      if !empty(loc)
+        let err_loc = [loc.attr.start, loc.attr.stop]
+      endif
+
+      call self.info(state_id, level, msg, err_loc)
+    endif
+  endfor
+  " TODO
+  " if error_found
+  "   return
+  " endif
+  if a:xml.find("value").attr.val == 'good'
+    let option = a:xml.find("value").find("option")
+    if !empty(option)
+      if has_key(option.attr, 'val') && option.attr['val'] == 'none'
+        call self.goal([])
+      endif
+    else
+      call self.goal(["hi"])
+    endif
+  endif
+  call remove(self.payloads, 0)
+endfunction  " }}}
 
 
 function! s:CoqTopDriver.queueSentence(sentence, payload = v:null) abort
   call add(self.sentenceQueue, [a:sentence, a:payload])
   call self._process_queue()
+endfunction
+
+function! s:CoqTopDriver.clearSentenceQueue() abort
+  let self.sentenceQueue = []
 endfunction
 
 
@@ -231,6 +287,9 @@ function! s:CoqTopDriver.setInfoCallback(info_cb)
   let self.info_cb = a:info_cb
 endfunction
 
+function! s:CoqTopDriver.setResultCallback(result_cb)
+  let self.result_cb = a:result_cb
+endfunction
 
 " set callback function for Goals
 " cb : (xml) => any
@@ -250,19 +309,24 @@ function! s:createElement(name, attr, ...) abort
   return element
 endfunction
 
+function! s:unescape(str) abort
+  return a:str
+    \->substitute('&nbsp;', ' ', 'g')
+endfunction
+
 
 " Export
 
-function! coquille#coqtop#makeInstance(args = [])
+function! coquille#coqtop#makeInstance(args = []) abort
   return s:CoqTopDriver.new(a:args)
 endfunction
 
-function! coquille#coqtop#isExecutable()
+function! coquille#coqtop#isExecutable() abort
   " TODO
   return 1
 endfunction
 
-function! coquille#coqtop#getVersion()
+function! coquille#coqtop#getVersion() abort
   " TODO
   return "1.0.0"
 endfunction

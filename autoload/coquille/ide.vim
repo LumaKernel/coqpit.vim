@@ -16,11 +16,17 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.colored = []
   let self.hls = []
 
+  let self.goal_message = []
+  let self.info_message = []
+
+  let self.state_id_to_range = {}
+
   let self.CoqTopDriver = coquille#coqtop#makeInstance(a:args)
 
   " We should bind.
   call self.CoqTopDriver.setGoalCallback(function(self._goalCallback, self))
   call self.CoqTopDriver.setInfoCallback(function(self._infoCallback, self))
+  call self.CoqTopDriver.setResultCallback(function(self._resultCallback, self))
 
   return self
 endfunction
@@ -28,23 +34,35 @@ endfunction
 
 " -- private
 
-function! s:IDE._goalCallback(xml) abort
-  " TODO
-  echom xml
+function! s:IDE._goalCallback(goals) abort
+  let goal_message = []
+  if type(a:goals) == v:t_none
+  else
+    if len(a:goals) == 0
+      let goal_message = ["No goals."]
+    else
+      let goal_message = a:goals
+    endif
+  endif
+
+  call self.refreshGoal()
 endfunction
 
-function! s:IDE._infoCallback(level, msg, loc, payload) abort
-  let [spos, epos] = a:payload["range"]
+function! s:IDE._infoCallback(state_id, level, msg, loc, payload) abort
+  let [spos, epos] = self.state_id_to_range[a:state_id]
 
   if type(a:loc) != v:t_none
     let [start, end] = a:loc
-    let mes_range = [self.steps(spos, start), self.steps(spos, end)]
+    let mes_range = [self.steps(spos, start, 1), self.steps(spos, end - 1, 1)]
     if a:level == "error"
       call add(self.hls, ["CoqError", mes_range, 30])
       call self._shrinkTo(epos)
+      let self.info_message += [a:msg]
     elseif a:level == "warning"
       call add(self.hls, ["CoqWarn", mes_range, 20])
+      let self.info_message += [a:msg]
     elseif a:level == "info"
+      let self.info_message += [a:msg]
     elseif a:level == ""
     else
       throw "Error: Unkown message level"
@@ -52,6 +70,44 @@ function! s:IDE._infoCallback(level, msg, loc, payload) abort
   endif
 
   call self.recolor()
+  call self.refreshInfo()
+  let self.hls = []
+endfunction
+
+function! s:IDE._resultCallback(state_id, is_err, msg, err_loc, payload) abort
+  let range = a:payload["range"]
+  let [spos, epos] = range
+  let refresh = a:payload["refresh"]
+
+  if a:is_err
+    call self._shrinkTo(epos)
+    call self.CoqTopDriver.clearSentenceQueue()
+    " call self.CoqTopDriver.refreshGoalInfo(a:payload)
+
+    echom "hi"
+    echom [a:is_err, a:msg, a:err_loc, a:payload]
+
+    if type(a:err_loc) != v:t_none
+      let [start, end] = a:err_loc
+      let mes_range = [self.steps(spos, start, 1), self.steps(spos, end - 1, 1)]
+      call add(self.hls, ["CoqError", mes_range, 30])
+    endif
+
+    echom "hi2"
+
+    if a:msg != ''
+      let self.info_message += [a:msg]
+    endif
+  else
+    let self.state_id_to_range[a:state_id] = range
+  endif
+
+  if refresh
+    call self.CoqTopDriver.refreshGoalInfo(a:payload)
+  endif
+
+  call self.recolor()
+  call self.refreshInfo()
   let self.hls = []
 endfunction
 
@@ -66,12 +122,33 @@ endfunction
 " -- public
 
 function! s:IDE.addGoalBuffer(bufnr) abort
-  call add(self.GoalBuffers, a:bufnr)
+  if !count(self.GoalBuffers, a:bufnr)
+    call add(self.GoalBuffers, a:bufnr)
+  endif
 endfunction
 
 function! s:IDE.addInfoBuffer(bufnr) abort
-  call add(self.InfoBuffers, a:bufnr)
+  if !count(self.InfoBuffers, a:bufnr)
+    call add(self.InfoBuffers, a:bufnr)
+  endif
 endfunction
+
+function! s:IDE.refreshGoal() abort
+  for bufnr in self.GoalBuffers
+    call deletebufline(bufnr, 1, '$')
+    call setbufline(bufnr, 1, self.goal_message)
+  endfor
+endfunction
+
+function! s:IDE.refreshInfo() abort
+  for bufnr in self.InfoBuffers
+    call deletebufline(bufnr, 1, '$')
+    call setbufline(bufnr, 1, self.info_message)
+  endfor
+endfunction
+
+
+
 
 " range : Range | null
 "
@@ -126,7 +203,7 @@ function! s:IDE.recolor() abort
   endfor
 endfunction
 
-function! s:IDE.steps(pos, num) abort
+function! s:IDE.steps(pos, num, newline_as_one = 0) abort
   let content = self.getContent()
   let now = 0
   let [line, col] = a:pos
@@ -134,10 +211,10 @@ function! s:IDE.steps(pos, num) abort
 
   while now < a:num && line < linenum
     let newcol = col + a:num - now
-    if newcol < len(content[line])
+    if newcol < len(content[line]) + a:newline_as_one
       return [line, newcol]
     else
-      let now += max([len(content[line]) - col, 0])
+      let now += max([len(content[line]) + a:newline_as_one - col, 0])
 
       let line += 1
       let col = 0
@@ -153,6 +230,8 @@ function! s:IDE.cursorNext() abort
   let content = self.getContent()
   let cursor = self.getCursor()
   let sentence_range = coqlang#nextSentenceRange(content, cursor)
+
+  let self.info_message = []
   
   if type(sentence_range) == v:t_none
     return
@@ -162,7 +241,8 @@ function! s:IDE.cursorNext() abort
 
   let sentence = join(self.getContent(sentence_range), "\n")
 
-  call self.CoqTopDriver.queueSentence(sentence, {"range": sentence_range})
+  let payload = {'range': sentence_range, 'refresh': 1}
+  call self.CoqTopDriver.queueSentence(sentence, payload)
 
   if exists("g:coquille_auto_move") && g:coquille_auto_move == 1
     self.move(sentence_range[0])
