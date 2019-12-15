@@ -22,11 +22,15 @@ function! coquille#resetPanels() abort
     setlocal buftype=nofile
     setlocal filetype=coq-goals
     setlocal noswapfile
+    setlocal nocursorline
+    setlocal nocursorcolumn
     let l:goal_buf = bufnr("%")
   rightbelow new Infos
     setlocal buftype=nofile
     setlocal filetype=coq-infos
     setlocal noswapfile
+    setlocal nocursorline
+    setlocal nocursorcolumn
     let l:info_buf = bufnr("%")
   execute l:winnr . 'winc w'
   

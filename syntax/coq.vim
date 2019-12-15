@@ -1,36 +1,11 @@
-" Vim syntax file
 " Language:     Coq
 " Filenames:    *.v
-" Maintainer:  Vincent Aravantinos <vincent.aravantinos@gmail.com>
-" Last Change: 2008 Dec 02 - Added the Program and Obligation constructions (in Coq v8.2) - with Serge Leblanc.
-"              2008 Jan 30 - Applied the improvments for all constructions, added 'with' and 'where' for
-"                            fixpoints and inductives, fixed some hard long standing bugs.
-"              2008 Jan 27 - Changed the way things are coloured, improved the efficiency of colouring.
-"              2008 Jan 25 - Added Ltac, added Notations, bugfixes.
-"              2007 Dec 1 - Added Record's.
-"              2007 Nov 28 - Added things to reuse (in other plugins) the knowledge that we are inside a proof.
-"              2007 Nov 19 - Fixed bug with comments.
-"              2007 Nov 17 - Various minor bugfixes.
-"              2007 Nov 8 - Added keywords.
-"              2007 Nov 8 - Fixed some ill-highlighting in the type of declarations.
-"              2007 Nov 8 - Fixed pb with keywords ("\<...\>" had been forgotten) 
-"                           (thanks to Vasileios Koutavas)
-"              2007 Nov 8 - Definition...Defined now works as expected, 
-"                           fixed a bug with tactics that were not recognized,
-"                           fixed other bugs
-"              2007 Nov 7 - Complete refactoring, (much) more accurate highlighting. Much bigger file...
-"              2007 Nov 7 - Added tactic colouration, added other keywords (thanks to Tom Harke)
-"              2007 Nov 6 - Added "Defined" keyword (thanks to Serge Leblanc)
-"              2007 Nov 5 - Initial version.
+" Original:  Vincent Aravantinos <vincent.aravantinos@gmail.com>
 " License:     public domain
 " TODO: mark bad constructions (eg. Section ended but not opened)
 
-" For version 5.x: Clear all syntax items
-" For version 6.x: Quit when a syntax file was already loaded
-if version < 600
- syntax clear
-elseif exists("b:current_syntax") && b:current_syntax == "coq"
- finish
+if exists("b:current_syntax")
+  finish
 endif
 
 " Coq is case sensitive.
@@ -52,7 +27,7 @@ syn region coqModule contains=coqIdent matchgroup=coqTopLevel start="Module" end
 syn region coqModVal contains=coqIdent start=":=" end="\.\_s"
 
 " Terms
-syn cluster coqTerm            contains=coqKwd,coqTermPunctuation,coqKwdMatch,coqKwdLet,coqKwdParen
+syn cluster coqTerm            contains=coqKwd,coqTermPunctuation,coqKwdMatch,coqKwdLet,coqKwdParen,coqString
 syn region coqKwdMatch         contained contains=@coqTerm matchgroup=coqKwd start="\<match\>" end="\<with\>"
 syn region coqKwdLet           contained contains=@coqTerm matchgroup=coqKwd start="\<let\>"   end=":="
 syn region coqKwdParen         contained contains=@coqTerm matchgroup=coqTermPunctuation start="(" end=")" keepend extend
@@ -288,78 +263,70 @@ syn region coqRecField   contained contains=coqField matchgroup=coqVernacPunctua
 syn match coqField       contained "[_[:alpha:]][_'[:alnum:]]*"
 
 " Various (High priority)
-syn region  coqComment           containedin=ALL contains=coqComment,coqTodo start="(\*" end="\*)" extend keepend
+syn region  coqComment           containedin=ALLBUT,coqString contains=coqComment,coqString,coqTodo start="(\*" end="\*)" extend keepend
 syn keyword coqTodo              contained TODO FIXME XXX NOTE
-syn region  coqString            start=+"+ skip=+""+ end=+"+ extend
+
+syn region  coqString            contains=coqCharEscaped matchgroup=coqString start=+"+ skip=+""+ end=+"+ extend
+syn match   coqCharEscaped       contained +""+
+
 
 " Synchronization
 syn sync minlines=50
 syn sync maxlines=500
 
-" Define the default highlighting.
-" For version 5.7 and earlier: only when not done already
-" For version 5.8 and later: only when an item doesn't have highlighting yet
-if version >= 508 || !exists("did_coq_syntax_inits")
- if version < 508
-  let did_coq_syntax_inits = 1
-  command -nargs=+ HiLink hi link <args>
- else
-  command -nargs=+ HiLink hi def link <args>
- endif
 
- " PROOFS
- HiLink coqTactic                    Keyword
- HiLink coqLtac coqTactic
- HiLink coqProofKwd coqTactic
- HiLink coqProofPunctuation coqTactic
- HiLink coqTacticKwd coqTactic
- HiLink coqTacNotationKwd coqTactic
- HiLink coqEvalFlag coqTactic
- " Exception
- HiLink coqProofDot coqVernacular
+" PROOFS
+hi def link coqTactic                    Keyword
+hi def link coqLtac coqTactic
+hi def link coqProofKwd coqTactic
+hi def link coqProofPunctuation coqTactic
+hi def link coqTacticKwd coqTactic
+hi def link coqTacNotationKwd coqTactic
+hi def link coqEvalFlag coqTactic
+" Exception
+hi def link coqProofDot coqVernacular
 
- " PROOF DELIMITERS ("Proof", "Qed", "Defined", "Save")
- HiLink coqProofDelim                Underlined
+" PROOF DELIMITERS ("Proof", "Qed", "Defined", "Save")
+hi def link coqProofDelim                Underlined
 
- " TERMS AND TYPES
- HiLink coqTerm                      Type
- HiLink coqKwd             coqTerm
- HiLink coqTermPunctuation coqTerm
+" TERMS AND TYPES
+hi def link coqTerm                      Type
+hi def link coqKwd             coqTerm
+hi def link coqTermPunctuation coqTerm
 
- " VERNACULAR COMMANDS
- HiLink coqVernacular                PreProc
- HiLink coqVernacCmd         coqVernacular
- HiLink coqVernacPunctuation coqVernacular
- HiLink coqHint              coqVernacular
- HiLink coqFeedback          coqVernacular
- HiLink coqTopLevel          coqVernacular
+" VERNACULAR COMMANDS
+hi def link coqVernacular                PreProc
+hi def link coqVernacCmd         coqVernacular
+hi def link coqVernacPunctuation coqVernacular
+hi def link coqHint              coqVernacular
+hi def link coqFeedback          coqVernacular
+hi def link coqTopLevel          coqVernacular
 
- " DEFINED OBJECTS
- HiLink coqIdent                     Identifier
- HiLink coqNotationString coqIdent
+" DEFINED OBJECTS
+hi def link coqIdent                     Identifier
+hi def link coqNotationString coqIdent
 
- " CONSTRUCTORS AND FIELDS
- HiLink coqConstructor               Keyword
- HiLink coqField coqConstructor
+" CONSTRUCTORS AND FIELDS
+hi def link coqConstructor               Keyword
+hi def link coqField coqConstructor
 
- " NOTATION SPECIFIC ("at level", "format", etc)
- HiLink coqNotationKwd               Special
+" NOTATION SPECIFIC ("at level", "format", etc)
+hi def link coqNotationKwd               Special
 
- " USUAL VIM HIGHLIGHTINGS
-   " Comments
-   HiLink coqComment                   Comment
-   HiLink coqProofComment coqComment
+" USUAL VIM HIGHLIGHTINGS
+  " Comments
+  hi def link coqComment                   Comment
+  hi def link coqProofComment coqComment
 
-   " Todo
-   HiLink coqTodo                      Todo
+  " Todo
+  hi def link coqTodo                      Todo
 
-   " Errors
-   HiLink coqError                     Error
+  " Errors
+  hi def link coqError                     Error
 
-   " Strings
-   HiLink coqString                    String
+  " Strings
+  hi def link coqString                    String
+  hi def link coqCharEscaped               SpecialChar
 
- delcommand HiLink
-endif
 
 let b:current_syntax = "coq"
