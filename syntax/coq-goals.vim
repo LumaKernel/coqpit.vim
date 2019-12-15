@@ -1,5 +1,5 @@
 " Language:     Coq-goals
-" Filenames:    *.v
+" Filenames:    Goals
 " Original:  Laurent Georget <laurent@lgeorget.eu>
 " License:     public domain
 

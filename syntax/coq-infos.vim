@@ -1,5 +1,5 @@
 " Language:    Coq-infos
-" Filenames:   *.v
+" Filenames:   Infos
 " Original:  Laurent Georget <laurent@lgeorget.eu>
 " License:     public domain
 
