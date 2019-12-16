@@ -93,7 +93,7 @@ function! coquille#launch(...)
   " make the different commands accessible
   " command! -buffer GotoDot py3 coquille.goto_last_sent_dot()
   command! -buffer CoqNext call b:coquilleIDE.cursorNext()
-  " command! -buffer CoqUndo py3 coquille.coq_rewind()
+  command! -buffer CoqUndo call b:coquilleIDE.cursorBack()
   " command! -buffer CoqToCursor py3 coquille.coq_to_cursor()
   command! -buffer CoqRearrange call coquille#resetPanels()
   command! -buffer CoqKill call coquille#killSession()
@@ -128,3 +128,18 @@ function! coquille#register()
 
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
 endfunction
+
+
+function! coquille#assert(assertion)
+  if exists('g:coquille_debug') && g:coquille_debug == 1
+    if !exists('s:V')
+      let s:V = vital#of('vital')
+      let s:PowerAssert = s:V.import('Vim.PowerAssert')
+      let s:assert = s:PowerAssert.assert
+      execute s:PowerAssert.define('PowerAssert')
+    endif
+
+    s:assert(a:assertion)
+  endif
+endfunction
+

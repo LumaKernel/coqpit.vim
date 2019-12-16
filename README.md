@@ -45,6 +45,7 @@ favorite editor.
 Dependencies
 ------------
 
+- Vim 8.0 or above with `+job`, `+lambda`
 - [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
 - Coq 3.7
 

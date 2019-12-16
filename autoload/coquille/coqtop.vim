@@ -15,8 +15,6 @@ endfunction
 " restart {{{
 function! s:CoqTopDriver.restart(args = []) abort
   " TODO : user args
-  let self.states = []
-  silent! unlet self.root_state
   silent! unlet self.state_id
 
   let self.payloads = []
@@ -61,6 +59,7 @@ function! s:CoqTopDriver._out_cb(channel, msg) abort
   let g:gxml = xml  " TODO : FOR DEUBG
 
   call self.cb(xml)
+  call remove(self.payloads, 0)
 
   call self._process_queue()
 endfunction
@@ -75,7 +74,7 @@ endfunction
 " -- process information
 
 function! s:CoqTopDriver._initiated() abort
-  return exists("self.root_state")
+  return exists("self.state_id")
 endfunction
 
 function! s:CoqTopDriver.running() abort
@@ -106,7 +105,8 @@ function! s:CoqTopDriver._process_queue() abort
 endfunction
 
 
-function! s:CoqTopDriver._call(msg, cb) abort
+function! s:CoqTopDriver._call(msg, cb, payload) abort
+  call add(self.payloads, a:payload)
   if self.waiting
     return
   endif
@@ -141,57 +141,59 @@ endfunction
 
 function! s:CoqTopDriver.goal(goals)
   if exists("self.goal_cb")
-    call self.goal_cb(a:goals)
+    call self.goal_cb(a:goals, self.payloads[0])
   endif
 endfunction
 
-function! s:CoqTopDriver.currentState() abort
-  if len(self.states) == 0
-    return self.root_state
-  else
-    return self.state_id
+function! s:CoqTopDriver.force_state_id(state_id)
+  if exists("self.force_state_id_cb")
+    call self.force_state_id_cb(a:state_id, self.payloads[0])
+  endif
+endfunction
+
+function! s:CoqTopDriver.initiated(state_id)
+  if exists("self.initiated_cb")
+    call self.initiated_cb(a:state_id, self.payloads[0])
   endif
 endfunction
 
 
 "  send Init < init > {{{
-function! s:CoqTopDriver._init() abort
+function! s:CoqTopDriver._init(payload = v:null) abort
   call self._call(
     \ '<call val="Init"><option val="none"/></call>'
-    \ , self._sendInitCallback)
+    \ , self._sendInitCallback, a:payload)
 endfunction
 function! s:CoqTopDriver._sendInitCallback(xml) abort
   echom "Init Callback"
   let self.state_id = a:xml.find("state_id").attr.val
-  let self.root_state = self.state_id
+  call self.initiated(self.state_id)
   call self._process_queue()
 endfunction  " }}}
 
 
 " send Add < send sentence > {{{
 function! s:CoqTopDriver.sendSentence(sentence, payload = v:null) abort
-  call add(self.payloads, a:payload)
   call self._call('
     \<call val="Add">
       \<pair>
         \<pair>
-          \' . s:createElement("string", {}, a:sentence).toString() . '
+          \' .. s:createElement("string", {}, a:sentence).toString() .. '
           \<int>-1</int>
         \</pair>
         \<pair>
-          \' . s:createElement("state_id", {"val": self.currentState()}).toString() . '
-          \<bool val="false"/>
+          \<state_id val="' .. self.state_id .. '" />
+          \<bool val="false" />
         \</pair>
       \</pair>
     \</call>
-  \', self._sendAddCallback)
+  \', self._sendAddCallback, a:payload)
 endfunction
 function! s:CoqTopDriver._sendAddCallback(xml) abort
   echom "Add Callback"
   let value = a:xml.find("value")
   let new_state_id = value.find("state_id").attr.val
   if value.attr.val == "good"
-    call add(self.states, new_state_id)
     let self.state_id = new_state_id
     call self.result(new_state_id, 0, '', v:null)
   else
@@ -211,16 +213,14 @@ function! s:CoqTopDriver._sendAddCallback(xml) abort
 
     call self.result(new_state_id, 1, msg, err_loc)
   endif
-  call remove(self.payloads, 0)
 endfunction  " }}}
 
 
 " send Goal < update Goals > {{{
 function! s:CoqTopDriver.refreshGoalInfo(payload = v:null) abort
-  call add(self.payloads, a:payload)
   call self._call(
     \ '<call val="Goal"><unit /></call>'
-    \ , self._sendGoalCallback)
+    \ , self._sendGoalCallback, a:payload)
 endfunction
 function! s:CoqTopDriver._sendGoalCallback(xml) abort
   let error_found = 0
@@ -258,9 +258,20 @@ function! s:CoqTopDriver._sendGoalCallback(xml) abort
       call self.goal(["hi"])
     endif
   endif
-  call remove(self.payloads, 0)
 endfunction  " }}}
 
+" send EditAt < move tip > {{{
+function! s:CoqTopDriver.editAt(new_state_id, payload = v:null) abort
+  call add(self.payloads, a:payload)
+  call self._call(
+    \ '<call val="Edit_at"><state_id val="' .. a:new_state_id .. '" /></call>'
+    \ , self._sendEditAtCallback)
+endfunction
+function! s:CoqTopDriver._sendEditAtCallback(xml) abort
+  if a:xml.find('value').attr.val != 'good'
+    call self.force_state_id(a:xml.find('value').find('state_id').attr.val)
+  endif
+endfunction  " }}}
 
 function! s:CoqTopDriver.queueSentence(sentence, payload = v:null) abort
   call add(self.sentenceQueue, [a:sentence, a:payload])
@@ -271,6 +282,16 @@ function! s:CoqTopDriver.clearSentenceQueue() abort
   let self.sentenceQueue = []
 endfunction
 
+function! s:CoqTopDriver.isQueueEmpty() abort
+  return len(self.sentenceQueue) == 0
+endfunction
+
+
+" callback setter {{{
+
+function! s:CoqTopDriver.setInitiatedCallback(initiated_cb)
+  let self.initiated_cb = s:bindItself(a:initiated_cb)
+endfunction
 
 " set callback function for Infos
 " cb : (
@@ -284,19 +305,20 @@ endfunction
 "   - warning
 "   - info
 function! s:CoqTopDriver.setInfoCallback(info_cb)
-  let self.info_cb = a:info_cb
+  let self.info_cb = s:bindItself(a:info_cb)
 endfunction
 
 function! s:CoqTopDriver.setResultCallback(result_cb)
-  let self.result_cb = a:result_cb
+  let self.result_cb = s:bindItself(a:result_cb)
 endfunction
 
 " set callback function for Goals
 " cb : (xml) => any
 function! s:CoqTopDriver.setGoalCallback(goal_cb)
-  let self.goal_cb = a:goal_cb
+  let self.goal_cb = s:bindItself(a:goal_cb)
 endfunction
 
+" }}}
 
 " internal functions
 
@@ -312,6 +334,14 @@ endfunction
 function! s:unescape(str) abort
   return a:str
     \->substitute('&nbsp;', ' ', 'g')
+endfunction
+
+function! s:bindItself(fn) abort
+  if type(get(a:fn, 'dict')) == v:t_dict
+    return function(a:fn, get(a:fn, 'dict'))
+  else
+    return a:fn
+  endif
 endfunction
 
 

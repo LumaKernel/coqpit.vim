@@ -12,7 +12,8 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.GoalBuffers = []
   let self.InfoBuffers = []
 
-  let self.sentencePosList = []
+  let self.sentencePosList = [[0, 0]]
+  let self.state_id_list = []
   let self.colored = []
   let self.hls = []
 
@@ -24,9 +25,10 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.CoqTopDriver = coquille#coqtop#makeInstance(a:args)
 
   " We should bind.
-  call self.CoqTopDriver.setGoalCallback(function(self._goalCallback, self))
-  call self.CoqTopDriver.setInfoCallback(function(self._infoCallback, self))
-  call self.CoqTopDriver.setResultCallback(function(self._resultCallback, self))
+  call self.CoqTopDriver.setGoalCallback(self._goalCallback)
+  call self.CoqTopDriver.setInfoCallback(self._infoCallback)
+  call self.CoqTopDriver.setResultCallback(self._resultCallback)
+  call self.CoqTopDriver.setInitiatedCallback(self._initiatedCallback)
 
   return self
 endfunction
@@ -34,7 +36,13 @@ endfunction
 
 " -- private
 
-function! s:IDE._goalCallback(goals) abort
+" -- -- callbacks to CoqTopHandler operations {{{
+
+function! s:IDE._initiatedCallback(state_id, _payload) abort
+  call add(self.state_id_list, a:state_id)
+endfunc
+
+function! s:IDE._goalCallback(goals, _payload) abort
   let goal_message = []
   if type(a:goals) == v:t_none
   else
@@ -49,11 +57,22 @@ function! s:IDE._goalCallback(goals) abort
 endfunction
 
 function! s:IDE._infoCallback(state_id, level, msg, loc, payload) abort
+  call add(self.state_id_list, a:state_id)
   let [spos, epos] = self.state_id_to_range[a:state_id]
 
   if type(a:loc) != v:t_none
     let [start, end] = a:loc
     let mes_range = [self.steps(spos, start, 1), self.steps(spos, end - 1, 1)]
+
+    call coquille#assert('type(mes_range[0]) != v:t_none')
+    call coquille#assert('type(mes_range[1]) != v:t_none')
+
+    if type(mes_range[0]) == v:t_none || type(mes_range[1]) == v:t_none
+      echom [spos, start]
+      echoerr mes_range
+      throw "[Coquille IDE] internal error."
+    endif
+
     if a:level == "error"
       call add(self.hls, ["CoqError", mes_range, 30])
       call self._shrinkTo(epos)
@@ -77,7 +96,8 @@ endfunction
 function! s:IDE._resultCallback(state_id, is_err, msg, err_loc, payload) abort
   let range = a:payload["range"]
   let [spos, epos] = range
-  let refresh = a:payload["refresh"]
+  " let refresh = a:payload["refresh"]
+  let refresh = self.CoqTopDriver.isQueueEmpty()
 
   if a:is_err
     call self._shrinkTo(epos)
@@ -111,11 +131,15 @@ function! s:IDE._resultCallback(state_id, is_err, msg, err_loc, payload) abort
   let self.hls = []
 endfunction
 
+" }}}
+
 function! s:IDE._shrinkTo(pos) abort
-  while len(self.sentencePosList)
+  while len(self.sentencePosList) > 1
         \ && sort([[a:pos, 0], [self.sentencePosList[-1], 1]])[0][1] == 0
     call remove(self.sentencePosList, -1)
   endwhile
+
+  silent! unlet self.state_id_list[len(self.sentencePosList):-1]
 endfunction
 
 
@@ -180,9 +204,6 @@ endfunction
 " Returns last position which is not sent.
 " return Pos
 function! s:IDE.getCursor() abort
-  if len(self.sentencePosList) == 0
-    return [0, 0]
-  endif
   return self.sentencePosList[-1]
 endfunction
 
@@ -209,7 +230,7 @@ function! s:IDE.steps(pos, num, newline_as_one = 0) abort
   let [line, col] = a:pos
   let linenum = len(content)
 
-  while now < a:num && line < linenum
+  while line < linenum
     let newcol = col + a:num - now
     if newcol < len(content[line]) + a:newline_as_one
       return [line, newcol]
@@ -245,8 +266,32 @@ function! s:IDE.cursorNext() abort
   call self.CoqTopDriver.queueSentence(sentence, payload)
 
   if exists("g:coquille_auto_move") && g:coquille_auto_move == 1
-    self.move(sentence_range[0])
+    self.move(sentence_range[1])
   endif
+
+  call self.recolor()
+endfunction
+
+function! s:IDE.cursorBack() abort
+  if len(self.sentencePosList) == 1
+    return
+  endif
+
+  let self.info_message = []
+
+  let removed = remove(self.sentencePosList, -1)
+  silent! unlet self.state_id_list[len(self.sentencePosList):-1]
+
+  " think `else` as possibility, `queued but not sent`
+  if len(self.state_id_list) && len(self.state_id_list) == len(self.sentencePosList)
+    let new_state_id = self.state_id_list[-1]
+    call self.CoqTopDriver.editAt(new_state_id)
+  endif
+
+  if exists("g:coquille_auto_move") && g:coquille_auto_move == 1
+    self.move(sentence_range[1])
+  endif
+  call self.CoqTopDriver.refreshGoalInfo()
 
   call self.recolor()
 endfunction
@@ -269,6 +314,7 @@ endfunction
 " internal
 
 function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abort
+  echom [a:range]
   let [spos, epos] = a:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
