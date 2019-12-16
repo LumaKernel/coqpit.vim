@@ -18,10 +18,23 @@ TODO
 * More flexible settings
   * Reset window
   * CoqToCursor with ceiling (now, flooring)
+  * `auto launch`
+  * `auto open window`
+  * `rearrange after focus`
+  * `rerun after focus`
 * Fix bugs
 * Highlighting Erros in Editor
 * Python2 to Python3 ... ? ( Is it needed ? )
   * write in vim script !!
+* Vim friendly Search Interface
+* Compile Coq in Vim
+  * `rerun after compile`
+* write tests
+* document about custimize window
+* Jump to Cursor
+* Jump to Error line
+  * location list
+  * ... or ?
 
 ---
 
