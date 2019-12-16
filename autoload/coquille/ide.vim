@@ -173,7 +173,7 @@ function! s:IDE.getContent(range = v:null) abort
 endfunction
 
 function! s:IDE.maxlen() abort
-  return max(map(self.getContent(), { a -> len(a) }))
+  return max(map(self.getContent(), 'len(v:val)'))
 endfunction
 
 
@@ -273,7 +273,6 @@ function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abo
   let [sline, scol] = spos
   let [eline, ecol] = epos
 
-  call assert_true(spos[0] < epos[0] || (spos[0] == epos[0] && spos[1] <= epos[1]))
   if spos == epos
     return []
   endif
