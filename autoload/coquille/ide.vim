@@ -2,6 +2,9 @@
 " Coquille IDE
 " ============
 
+let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
+let s:assert = s:PowerAssert.assert
+
 let s:IDE = {}
 
 function! s:IDE.new(bufnr, args = []) abort
@@ -22,13 +25,13 @@ function! s:IDE.new(bufnr, args = []) abort
 
   let self.state_id_to_range = {}
 
-  let self.CoqTopDriver = coquille#coqtop#makeInstance(a:args)
+  function! s:after_init(state_id) abort closure
+    call add(self.state_id_list, a:state_id)
+    let self.state_id_to_range[a:state_id] = [[0, 0], [0, 0]]
+  endfunction
 
-  " We should bind.
-  call self.CoqTopDriver.setGoalCallback(self._goalCallback)
-  call self.CoqTopDriver.setInfoCallback(self._infoCallback)
-  call self.CoqTopDriver.setResultCallback(self._resultCallback)
-  call self.CoqTopDriver.setInitiatedCallback(self._initiatedCallback)
+  let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, funcref('s:after_init', self))
+  call self.coqtop_handler.set_info_callback(self._infoCallback)
 
   return self
 endfunction
@@ -38,13 +41,9 @@ endfunction
 
 " -- -- callbacks to CoqTopHandler operations {{{
 
-function! s:IDE._initiatedCallback(state_id, _payload) abort
-  call add(self.state_id_list, a:state_id)
-endfunc
-
-function! s:IDE._goalCallback(goals, _payload) abort
+function! s:IDE._goalCallback(goals) abort
   let goal_message = []
-  if type(a:goals) == v:t_none
+  if a:goals is v:null
   else
     if len(a:goals) == 0
       let goal_message = ["No goals."]
@@ -56,79 +55,34 @@ function! s:IDE._goalCallback(goals, _payload) abort
   call self.refreshGoal()
 endfunction
 
-function! s:IDE._infoCallback(state_id, level, msg, loc, payload) abort
-  call add(self.state_id_list, a:state_id)
+function! s:IDE._infoCallback(state_id, level, msg, loc) abort
+  exe s:assert('has_key(self.state_id_to_range, a:state_id)')
   let [spos, epos] = self.state_id_to_range[a:state_id]
 
-  if type(a:loc) != v:t_none
+  let self.info_message += [a:msg]
+
+  if a:loc isnot v:null
     let [start, end] = a:loc
-    let mes_range = [self.steps(spos, start, 1), self.steps(spos, end - 1, 1)]
+    let mes_range = [self.steps(spos, start, 1), self.steps(spos, end, 1)]
 
-    call coquille#assert('type(mes_range[0]) != v:t_none')
-    call coquille#assert('type(mes_range[1]) != v:t_none')
-
-    if type(mes_range[0]) == v:t_none || type(mes_range[1]) == v:t_none
-      echom [spos, start]
-      echoerr mes_range
-      throw "[Coquille IDE] internal error."
-    endif
+    exe s:assert('mes_range[0] isnot v:null')
+    exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
-      call add(self.hls, ["CoqError", mes_range, 30])
+      call add(self.hls, ["CoqMarkedError", mes_range, 30])
       call self._shrinkTo(epos)
-      let self.info_message += [a:msg]
     elseif a:level == "warning"
-      call add(self.hls, ["CoqWarn", mes_range, 20])
-      let self.info_message += [a:msg]
+      call add(self.hls, ["CoqCheckedWarn", mes_range, 20])
     elseif a:level == "info"
-      let self.info_message += [a:msg]
     elseif a:level == ""
     else
       throw "Error: Unkown message level"
     endif
-  endif
-
-  call self.recolor()
-  call self.refreshInfo()
-  let self.hls = []
-endfunction
-
-function! s:IDE._resultCallback(state_id, is_err, msg, err_loc, payload) abort
-  let range = a:payload["range"]
-  let [spos, epos] = range
-  " let refresh = a:payload["refresh"]
-  let refresh = self.CoqTopDriver.isQueueEmpty()
-
-  if a:is_err
-    call self._shrinkTo(epos)
-    call self.CoqTopDriver.clearSentenceQueue()
-    " call self.CoqTopDriver.refreshGoalInfo(a:payload)
-
-    echom "hi"
-    echom [a:is_err, a:msg, a:err_loc, a:payload]
-
-    if type(a:err_loc) != v:t_none
-      let [start, end] = a:err_loc
-      let mes_range = [self.steps(spos, start, 1), self.steps(spos, end - 1, 1)]
-      call add(self.hls, ["CoqError", mes_range, 30])
-    endif
-
-    echom "hi2"
-
-    if a:msg != ''
-      let self.info_message += [a:msg]
-    endif
   else
-    let self.state_id_to_range[a:state_id] = range
-  endif
-
-  if refresh
-    call self.CoqTopDriver.refreshGoalInfo(a:payload)
   endif
 
   call self.recolor()
   call self.refreshInfo()
-  let self.hls = []
 endfunction
 
 " }}}
@@ -178,7 +132,7 @@ endfunction
 "
 " return [string]
 function! s:IDE.getContent(range = v:null) abort
-  if type(a:range) == v:t_none
+  if a:range is v:null
     return getbufline(self.handling_bufnr, 1, '$')
   endif
 
@@ -186,9 +140,7 @@ function! s:IDE.getContent(range = v:null) abort
   let [sline, scol] = spos
   let [eline, ecol] = epos
 
-  call assert_true(spos[0] < epos[0] || (spos[0] == epos[0] && spos[1] <= epos[1]))
-
-  let lines = getbufline(self.handling_bufnr, sline + 1, eline + 2)
+  let lines = getbufline(self.handling_bufnr, sline + 1, eline + 1)
 
   let lines[eline-sline] = lines[eline-sline][:ecol]
   let lines[0] = lines[0][scol:]
@@ -202,6 +154,7 @@ endfunction
 
 
 " Returns last position which is not sent.
+"
 " return Pos
 function! s:IDE.getCursor() abort
   return self.sentencePosList[-1]
@@ -213,15 +166,20 @@ function! s:IDE.recolor() abort
     call matchdelete(id)
   endfor
 
-  let self.colored = []
-  let cursor = self.getCursor()
-  let maxlen = self.maxlen()
+  if len(self.state_id_list)
+    let self.colored = []
+    let cursor = self.getCursor()
+    let last = self.state_id_to_range[self.state_id_list[-1]][1]
+    let maxlen = self.maxlen()
+    ECHO last
 
-  let self.colored += s:matchaddrange(maxlen, "SentToCoq", [[0, 0], cursor])
+    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last])
+    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last, cursor])
 
-  for [group, range, priority] in self.hls
-    let self.colored += s:matchaddrange(maxlen, group, range, priority)
-  endfor
+    for [group, range, priority] in self.hls
+      let self.colored += s:matchaddrange(maxlen, group, range, priority)
+    endfor
+  endif
 endfunction
 
 function! s:IDE.steps(pos, num, newline_as_one = 0) abort
@@ -245,8 +203,48 @@ function! s:IDE.steps(pos, num, newline_as_one = 0) abort
 endfunction
 
 
+" -- -- callback for sending sentence {{{
+
+function! s:IDE._makeResultCallback(range) abort
+  function! s:_resultCallback(state_id, is_err, msg, err_loc) abort closure
+    let [spos, epos] = a:range
+    let refresh = self.coqtop_handler.isQueueEmpty()
+
+    if a:is_err
+      call self._shrinkTo(epos)
+      call self.coqtop_handler.clearSentenceQueue()
+      call self.coqtop_handler.refreshGoalInfo()
+
+      if a:err_loc isnot v:null
+        let [start, end] = a:err_loc
+        let mes_range = [self.steps(spos, start, 1), self.steps(spos, end, 1)]
+        call add(self.hls, ["CoqMarkedError", mes_range, 30])
+      endif
+
+      if a:msg != ''
+        let self.info_message += [a:msg]
+      endif
+    else
+      call add(self.state_id_list, a:state_id)
+      let self.state_id_to_range[a:state_id] = a:range
+    endif
+
+    if refresh
+      call self.coqtop_handler.refreshGoalInfo()
+    endif
+
+    call self.recolor()
+    call self.refreshInfo()
+  endfunction
+
+  return funcref('s:_resultCallback', self)
+endfunction
+" }}}
+
+
 " -- -- cursor move (cursor means last position which was not sent)
 
+" cursorNext {{{
 function! s:IDE.cursorNext() abort
   let content = self.getContent()
   let cursor = self.getCursor()
@@ -254,7 +252,7 @@ function! s:IDE.cursorNext() abort
 
   let self.info_message = []
   
-  if type(sentence_range) == v:t_none
+  if sentence_range is v:null
     return
   endif
 
@@ -262,20 +260,24 @@ function! s:IDE.cursorNext() abort
 
   let sentence = join(self.getContent(sentence_range), "\n")
 
-  let payload = {'range': sentence_range, 'refresh': 1}
-  call self.CoqTopDriver.queueSentence(sentence, payload)
+  call self.coqtop_handler.queueSentence(sentence, self._makeResultCallback(sentence_range))
 
-  if exists("g:coquille_auto_move") && g:coquille_auto_move == 1
-    self.move(sentence_range[1])
+  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
+    call self.move(sentence_range[1])
   endif
 
   call self.recolor()
-endfunction
+endfunction  " }}}
 
+" cursorBack {{{
 function! s:IDE.cursorBack() abort
   if len(self.sentencePosList) == 1
     return
   endif
+  exe s:assert('len(self.sentencePosList) > 1')
+
+  ECHO self.state_id_list
+  ECHO self.sentencePosList
 
   let self.info_message = []
 
@@ -285,16 +287,23 @@ function! s:IDE.cursorBack() abort
   " think `else` as possibility, `queued but not sent`
   if len(self.state_id_list) && len(self.state_id_list) == len(self.sentencePosList)
     let new_state_id = self.state_id_list[-1]
-    call self.CoqTopDriver.editAt(new_state_id)
+    call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
   endif
 
-  if exists("g:coquille_auto_move") && g:coquille_auto_move == 1
-    self.move(sentence_range[1])
+  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
+    call self.move(removed)
   endif
-  call self.CoqTopDriver.refreshGoalInfo()
+  call self.coqtop_handler.refreshGoalInfo()
 
   call self.recolor()
 endfunction
+function! s:IDE._after_edit_at(is_err, state_id) abort
+  if a:is_err
+    " TODO: restart ? shrink to valid sate_id ?
+    echoerr "[Coquille IDE] internal error."
+  endif
+endfunction
+" }}}
 
 
 " -- -- move (vim editor's cursor move)
@@ -304,17 +313,17 @@ function! s:IDE.focusing() abort
 endfunction
 
 function! s:IDE.move(pos) abort
-  if focusing()
+  if self.focusing()
     let [line, col] = a:pos
-    call cursor(line, col + 1)
+    call cursor(line + 1, col)
   endif
 endfunction
+
 
 
 " internal
 
 function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abort
-  echom [a:range]
   let [spos, epos] = a:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
@@ -325,7 +334,7 @@ function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abo
 
   let ids = []
   if sline == eline
-    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol + 1]], a:priority, a:id, a:dict))
+    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], a:priority, a:id, a:dict))
   else
     call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], a:priority, a:id, a:dict))
     call add(ids, matchaddpos(a:group, [[eline + 1, 1, ecol]], a:priority, a:id, a:dict))
@@ -346,7 +355,6 @@ endfunction
 
 " export
 
-function! coquille#ide#makeInstance(bufnr, args = []) abort
-  return s:IDE.new(a:bufnr, a:args)
+function! coquille#ide#makeInstance(...) abort
+  return call(s:IDE.new, a:000)
 endfunction
-

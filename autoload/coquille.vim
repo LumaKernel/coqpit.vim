@@ -110,36 +110,10 @@ endfunction
 function! coquille#register()
   " TODO : add auto-launch optoin
 
-  function! s:defineColorScheme()
-    if g:colors_name is "hybrid"
-      hi default CheckedByCoq guibg=#111130
-      hi default SentToCoq guibg=#336633
-    endif
-    hi default CheckedByCoq ctermbg=17 guibg=LightGreen
-    hi default SentToCoq ctermbg=60 guibg=LimeGreen
-  endfunction
-
   augroup cs
     autocmd!
-    autocmd ColorScheme * :call <SID>defineColorScheme()
+    autocmd ColorScheme * :call coquille#color#defineColorScheme()
   augroup END
-
-  hi link CoqError Error
 
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
 endfunction
-
-
-function! coquille#assert(assertion)
-  if exists('g:coquille_debug') && g:coquille_debug == 1
-    if !exists('s:V')
-      let s:V = vital#of('vital')
-      let s:PowerAssert = s:V.import('Vim.PowerAssert')
-      let s:assert = s:PowerAssert.assert
-      execute s:PowerAssert.define('PowerAssert')
-    endif
-
-    s:assert(a:assertion)
-  endif
-endfunction
-

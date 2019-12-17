@@ -3,11 +3,10 @@
 " =============
 
 
-let s:NOT_WHITESPACE_regex = '\v\S&[^\n\r]'
-let s:COMMENT_START_regex = '\v\(\*'
-let s:COMMENT_END_regex = '\v\*\)'
-let s:STRING_DELIM_regex = '\v"'
-let s:DOT_regex = '\v\.'
+let s:COMMENT_START_regex = '(\*'
+let s:COMMENT_END_regex = '\*)'
+let s:STRING_DELIM_regex = '"'
+let s:DOT_regex = '\.\%($\|\n\|\t\)'
 
 
 " library for Coq as a language
@@ -30,7 +29,7 @@ let s:DOT_regex = '\v\.'
 function! coqlang#nextSentenceRange(content, from_pos) abort
   let [line, col] = a:from_pos
   let end_pos = coqlang#nextSentencePos(a:content, a:from_pos)
-  if type(end_pos) == v:t_none
+  if end_pos is v:null
     return v:null
   endif
 
@@ -46,7 +45,7 @@ endfunction  " }}}
 " return Pos | null
 " skipBlanks(content, from_pos) {{{
 function! coqlang#skipBlanks(content, from_pos) abort
-  if type(a:from_pos) == v:t_none
+  if a:from_pos is v:null
     return v:null
   endif
 
@@ -89,7 +88,7 @@ endfunction  " }}}
 " Examples:
 "   - nextSentencePos(["hi."], [0, 0]) == [0, 3]
 "   - nextSentencePos([" hello."], [0, 0]) == [0, 7]
-"   - nextSentencePos(["(* oh... *)","--."], [0, 3]) == [1, 2]
+"   - nextSentencePos(["(* oh... *)","--."], [0, 0]) == [1, 2]
 "
 "
 " content : [string]
@@ -99,7 +98,7 @@ endfunction  " }}}
 " nextSentencePos(content, from_pos) {{{
 function! coqlang#nextSentencePos(content, from_pos) abort
   let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(nonblank_pos) == v:t_none
+  if nonblank_pos is v:null
     return v:null
   endif
 
@@ -128,10 +127,10 @@ function! coqlang#nextSentencePos(content, from_pos) abort
   "  before finding the sentence beginning
   let tail_len = len(a:content[line]) - col
 
-  if a:content[line][col:col+2] == '(*'
-    let com_end = coqlang#skipComment(content, [line, col + 2])
+  if a:content[line][col:col+1] == '(*'
+    let com_end = coqlang#skipComment(a:content, [line, col + 2])
 
-    if type(com_end) == v:t_none
+    if com_end is v:null
       return v:null
     endif
 
@@ -150,7 +149,7 @@ endfunction  " }}}
 "   - skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
 "   - skipComment([" (* *) hello"], [0, 3]) == [0, 6]
 "   - skipComment([" (* ", "(*", "*)*)--"], [0, 3]) == [2, 4]
-"   - skipComment([' (* " "" "*) "" " *) hello'], [0, 3]) == [0, 20]
+"   - skipComment([' (* " "" *) "" " *) hello'], [0, 3]) == [0, 19]
 "
 "
 " content : [string]
@@ -165,7 +164,7 @@ function! coqlang#skipComment(content, from_pos, nested = 1) abort
   endif
 
   let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(nonblank_pos) == v:t_none
+  if nonblank_pos is v:null
     return v:null
   endif
 
@@ -214,7 +213,7 @@ endfunction  " }}}
 " skipString(content, from_pos) {{{
 function! coqlang#skipString(content, from_pos) abort
   let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(nonblank_pos) == v:t_none
+  if nonblank_pos is v:null
     return v:null
   endif
 
@@ -242,7 +241,7 @@ endfunction  " }}}
 "
 " Examples:
 "   - nextDot(["Hi."], [0, 0]) == [0, 3]
-"   - nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 8]
+"   - nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
 "
 "
 " content : [string]
@@ -252,7 +251,7 @@ endfunction  " }}}
 " nextDot(content, from_pos) {{{
 function! coqlang#nextDot(content, from_pos) abort
   let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
-  if type(nonblank_pos) == v:t_none
+  if nonblank_pos is v:null
     return v:null
   endif
 
@@ -287,22 +286,31 @@ function! coqlang#nextDot(content, from_pos) abort
 endfunction  " }}}
 
 
-
 function! coqlang#Test()
-  call assert_equal(coqlang#nextSentencePos(["hi."], [0, 0]), [0, 3])
-  call assert_equal(coqlang#nextSentencePos([" hello."], [0, 0]), [0, 7])
-  call assert_equal(coqlang#nextSentencePos(["(* oh... *)","--."], [0, 3]), [1, 2])
+  PAssert coqlang#nextSentencePos(["hi."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["hi.hey."], [0, 0]) == [0, 7]
+  PAssert coqlang#nextSentencePos(["hi.\they."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["hi.","hey."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["hi.(**)hey."], [0, 0]) == [0, 11]
+  PAssert coqlang#nextSentencePos([" hello."], [0, 0]) == [0, 7]
+  PAssert coqlang#nextSentencePos(["(* oh... *)","--."], [0, 0]) == [1, 2]
+  PAssert coqlang#nextSentencePos(["Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 8]
+  PAssert coqlang#nextSentencePos(["", "Axiom A.", "Variable B:Prob."], [0, 0]) == [1, 8]
+  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
+  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
 
-  call assert_equal(coqlang#skipComment(["hi (**) ."], [0, 0], 0), [0, 0])
-  call assert_equal(coqlang#skipComment([" (* *) hello"], [0, 0], 0), [0, 0])
-  call assert_equal(coqlang#skipComment([" (* *) hello"], [0, 3]), [0, 6])
-  call assert_equal(coqlang#skipComment([" (* ", "(*", "*)*)--"], [0, 3]), [2, 4])
-  call assert_equal(coqlang#skipComment([' (* " "" "*) "" " *) hello'], [0, 3]), [0, 20])
+  PAssert coqlang#skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
+  PAssert coqlang#skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
+  PAssert coqlang#skipComment([" (* *) hello"], [0, 3]) == [0, 6]
+  PAssert coqlang#skipComment([" (* ", "(*", "*)*)--"], [0, 3]) == [2, 4]
+  PAssert coqlang#skipComment([' (* " "" *) "" " *) hello'], [0, 3]) == [0, 19]
 
-  call assert_equal(coqlang#skipString(['" "yo.'], [0, 1]), [0, 3])
-  call assert_equal(coqlang#skipString([' " ""', ' "" " hi'], [0, 2]), [1, 5])
+  PAssert coqlang#skipString(['" "yo.'], [0, 1]) == [0, 3]
+  PAssert coqlang#skipString([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
 
-  call assert_equal(coqlang#nextDot(["Hi."], [0, 0]), [0, 3])
-  call assert_equal(coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]), [1, 8])
+  PAssert coqlang#nextDot(["Hi."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
 endfunction
 
