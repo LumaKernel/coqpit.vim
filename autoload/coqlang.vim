@@ -314,3 +314,4 @@ function! coqlang#Test()
   PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
 endfunction
 
+call coquille#test#addTestFn(funcref('coqlang#Test'))

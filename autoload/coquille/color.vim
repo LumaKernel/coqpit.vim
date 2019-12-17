@@ -31,8 +31,9 @@ endfunction
 
 
 
-function! coquille#color#Test() abort
+function! coquille#color#Test()
   exe g:PAssert('s:toTuple("#ABCDEF") == [171, 205, 239]')
   exe g:PAssert('s:toString([171, 205, 239]) ==? "#abcdef"')
 endfunction
 
+call coquille#test#addTestFn(funcref('coquille#color#Test'))

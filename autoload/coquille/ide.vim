@@ -2,15 +2,27 @@
 " Coquille IDE
 " ============
 
+" TODO : Queue はこっちで管理
+" TODO : result が帰ってきたら，queue を処理
+" TODO : 編集によって queue を縮める
+" TODO : 編集と coqtocursor を同一に
+" TODO : ただしオプションで，編集で何も変わらないように
+" TODO : 実行中より前に戻すとき，中断の発行と，EditAtの発行を
+
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
 let s:IDE = {}
+let s:bufnr_to_IDE = {}
+
+function! s:getIDE_by_bufnr(bufnr) abort
+  return s:bufnr_to_IDE[a:bufnr]
+endfunction
 
 function! s:IDE.new(bufnr, args = []) abort
   " TODO : Use argss
 
-  let self.handling_bufnr = a:bufnr
+  call self._register_buffer(a:bufnr)
 
   let self.GoalBuffers = []
   let self.InfoBuffers = []
@@ -69,10 +81,10 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
     exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
-      call add(self.hls, ["CoqMarkedError", mes_range, 30])
+      call add(self.hls, ["error", mes_range])
       call self._shrinkTo(epos)
     elseif a:level == "warning"
-      call add(self.hls, ["CoqCheckedWarn", mes_range, 20])
+      call add(self.hls, ["warning", mes_range])
     elseif a:level == "info"
     elseif a:level == ""
     else
@@ -87,13 +99,42 @@ endfunction
 
 " }}}
 
-function! s:IDE._shrinkTo(pos) abort
+function! s:IDE._shrinkTo(pos, exclusive=0) abort
   while len(self.sentencePosList) > 1
-        \ && sort([[a:pos, 0], [self.sentencePosList[-1], 1]])[0][1] == 0
+        \ && s:pos_lt(a:pos, self.sentencePosList[-1], a:exclusive)
     call remove(self.sentencePosList, -1)
   endwhile
 
+  for i in reverse(range(len(self.hls)))
+    if s:pos_lt(a:pos, self.hls[i][0][0], a:exclusive)
+      call remove(self.hls, i)
+    endif
+  endfor
+
   silent! unlet self.state_id_list[len(self.sentencePosList):-1]
+endfunction
+
+function! s:IDE._register_buffer(bufnr) abort
+  let s:bufnr_to_IDE[a:bufnr] = self
+  let self.handling_bufnr = a:bufnr
+  augroup coquille_buffer_change
+    au!
+    exe 'au TextChanged  <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
+    exe 'au TextChangedI <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
+    exe 'au TextChangedP <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
+  augroup END
+endfunction
+
+function! s:IDE._cache_buffer() abort
+  let self.cached_buffer = self.getContent()
+endfunction
+
+" make it as possible as lightweight
+function! s:IDE._after_textchange() abort
+  let change = getchangelist(self.handling_bufnr)[0][-1]
+  let pos = s:first_change(self.cached_buffer, self.getContent(), max([change['lnum']-2, 0]), 0)
+  call self._shrinkTo(pos, 1)
+  call self.recolor()
 endfunction
 
 
@@ -162,6 +203,8 @@ endfunction
 
 
 function! s:IDE.recolor() abort
+  cal self._cache_buffer()
+
   for id in self.colored
     call matchdelete(id)
   endfor
@@ -171,12 +214,21 @@ function! s:IDE.recolor() abort
     let cursor = self.getCursor()
     let last = self.state_id_to_range[self.state_id_list[-1]][1]
     let maxlen = self.maxlen()
-    ECHO last
 
     let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last])
     let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last, cursor])
 
-    for [group, range, priority] in self.hls
+    for [level, range] in self.hls
+      " sweep error and warnings appearing after the top in advance
+      let is_in_checked = s:pos_le(range[1], last)
+      if level == 'error'
+        " error is treated as not checked
+        let group = 'CoqMarkedError'
+        let priority = 30
+      elseif level == 'warning'
+        let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
+        let priority = 20
+      endif
       let self.colored += s:matchaddrange(maxlen, group, range, priority)
     endfor
   endif
@@ -218,7 +270,7 @@ function! s:IDE._makeResultCallback(range) abort
       if a:err_loc isnot v:null
         let [start, end] = a:err_loc
         let mes_range = [self.steps(spos, start, 1), self.steps(spos, end, 1)]
-        call add(self.hls, ["CoqMarkedError", mes_range, 30])
+        call add(self.hls, ["error", mes_range])
       endif
 
       if a:msg != ''
@@ -249,6 +301,7 @@ function! s:IDE.cursorNext() abort
   let content = self.getContent()
   let cursor = self.getCursor()
   let sentence_range = coqlang#nextSentenceRange(content, cursor)
+  call self._shrinkTo(cursor)
 
   let self.info_message = []
   
@@ -351,6 +404,33 @@ function! s:matchaddlines(group, lines, priority=10, id=-1, dict={}) abort
   return ids
 endfunction
 
+function! s:first_change(c1, c2, line=0, col=0) abort
+  let line = a:line
+  let col = a:col
+  while line < len(a:c1) && line < len(a:c2) && a:c1[line] == a:c2[line]
+    let line += 1
+  endwhile
+  if line < len(a:c1) && line < len(a:c2)
+    while col < len(a:c1[line]) && col < len(a:c2[line]) && a:c1[line][col] == a:c2[line][col]
+      let col += 1
+    endwhile
+  endif
+  return [line, col]
+endfunction
+
+function! s:pos_lt(pos1, pos2, eq=0) abort
+  if a:eq
+    return s:pos_le(a:pos1, a:pos2)
+  endif
+  return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] < a:pos2[1]
+endfunction
+
+function! s:pos_le(pos1, pos2, eq=1) abort
+  if !a:eq
+    return s:pos_lt(a:pos1, a:pos2)
+  endif
+  return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] <= a:pos2[1]
+endfunction
 
 
 " export
@@ -358,3 +438,23 @@ endfunction
 function! coquille#ide#makeInstance(...) abort
   return call(s:IDE.new, a:000)
 endfunction
+
+
+
+" test
+
+function! coquille#ide#Test()
+  exe g:assert('s:pos_lt([0, 1], [0, 2])')
+  exe g:assert('!s:pos_lt([0, 2], [0, 1])')
+  exe g:assert('!s:pos_lt([0, 2], [0, 2])')
+  exe g:assert('s:pos_lt([1, 2], [3, 4])')
+  exe g:assert('!s:pos_lt([3, 3], [2, 2])')
+
+  exe g:assert('s:pos_le([0, 1], [0, 2])')
+  exe g:assert('!s:pos_le([0, 2], [0, 1])')
+  exe g:assert('s:pos_le([0, 2], [0, 2])')
+  exe g:assert('s:pos_le([1, 2], [3, 4])')
+  exe g:assert('!s:pos_le([3, 3], [2, 2])')
+endfunction
+
+call coquille#test#addTestFn(funcref('coquille#ide#Test'))
