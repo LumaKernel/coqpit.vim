@@ -67,11 +67,13 @@ function! s:IDE.get_last() abort
   return get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
 endfunction
 
-function! s:IDE.top_forced() abort
-  if len(self.queue) == 0 && self.coqtop_handler.waiting
-    call self.coqtop_handler.interrupt()
+function! s:IDE._after_shrink() abort
+  if len(self.queue) == 0
+    if self.coqtop_handler.waiting
+      call self.coqtop_handler.interrupt()
+    endif
+    call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
   endif
-  call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
 endfunction
 
 " state_id_to_range {{{
@@ -204,7 +206,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
   if updated > 0
-    call self.top_forced()
+    call self._after_shrink()
   endif
 
   return updated > 0
@@ -462,14 +464,14 @@ function! s:IDE.coq_back() abort
 
   if len(self.queue) > 0
     call remove(self.queue, -1)
-    call self.top_forced()
+    call self._after_shrink()
   elseif len(self.sentence_end_pos_list) > 1
     let self.info_message = []
 
     let removed = remove(self.sentence_end_pos_list, -1)
     silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
-    call self.top_forced()
+    call self._after_shrink()
   else 
     exe s:assert('len(self.sentence_end_pos_list) == 1')
     return
@@ -546,15 +548,10 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
   let content = self.getContent()
   let last = self.get_last()
 
-  exe s:assert('last[1] >= 1')
-  if last[1] == 0
+  let next_endpos = coqlang#nextSentencePos(content, last)
+
+  if next_endpos is v:null
     return
-  endif
-
-  let sentence_end_pos = coqlang#nextSentencePos(content, last)
-
-  if sentence_end_pos is v:null
-    break
   endif
 
   call self._shrink_to(last)
@@ -563,26 +560,26 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
     let self.info_message = []
   endif
 
-  let last[1] -= 1
+  let last_inclusive = [last[0], last[1] - 1]
 
-  if s:pos_le(a:pos, last)
+  if s:pos_le(a:pos, last_inclusive)
     return
   endif
 
-  while s:pos_le(last, a:pos)
-    let sentence_end_pos = coqlang#nextSentencePos(content, last)
-    let last = sentence_end_pos
-    exe s:assert('last[1] >= 1')
-    let last[1] -= 1
+  while s:pos_le(last_inclusive, a:pos)
+    let last = coqlang#nextSentencePos(content, last)
 
-    if sentence_end_pos is v:null
+    if last is v:null
       break
     endif
 
-    call add(self.queue, sentence_end_pos)
+    exe s:assert('last[1] >= 1')
+    let last_inclusive = [last[0], last[1] - 1]
+
+    call add(self.queue, last)
   endwhile
 
-  if !ceil && a:pos != last
+  if !a:ceil && a:pos != last_inclusive
     call remove(self.queue, -1)
   endif
 
@@ -615,7 +612,9 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
     return
   endif
 
-  let curpos = getcurpos()
+  let curpos = getcurpos()[1:2]
+  let pos = [curpos[0] - 1, curpos[1] - 1]
+
   let ceil = 0
 
   if a:ceil isnot v:null
@@ -624,7 +623,7 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
     let ceil = coquille#get_buffer_config(s:cursor_ceiling)
   endif
 
-  call self.coq_to_cursor(curpos, ceil)
+  call self.coq_to_pos(pos, ceil)
 endfunction
 " }}}
 

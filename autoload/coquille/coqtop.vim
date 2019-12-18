@@ -70,6 +70,8 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
       continue
     endif
 
+    exe s:assert('self.waiting == 1')
+
     let self.waiting = 0
 
     call self.cb(value)
@@ -86,7 +88,6 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
     let content = feedback.find('feedback_content')
     if content.attr.val == 'message'
       let state_id = str2nr(feedback.find('state_id').attr.val)
-      let self.tip = state_id
       let level = content.find('message_level').attr.val
       let msg = s:unescape(content.find('pp').child[0])
       let err_loc = v:null
@@ -154,8 +155,9 @@ endfunction
 function! s:CoqTopHandler.interrupt() abort
   if self.waiting
     let self.abandon += 1
+    let self.tip = -1
+    let self.waiting = 0
   endif
-  let self.waiting = 0
 endfunction!
 
 " }}}
@@ -220,8 +222,8 @@ endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
   function! self.addCallback(value) abort closure
     let new_state_id = str2nr(a:value.find("state_id").attr.val)
-    let self.tip = new_state_id
     if a:value.attr.val == "good"
+      let self.tip = new_state_id
       let self.state_id = new_state_id
       call a:callback(new_state_id, 0, '', v:null)
     else
