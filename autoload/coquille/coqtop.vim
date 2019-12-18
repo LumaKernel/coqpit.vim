@@ -4,6 +4,8 @@
 
 " + support for Coq 8.7
 
+let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
+let s:assert = s:PowerAssert.assert
 
 let s:CoqTopHandler = {}
 
@@ -19,6 +21,7 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
 
   let self.sentenceQueue = []  " : List<[Sentence, any]>
   let self.waiting = 0
+  let self.abandon_next = 0
 
   let coqtop_cmd = [
   \  'coqtop',
@@ -38,6 +41,7 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
   let job_options.out_cb = self._out_cb
   let job_options.err_cb = self._err_cb
 
+
   let self.info = {...->0}
   let self.after_callback_fns = []
 
@@ -53,8 +57,13 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  ECHO "got!!"
-  ECHO a:msg
+  " ECHO "got!!"
+  " ECHO a:msg
+  
+  if self.abandon_next
+    let self.abandon_next = 0
+    return
+  endif
 
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -77,6 +86,7 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
     let content = feedback.find('feedback_content')
     if content.attr.val == 'message'
       let state_id = str2nr(feedback.find('state_id').attr.val)
+      let self.tip = state_id
       let level = content.find('message_level').attr.val
       let msg = s:unescape(content.find('pp').child[0])
       let err_loc = v:null
@@ -131,8 +141,8 @@ function! s:CoqTopHandler._call(msg, cb) abort
   endif
 
   " TODO : FOR DEBUG
-  ECHO "send!!"
-  ECHO a:msg
+  " ECHO "send!!"
+  " ECHO a:msg
 
   if self.running()
     let self.waiting = 1
@@ -140,6 +150,13 @@ function! s:CoqTopHandler._call(msg, cb) abort
     call ch_sendraw(self.job, a:msg . "\n")
   endif
 endfunction
+
+function! s:CoqTopHandler.interrupt() abort
+  if self.waiting
+    let self.abandon_next = 1
+  endif
+  let self.waiting = 0
+endfunction!
 
 " }}}
 
@@ -171,8 +188,9 @@ function! s:CoqTopHandler._init(callback = {...->0}) abort
 endfunction
 function! s:CoqTopHandler._makeInitCallback(callback) abort
   function! self.initCallback(xml) abort closure
-    let self.state_id = str2nr(a:xml.find('state_id').attr.val)
-    call a:callback(self.state_id)
+    let state_id = str2nr(a:xml.find('state_id').attr.val)
+    let self.tip = state_id
+    call a:callback(state_id)
   endfunction
 
   return function(self.initCallback, self)
@@ -183,6 +201,7 @@ endfunction
 " callback : (state_id, is_err, msg, err_loc) -> any
 " send Add < send sentence > {{{
 function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0}) abort
+  exe s:assert('a:state_id == self.tip')
   call self._call('
     \<call val="Add">
       \<pair>
@@ -201,6 +220,7 @@ endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
   function! self.addCallback(value) abort closure
     let new_state_id = a:value.find("state_id").attr.val
+    let self.tip = new_state_id
     if a:value.attr.val == "good"
       let self.state_id = new_state_id
       call a:callback(new_state_id, 0, '', v:null)
@@ -264,10 +284,10 @@ function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
   function! self.editAtCallback(value) abort closure
     if a:value.attr.val != 'good'
       let forced_state_id = a:value.find('state_id').attr.val
-      let self.state_id = forced_state_id
+      let self.tip = forced_state_id
       call a:callback(1, forced_state_id)
     else
-      let self.state_id = a:new_state_id
+      let self.tip = a:new_state_id
       call a:callback(0, a:new_state_id)
     endif
   endfunction

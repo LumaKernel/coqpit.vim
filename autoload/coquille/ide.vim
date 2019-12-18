@@ -132,8 +132,7 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
     exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
-      ECHO [spos, epos]
-      call self._shrink_to(spos)
+      call self.coq_shrink_to_pos(spos)
       call add(self.hls, ["error", mes_range])
     elseif a:level == "warning"
       call add(self.hls, ["warning", mes_range])
@@ -223,6 +222,10 @@ endfunction
 function! s:IDE._after_textchange() abort
   let change = getchangelist(self.handling_bufnr)[0][-1]
   let content = self.getContent()
+
+  if !exists('self.cached_buffer')
+    return
+  endif
 
   let pos = s:first_change(self.cached_buffer, content, max([change['lnum']-2, 0]), 0)
 
@@ -512,6 +515,9 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
   endif
 
   let self.info_message = []
+
+  call self.coqtop_handler.interrupt()
+  exe s:assert('self.coqtop_handler.waiting == 0')
 
   let new_state_id = self.state_id_list[-1]
   call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
