@@ -4,12 +4,9 @@
 
 " TODO : 編集と coqtocursor を同一に
 " TODO : ただしオプションで，編集で何も変わらないように
-" TODO : 実行中より前に戻すとき，(中断の発行と，)EditAtの発行を
-"        - 中断みたいなのはなさそう
-"        - feedback の worker の名前を溜め込んどけば中断できるかも
-"        - 最悪 re-launch できますよ，は大事だよね
-" TODO : Check の終わりは Goals の返却の終わり，にしたほうがいいかもしれない
+" TODO : 最悪 re-launch できますよ，は大事だよね
 " TODO : Axiom
+" TODO : Goals
 
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
