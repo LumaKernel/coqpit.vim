@@ -39,6 +39,7 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
   let job_options.err_cb = self._err_cb
 
   let self.info = {...->0}
+  let self.after_callback_fns = []
 
   let self.job = job_start(coqtop_cmd, job_options)
 
@@ -52,8 +53,8 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  " ECHO "got!!"
-  " ECHO a:msg
+  ECHO "got!!"
+  ECHO a:msg
 
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -64,8 +65,11 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
 
     call self.cb(value)
 
+    for Fn in self.after_callback_fns
+      call Fn()
+    endfor
+
     let option = xml.find("value").find("option")
-    call self._process_queue()
   endif
 
 
@@ -121,25 +125,14 @@ endfunction
 
 " -- core functions {{{
 
-function! s:CoqTopHandler._process_queue() abort
-  if !self._initiated() || self.waiting
-    return
-  endif
-  if len(self.sentenceQueue) > 0
-    let front = remove(self.sentenceQueue, 0)
-    call self.sendSentence(front[0], front[1])
-  endif
-endfunction
-
-
 function! s:CoqTopHandler._call(msg, cb) abort
   if self.waiting
     return
   endif
 
   " TODO : FOR DEBUG
-  " ECHO "send!!"
-  " ECHO a:msg
+  ECHO "send!!"
+  ECHO a:msg
 
   if self.running()
     let self.waiting = 1
@@ -150,11 +143,18 @@ endfunction
 
 " }}}
 
-" callback : (state_id, level, msg, err_loc)
+" callback : (state_id, level, msg, err_loc) -> any
 " set_info_callback(callback?) (empty to unset)
 " info {{{
 function! s:CoqTopHandler.set_info_callback(callback = {...->0})
   let self.info = s:bind_itself(a:callback)
+endfunction
+" }}}
+
+" callback : () -> any
+" add after_callback {{{
+function! s:CoqTopHandler.add_after_callback(callback = {...->0})
+  call add(self.after_callback_fns, s:bind_itself(a:callback))
 endfunction
 " }}}
 
@@ -171,19 +171,18 @@ function! s:CoqTopHandler._init(callback = {...->0}) abort
 endfunction
 function! s:CoqTopHandler._makeInitCallback(callback) abort
   function! self.initCallback(xml) abort closure
-    let self.state_id = str2nr(a:xml.find("state_id").attr.val)
+    let self.state_id = str2nr(a:xml.find('state_id').attr.val)
     call a:callback(self.state_id)
-    call self._process_queue()
   endfunction
 
   return function(self.initCallback, self)
 endfunction
 " }}}
 
-" .sendSentence(sentence, callback)
+" .send_sentence(sentence, callback)
 " callback : (state_id, is_err, msg, err_loc) -> any
 " send Add < send sentence > {{{
-function! s:CoqTopHandler.sendSentence(sentence, callback = {...->0}) abort
+function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0}) abort
   call self._call('
     \<call val="Add">
       \<pair>
@@ -192,7 +191,7 @@ function! s:CoqTopHandler.sendSentence(sentence, callback = {...->0}) abort
           \<int>-1</int>
         \</pair>
         \<pair>
-          \<state_id val="' .. self.state_id .. '" />
+          \<state_id val="' .. a:state_id .. '" />
           \<bool val="false" />
         \</pair>
       \</pair>
@@ -279,23 +278,6 @@ endfunction
 
 " }}}
 
-
-" -- sentence queue opreration {{{
-
-function! s:CoqTopHandler.queueSentence(sentence, callback = v:null) abort
-  call add(self.sentenceQueue, [a:sentence, a:callback])
-  call self._process_queue()
-endfunction
-
-function! s:CoqTopHandler.clearSentenceQueue() abort
-  let self.sentenceQueue = []
-endfunction
-
-function! s:CoqTopHandler.isQueueEmpty() abort
-  return len(self.sentenceQueue) == 0
-endfunction
-
-" }}}
 
 
 

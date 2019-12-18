@@ -30,7 +30,6 @@ function! s:IDE.new(bufnr, args = []) abort
 
   let self.GoalBuffers = []
   let self.InfoBuffers = []
-  let self.waiting = 1
 
   " checked by coq
   let self.sentence_end_pos_list = []
@@ -46,14 +45,15 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.info_message = []
 
   function! self.after_init(state_id) abort closure
-    let self.waiting = 0
     exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
     call add(self.sentence_end_pos_list, [0, 0])
     call add(self.state_id_list, a:state_id)
+    call self._process_queue()
   endfunction
 
   let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, function(self.after_init, self))
   call self.coqtop_handler.set_info_callback(self._infoCallback)
+  call self.coqtop_handler.add_after_callback(self._after_callback)
 
   return self
 endfunction
@@ -65,9 +65,13 @@ function! s:IDE.is_initiated() abort
   return len(self.sentence_end_pos_list) > 0
 endfunction
 
+function! s:IDE.get_last() abort
+  return get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
+endfunction
+
 " state_id_to_range {{{
 function! s:IDE._state_id_to_range(state_id) abort
-  silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
+  exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
 
 
   " binary serach
@@ -129,7 +133,7 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
 
     if a:level == "error"
       ECHO [spos, epos]
-      call self._shrink_to(spos, 1)
+      call self._shrink_to(spos)
       call add(self.hls, ["error", mes_range])
     elseif a:level == "warning"
       call add(self.hls, ["warning", mes_range])
@@ -139,6 +143,8 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
       throw "Error: Unkown message level"
     endif
   endif
+
+  " call self._process_queue()
 
   call self.recolor()
   call self.refreshInfo()
@@ -150,36 +156,9 @@ endfunction
 "
 " <pos> [shrinked range] (old range)
 "
-" Examples: {{{
-" ([A. B<.>] C.)
-" ([A.] <B>. C.)
-" ([A. B<.>]) C.
-" ([A.] <B>.) C.
-" ([A.]) B<.> C.
-" ([A.]) <B>. C.
-"
-" exclusive = 1
-" ([A.] B<.> C.)
-" ([A.] <B>. C.)
-" ([A.] B<.>) C.
-" ([A.] <B>.) C.
-" ([A.]) B<.> C.
-" ([A.]) <B>. C.
-"
-" ceil = 1
-" ([A. B<.>] C.)
-" ([A. <B>.] C.)
-" ([A. B<.>]) C.
-" ([A. <B>.]) C.
-" ([A.]) B<.> C.
-" ([A.]) <B>. C.
-" 
-" }}}
-"
 " return [bool] updated
-" _shrink_to(pos, exclusive=0, ceil=0) {{{
-function! s:IDE._shrink_to(pos, exclusive=0, ceil=0) abort
-  exe s:assert('a:exclusive == 0 || a:ceil == 0')
+" _shrink_to(pos, ceil=0) {{{
+function! s:IDE._shrink_to(pos, ceil=0) abort
   if a:pos is v:null
     return 0
   endif
@@ -189,13 +168,13 @@ function! s:IDE._shrink_to(pos, exclusive=0, ceil=0) abort
 
   " TODO : maybe last queue is running. how to treat it ?
   while len(self.queue) > 0
-        \ && s:pos_lt(a:pos, self.queue[-1], a:exclusive)
+        \ && s:pos_lt(a:pos, self.queue[-1])
     let last = [0, remove(self.queue, -1)]
     let updated += 1
   endwhile
 
   while len(self.sentence_end_pos_list) > 1
-        \ && s:pos_lt(a:pos, self.sentence_end_pos_list[-1], a:exclusive)
+        \ && s:pos_lt(a:pos, self.sentence_end_pos_list[-1])
     let last = [1, remove(self.sentence_end_pos_list, -1)]
     let updated += 1
   endwhile
@@ -260,6 +239,11 @@ function! s:IDE._after_textchange() abort
 endfunction
 " }}}
 
+" _after_callback {{{
+function! s:IDE._after_callback() abort
+  call self._process_queue()
+endfunction
+" }}}
 
 " -- public
 
@@ -360,26 +344,25 @@ endfunction
 
 " process queue {{{
 function! s:IDE._process_queue()
-  if self.waiting || len(self.queue) == 0
+  if self.coqtop_handler.waiting || len(self.queue) == 0
     return
   endif
 
-  let self.waiting = 1
+  exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
 
   let last_checked = self.sentence_end_pos_list[-1]
   let next_queue = self.queue[0]
 
   let sentence_range = [last_checked, next_queue]
   let sentence = join(self.getContent(sentence_range), "\n")
+  let state_id = self.state_id_list[-1]
 
-  call self.coqtop_handler.queueSentence(sentence, self._make_after_result(sentence_range))
+  call self.coqtop_handler.send_sentence(state_id, sentence, self._make_after_result(sentence_range))
 endfunction
 " }}}
 " IDE._make_after_result(range) {{{
 function! s:IDE._make_after_result(range) abort
   function! self.after_result(state_id, is_err, msg, err_loc) abort closure
-    let self.waiting = 0
-
     let [spos, epos] = a:range
     let refresh = len(self.queue) == 0
     let content = self.getContent()
@@ -390,7 +373,7 @@ function! s:IDE._make_after_result(range) abort
     call remove(self.queue, 0)
 
     if a:is_err
-      call self._shrink_to(spos, 1)
+      call self._shrink_to(spos)
       let self.queue = []
 
       if a:err_loc isnot v:null
@@ -405,7 +388,7 @@ function! s:IDE._make_after_result(range) abort
     else
       call add(self.sentence_end_pos_list, next_queue)
       call add(self.state_id_list, a:state_id)
-      call self._process_queue()
+      " call self._process_queue()
     endif
 
     if len(self.queue) == 0
@@ -430,7 +413,7 @@ endfunction
 " coq_next {{{
 function! s:IDE.coq_next() abort
   let content = self.getContent()
-  let last = get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
+  let last = self.get_last()
   let sentence_end_pos = coqlang#nextSentencePos(content, last)
 
   if sentence_end_pos is v:null
@@ -477,7 +460,7 @@ function! s:IDE.coq_back() abort
   endif
 
   if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
-    call self.move(removed)
+    call self.move(self.get_last())
   endif
 
   call self.recolor()
@@ -505,6 +488,7 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
     endwhile
 
     call self.coqtop_handler.refreshGoalInfo()
+    " call self._process_queue()
   endif
 endfunction
 " }}}
@@ -518,7 +502,7 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
   let pos = a:pos
   let content = self.getContent()
 
-  let updated = self._shrink_to(pos, v:none, a:ceil)
+  let updated = self._shrink_to(pos, a:ceil)
   if !updated
     return
   endif
