@@ -2,7 +2,6 @@
 " Coquille IDE
 " ============
 
-" TODO : 編集と coqtocursor を同一に
 " TODO : ただしオプションで，編集で何も変わらないように
 " TODO : 最悪 re-launch できますよ，は大事だよね
 " TODO : Axiom
@@ -186,7 +185,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
     let updated += 1
   endwhile
 
-  if a:ceil && last[0] != -1 && last[1] != pos
+  if a:ceil && last[0] != -1 && last[1] != a:pos
     let updated -= 1
     if last[0] == 0
       call add(self.queue, last[1])
@@ -566,7 +565,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
     return
   endif
 
-  while s:pos_le(last_inclusive, a:pos)
+  while s:pos_lt(last_inclusive, a:pos)
     let last = coqlang#nextSentencePos(content, last)
 
     if last is v:null
