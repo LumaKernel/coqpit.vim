@@ -46,13 +46,14 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
     echoerr "[CoqTop Handler] coqtop is not running"
   endif
   call self._init(a:init_callback)
-endfunction " }}}
+endfunction
+" }}}
 
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  echom "got!!"
-  echom a:msg
+  " ECHO "got!!"
+  " ECHO a:msg
 
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -71,11 +72,10 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
   for feedback in xml.findAll('feedback')
     let content = feedback.find('feedback_content')
     if content.attr.val == 'message'
-      let state_id = feedback.find('state_id').attr.val
+      let state_id = str2nr(feedback.find('state_id').attr.val)
       let level = content.find('message_level').attr.val
       let msg = s:unescape(content.find('pp').child[0])
       let err_loc = v:null
-      ECHO msg
 
       if level == 'error'
         let error_found = 1
@@ -93,8 +93,7 @@ endfunction
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
   " TODO
-  echom "error!!"
-  echoerr a:msg
+  throw "[CoqTop Handler] Internal Error"
 endfunction
 " }}}
 
@@ -139,8 +138,8 @@ function! s:CoqTopHandler._call(msg, cb) abort
   endif
 
   " TODO : FOR DEBUG
-  echom "send!!"
-  echom a:msg
+  " ECHO "send!!"
+  " ECHO a:msg
 
   if self.running()
     let self.waiting = 1
@@ -171,13 +170,13 @@ function! s:CoqTopHandler._init(callback = {...->0}) abort
     \ , self._makeInitCallback(a:callback))
 endfunction
 function! s:CoqTopHandler._makeInitCallback(callback) abort
-  function! s:initCallback(xml) abort closure
-    let self.state_id = a:xml.find("state_id").attr.val
+  function! self.initCallback(xml) abort closure
+    let self.state_id = str2nr(a:xml.find("state_id").attr.val)
     call a:callback(self.state_id)
     call self._process_queue()
   endfunction
 
-  return funcref('s:initCallback', self)
+  return function(self.initCallback, self)
 endfunction
 " }}}
 
@@ -201,7 +200,7 @@ function! s:CoqTopHandler.sendSentence(sentence, callback = {...->0}) abort
   \', self._makeAddCallback(a:callback))
 endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
-  function! s:addCallback(value) abort closure
+  function! self.addCallback(value) abort closure
     let new_state_id = a:value.find("state_id").attr.val
     if a:value.attr.val == "good"
       let self.state_id = new_state_id
@@ -225,7 +224,7 @@ function! s:CoqTopHandler._makeAddCallback(callback) abort
     endif
   endfunction
 
-  return funcref('s:addCallback', self)
+  return function(self.addCallback, self)
 endfunction
 " }}}
 
@@ -238,7 +237,7 @@ function! s:CoqTopHandler.refreshGoalInfo(callback = {...->0}) abort
     \ , self._makeGoalCallback(a:callback))
 endfunction
 function! s:CoqTopHandler._makeGoalCallback(callback) abort
-  function! s:goalCallback(value) abort closure
+  function! self.goalCallback(value) abort closure
     if a:value.attr.val == 'good'
       let option = a:value.find("option")
       if !empty(option)
@@ -251,30 +250,30 @@ function! s:CoqTopHandler._makeGoalCallback(callback) abort
     endif
   endfunction
 
-  return funcref('s:goalCallback', self)
+  return function(self.goalCallback, self)
 endfunction
 " }}}
 
 " callback : (is_err, state_id)
 " send EditAt < move tip > {{{
 function! s:CoqTopHandler.editAt(new_state_id, callback = {...->0}) abort
-  let self.new_state_id = a:new_state_id
   call self._call(
     \ '<call val="Edit_at"><state_id val="' .. a:new_state_id .. '" /></call>'
-    \ , self._makeEditAtCallback(a:callback))
+    \ , self._makeEditAtCallback(a:new_state_id, a:callback))
 endfunction
-function! s:CoqTopHandler._makeEditAtCallback(callback) abort
-  function! s:editAtCallback(value) abort closure
+function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
+  function! self.editAtCallback(value) abort closure
     if a:value.attr.val != 'good'
-      let new_state_id = a:value.find('state_id').attr.val
-      call a:callback(1, f_state_id)
+      let forced_state_id = a:value.find('state_id').attr.val
+      let self.state_id = forced_state_id
+      call a:callback(1, forced_state_id)
     else
-      let self.state_id = self.new_state_id
-      call a:callback(0, self.new_state_id)
+      let self.state_id = a:new_state_id
+      call a:callback(0, a:new_state_id)
     endif
   endfunction
 
-  return funcref('s:editAtCallback', self)
+  return function(self.editAtCallback, self)
 endfunction
 " }}}
 

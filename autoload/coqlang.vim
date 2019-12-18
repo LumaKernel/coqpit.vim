@@ -6,7 +6,7 @@
 let s:COMMENT_START_regex = '(\*'
 let s:COMMENT_END_regex = '\*)'
 let s:STRING_DELIM_regex = '"'
-let s:DOT_regex = '\.\%($\|\n\|\t\)'
+let s:DOT_regex = '\.\%($\| \|\n\|\t\)'
 
 
 " library for Coq as a language
@@ -16,6 +16,10 @@ let s:DOT_regex = '\.\%($\|\n\|\t\)'
 "   NOTE: (left inclusive, right exclusive)
 " type null = ** only v:null **
 
+
+function! coqlang#is_blank(char)
+  return a:char == ' ' || a:char == "\n" || a:char == "\t"
+endfunction
 
 
 " Return range corresponding to one sentense.
@@ -288,6 +292,7 @@ endfunction  " }}}
 
 function! coqlang#Test()
   PAssert coqlang#nextSentencePos(["hi."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
   PAssert coqlang#nextSentencePos(["hi.hey."], [0, 0]) == [0, 7]
   PAssert coqlang#nextSentencePos(["hi.\they."], [0, 0]) == [0, 3]
   PAssert coqlang#nextSentencePos(["hi.","hey."], [0, 0]) == [0, 3]
@@ -312,6 +317,5 @@ function! coqlang#Test()
 
   PAssert coqlang#nextDot(["Hi."], [0, 0]) == [0, 3]
   PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
+  PAssert coqlang#nextDot(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
 endfunction
-
-call coquille#test#addTestFn(funcref('coqlang#Test'))

@@ -7,7 +7,11 @@
 " TODO : 編集によって queue を縮める
 " TODO : 編集と coqtocursor を同一に
 " TODO : ただしオプションで，編集で何も変わらないように
-" TODO : 実行中より前に戻すとき，中断の発行と，EditAtの発行を
+" TODO : 実行中より前に戻すとき，(中断の発行と，)EditAtの発行を
+"        - 中断みたいなのはなさそう
+"        - feedback の worker の名前を溜め込んどけば中断できるかも
+"        - 最悪 re-launch できますよ，は大事だよね
+" TODO : Check の終わりは Goals の返却の終わり，にしたほうがいいかもしれない
 
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
@@ -26,23 +30,29 @@ function! s:IDE.new(bufnr, args = []) abort
 
   let self.GoalBuffers = []
   let self.InfoBuffers = []
+  let self.waiting = 1
 
-  let self.sentencePosList = [[0, 0]]
+  " checked by coq
+  let self.sentence_end_pos_list = []
+  " queued (exclusive)
+  let self.queue = []
+  " resulted by coqtop
   let self.state_id_list = []
+
   let self.colored = []
   let self.hls = []
 
   let self.goal_message = []
   let self.info_message = []
 
-  let self.state_id_to_range = {}
-
-  function! s:after_init(state_id) abort closure
+  function! self.after_init(state_id) abort closure
+    let self.waiting = 0
+    exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
+    call add(self.sentence_end_pos_list, [0, 0])
     call add(self.state_id_list, a:state_id)
-    let self.state_id_to_range[a:state_id] = [[0, 0], [0, 0]]
   endfunction
 
-  let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, funcref('s:after_init', self))
+  let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, function(self.after_init, self))
   call self.coqtop_handler.set_info_callback(self._infoCallback)
 
   return self
@@ -51,9 +61,42 @@ endfunction
 
 " -- private
 
+function! s:IDE.is_initiated() abort
+  return len(self.sentence_end_pos_list) > 0
+endfunction
+
+" state_id_to_range {{{
+function! s:IDE._state_id_to_range(state_id) abort
+  silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
+
+
+  " binary serach
+  let ok = 0
+  let ng = len(self.state_id_list)
+  while ng - ok > 1
+    let mid = (ok + ng) / 2
+    if self.state_id_list[mid] <= a:state_id
+      let ok = mid
+    else
+      let ng = mid
+    endif
+  endwhile
+
+  if get(self.state_id_list, ok, -1) != a:state_id
+    return v:null
+  endif
+
+  return [
+        \ get(self.sentence_end_pos_list, ok - 1, [0, 0]),
+        \ self.sentence_end_pos_list[ok]
+        \]
+endfunction
+" }}}
+
 " -- -- callbacks to CoqTopHandler operations {{{
 
 function! s:IDE._goalCallback(goals) abort
+  " TODO
   let goal_message = []
   if a:goals is v:null
   else
@@ -68,21 +111,26 @@ function! s:IDE._goalCallback(goals) abort
 endfunction
 
 function! s:IDE._infoCallback(state_id, level, msg, loc) abort
-  exe s:assert('has_key(self.state_id_to_range, a:state_id)')
-  let [spos, epos] = self.state_id_to_range[a:state_id]
+  let range = self._state_id_to_range(a:state_id)
+  if range is v:null
+    return
+  endif
+  let [spos, epos] = range
+  let content = self.getContent()
 
   let self.info_message += [a:msg]
 
   if a:loc isnot v:null
     let [start, end] = a:loc
-    let mes_range = [self.steps(spos, start, 1), self.steps(spos, end, 1)]
+    let mes_range = [s:steps(content, spos, start, 1), s:steps(content, spos, end, 1)]
 
     exe s:assert('mes_range[0] isnot v:null')
     exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
+      ECHO [spos, epos]
+      call self._shrink_to(spos, 1)
       call add(self.hls, ["error", mes_range])
-      call self._shrinkTo(epos)
     elseif a:level == "warning"
       call add(self.hls, ["warning", mes_range])
     elseif a:level == "info"
@@ -90,7 +138,6 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
     else
       throw "Error: Unkown message level"
     endif
-  else
   endif
 
   call self.recolor()
@@ -99,21 +146,83 @@ endfunction
 
 " }}}
 
-function! s:IDE._shrinkTo(pos, exclusive=0) abort
-  while len(self.sentencePosList) > 1
-        \ && s:pos_lt(a:pos, self.sentencePosList[-1], a:exclusive)
-    call remove(self.sentencePosList, -1)
+" pos : Pos | null
+"
+" <pos> [shrinked range] (old range)
+"
+" Examples: {{{
+" ([A. B<.>] C.)
+" ([A.] <B>. C.)
+" ([A. B<.>]) C.
+" ([A.] <B>.) C.
+" ([A.]) B<.> C.
+" ([A.]) <B>. C.
+"
+" exclusive = 1
+" ([A.] B<.> C.)
+" ([A.] <B>. C.)
+" ([A.] B<.>) C.
+" ([A.] <B>.) C.
+" ([A.]) B<.> C.
+" ([A.]) <B>. C.
+"
+" ceil = 1
+" ([A. B<.>] C.)
+" ([A. <B>.] C.)
+" ([A. B<.>]) C.
+" ([A. <B>.]) C.
+" ([A.]) B<.> C.
+" ([A.]) <B>. C.
+" 
+" }}}
+"
+" return [bool] updated
+" _shrink_to(pos, exclusive=0, ceil=0) {{{
+function! s:IDE._shrink_to(pos, exclusive=0, ceil=0) abort
+  exe s:assert('a:exclusive == 0 || a:ceil == 0')
+  if a:pos is v:null
+    return 0
+  endif
+
+  let last = [-1]
+  let updated = 1
+
+  " TODO : maybe last queue is running. how to treat it ?
+  while len(self.queue) > 0
+        \ && s:pos_lt(a:pos, self.queue[-1], a:exclusive)
+    let last = [0, remove(self.queue, -1)]
+    let updated += 1
   endwhile
 
+  while len(self.sentence_end_pos_list) > 1
+        \ && s:pos_lt(a:pos, self.sentence_end_pos_list[-1], a:exclusive)
+    let last = [1, remove(self.sentence_end_pos_list, -1)]
+    let updated += 1
+  endwhile
+
+  if a:ceil && last[0] != -1 && last[1] != pos
+    let updated -= 1
+    if last[0] == 0
+      call add(self.queue, last[1])
+    elseif last[0] == 1
+      call add(self.sentence_end_pos_list, last[1])
+    endif
+  endif
+
+
   for i in reverse(range(len(self.hls)))
-    if s:pos_lt(a:pos, self.hls[i][0][0], a:exclusive)
+    if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
       call remove(self.hls, i)
     endif
   endfor
 
-  silent! unlet self.state_id_list[len(self.sentencePosList):-1]
-endfunction
+  silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
+  return updated > 0
+endfunction
+" }}}
+
+" buffer caching {{{
 function! s:IDE._register_buffer(bufnr) abort
   let s:bufnr_to_IDE[a:bufnr] = self
   let self.handling_bufnr = a:bufnr
@@ -128,14 +237,28 @@ endfunction
 function! s:IDE._cache_buffer() abort
   let self.cached_buffer = self.getContent()
 endfunction
+" }}}
 
 " make it as possible as lightweight
+" _after_textchange {{{
 function! s:IDE._after_textchange() abort
   let change = getchangelist(self.handling_bufnr)[0][-1]
-  let pos = s:first_change(self.cached_buffer, self.getContent(), max([change['lnum']-2, 0]), 0)
-  call self._shrinkTo(pos, 1)
-  call self.recolor()
+  let content = self.getContent()
+
+  let pos = s:first_change(self.cached_buffer, content, max([change['lnum']-2, 0]), 0)
+
+  if pos is v:null
+    return
+  endif
+
+  " see 1 back because the right before is dot, the former sentence is broken
+  if pos[0] < len(content) && pos[1] < len(content[pos[0]]) && !coqlang#is_blank(content[pos[0]][pos[1]])
+    let pos[1] = max([0, pos[1]-1])
+  endif
+
+  call self.coq_shrink_to_pos(pos)
 endfunction
+" }}}
 
 
 " -- public
@@ -167,7 +290,7 @@ function! s:IDE.refreshInfo() abort
 endfunction
 
 
-
+" content informations {{{
 
 " range : Range | null
 "
@@ -193,17 +316,12 @@ function! s:IDE.maxlen() abort
   return max(map(self.getContent(), 'len(v:val)'))
 endfunction
 
-
-" Returns last position which is not sent.
-"
-" return Pos
-function! s:IDE.getCursor() abort
-  return self.sentencePosList[-1]
-endfunction
+" }}}
 
 
+" recolor {{{
 function! s:IDE.recolor() abort
-  cal self._cache_buffer()
+  call self._cache_buffer()
 
   for id in self.colored
     call matchdelete(id)
@@ -211,19 +329,21 @@ function! s:IDE.recolor() abort
 
   if len(self.state_id_list)
     let self.colored = []
-    let cursor = self.getCursor()
-    let last = self.state_id_to_range[self.state_id_list[-1]][1]
+    let last_checked = self.sentence_end_pos_list[-1]
+    let last_queued = get(self.queue, -1, last_checked)
+
+    exe s:assert('s:pos_le(last_checked, last_queued)')
+
     let maxlen = self.maxlen()
 
-    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last])
-    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last, cursor])
+    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked])
+    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued])
 
     for [level, range] in self.hls
       " sweep error and warnings appearing after the top in advance
-      let is_in_checked = s:pos_le(range[1], last)
+      let is_in_checked = s:pos_le(range[1], last_checked)
       if level == 'error'
-        " error is treated as not checked
-        let group = 'CoqMarkedError'
+        let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
         let priority = 30
       elseif level == 'warning'
         let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
@@ -233,43 +353,49 @@ function! s:IDE.recolor() abort
     endfor
   endif
 endfunction
+" }}}
 
-function! s:IDE.steps(pos, num, newline_as_one = 0) abort
-  let content = self.getContent()
-  let now = 0
-  let [line, col] = a:pos
-  let linenum = len(content)
 
-  while line < linenum
-    let newcol = col + a:num - now
-    if newcol < len(content[line]) + a:newline_as_one
-      return [line, newcol]
-    else
-      let now += max([len(content[line]) + a:newline_as_one - col, 0])
+" -- -- processing queue and callback
 
-      let line += 1
-      let col = 0
-    endif
-  endwhile
-  return v:null
+" process queue {{{
+function! s:IDE._process_queue()
+  if self.waiting || len(self.queue) == 0
+    return
+  endif
+
+  let self.waiting = 1
+
+  let last_checked = self.sentence_end_pos_list[-1]
+  let next_queue = self.queue[0]
+
+  let sentence_range = [last_checked, next_queue]
+  let sentence = join(self.getContent(sentence_range), "\n")
+
+  call self.coqtop_handler.queueSentence(sentence, self._make_after_result(sentence_range))
 endfunction
+" }}}
+" IDE._make_after_result(range) {{{
+function! s:IDE._make_after_result(range) abort
+  function! self.after_result(state_id, is_err, msg, err_loc) abort closure
+    let self.waiting = 0
 
-
-" -- -- callback for sending sentence {{{
-
-function! s:IDE._makeResultCallback(range) abort
-  function! s:_resultCallback(state_id, is_err, msg, err_loc) abort closure
     let [spos, epos] = a:range
-    let refresh = self.coqtop_handler.isQueueEmpty()
+    let refresh = len(self.queue) == 0
+    let content = self.getContent()
+    let next_queue = self.queue[0]
+
+    " this result is for self.queue[0]
+
+    call remove(self.queue, 0)
 
     if a:is_err
-      call self._shrinkTo(epos)
-      call self.coqtop_handler.clearSentenceQueue()
-      call self.coqtop_handler.refreshGoalInfo()
+      call self._shrink_to(spos, 1)
+      let self.queue = []
 
       if a:err_loc isnot v:null
         let [start, end] = a:err_loc
-        let mes_range = [self.steps(spos, start, 1), self.steps(spos, end, 1)]
+        let mes_range = [s:steps(content, spos, start, 1), s:steps(content, spos, end, 1)]
         call add(self.hls, ["error", mes_range])
       endif
 
@@ -277,11 +403,15 @@ function! s:IDE._makeResultCallback(range) abort
         let self.info_message += [a:msg]
       endif
     else
+      call add(self.sentence_end_pos_list, next_queue)
       call add(self.state_id_list, a:state_id)
-      let self.state_id_to_range[a:state_id] = a:range
+      call self._process_queue()
     endif
 
-    if refresh
+    if len(self.queue) == 0
+      " this is last one
+      " call Goals
+      " TODO
       call self.coqtop_handler.refreshGoalInfo()
     endif
 
@@ -289,72 +419,121 @@ function! s:IDE._makeResultCallback(range) abort
     call self.refreshInfo()
   endfunction
 
-  return funcref('s:_resultCallback', self)
+  return function(self.after_result, self)
 endfunction
 " }}}
 
 
+
 " -- -- cursor move (cursor means last position which was not sent)
 
-" cursorNext {{{
-function! s:IDE.cursorNext() abort
+" coq_next {{{
+function! s:IDE.coq_next() abort
   let content = self.getContent()
-  let cursor = self.getCursor()
-  let sentence_range = coqlang#nextSentenceRange(content, cursor)
-  call self._shrinkTo(cursor)
+  let last = get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
+  let sentence_end_pos = coqlang#nextSentencePos(content, last)
 
-  let self.info_message = []
-  
-  if sentence_range is v:null
+  if sentence_end_pos is v:null
     return
   endif
 
-  call add(self.sentencePosList, sentence_range[1])
-
-  let sentence = join(self.getContent(sentence_range), "\n")
-
-  call self.coqtop_handler.queueSentence(sentence, self._makeResultCallback(sentence_range))
-
-  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
-    call self.move(sentence_range[1])
+  call self._shrink_to(last)
+  
+  if len(self.queue) == 0
+    let self.info_message = []
   endif
+
+  call add(self.queue, sentence_end_pos)
+  call self._process_queue()
 
   call self.recolor()
-endfunction  " }}}
+  call self.refreshInfo()
 
-" cursorBack {{{
-function! s:IDE.cursorBack() abort
-  if len(self.sentencePosList) == 1
+  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
+    call self.move(sentence_end_pos)
+  endif
+endfunction
+" }}}
+
+" coq_back {{{
+function! s:IDE.coq_back() abort
+  if !self.is_initiated()
     return
   endif
-  exe s:assert('len(self.sentencePosList) > 1')
 
-  ECHO self.state_id_list
-  ECHO self.sentencePosList
+  if len(self.queue) > 0
+    call remove(self.queue, -1)
+  elseif len(self.sentence_end_pos_list) > 1
+    let self.info_message = []
 
-  let self.info_message = []
+    let removed = remove(self.sentence_end_pos_list, -1)
+    silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
-  let removed = remove(self.sentencePosList, -1)
-  silent! unlet self.state_id_list[len(self.sentencePosList):-1]
-
-  " think `else` as possibility, `queued but not sent`
-  if len(self.state_id_list) && len(self.state_id_list) == len(self.sentencePosList)
     let new_state_id = self.state_id_list[-1]
     call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
+  else 
+    exe s:assert('len(self.sentence_end_pos_list) == 1')
+    return
   endif
 
   if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
     call self.move(removed)
   endif
-  call self.coqtop_handler.refreshGoalInfo()
 
   call self.recolor()
+  call self.refreshInfo()
 endfunction
+" }}}
+
+" _after_edit_at {{{
 function! s:IDE._after_edit_at(is_err, state_id) abort
   if a:is_err
-    " TODO: restart ? shrink to valid sate_id ?
-    echoerr "[Coquille IDE] internal error."
+    let range = self._state_id_to_range(a:state_id)
+
+    if range is v:null
+      " TODO: restart
+      throw "[Coquille IDE] internal error."
+    endif
+
+    let epos = range[1]
+
+    call self.coq_shrink_to_pos(epos)
+  else
+    exe s:assert('index(self.state_id_list, a:state_id) >= 0')
+    while self.state_id_list[-1] != a:state_id
+      call remove(self.state_id_list[-1])
+    endwhile
+
+    call self.coqtop_handler.refreshGoalInfo()
   endif
+endfunction
+" }}}
+
+" coq_shrink_to_pos {{{
+function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
+  if !self.is_initiated()
+    return
+  endif
+
+  let pos = a:pos
+  let content = self.getContent()
+
+  let updated = self._shrink_to(pos, v:none, a:ceil)
+  if !updated
+    return
+  endif
+
+  if len(self.queue) > 0
+    return
+  endif
+
+  let self.info_message = []
+
+  let new_state_id = self.state_id_list[-1]
+  call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
+
+  call self.recolor()
+  call self.refreshInfo()
 endfunction
 " }}}
 
@@ -374,7 +553,7 @@ endfunction
 
 
 
-" internal
+" internal {{{
 
 function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abort
   let [spos, epos] = a:range
@@ -432,6 +611,28 @@ function! s:pos_le(pos1, pos2, eq=1) abort
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] <= a:pos2[1]
 endfunction
 
+function! s:steps(content, pos, num, newline_as_one = 0) abort
+  let now = 0
+  let [line, col] = a:pos
+  let linenum = len(a:content)
+
+  while line < linenum
+    let newcol = col + a:num - now
+    if newcol < len(a:content[line]) + a:newline_as_one
+      return [line, newcol]
+    else
+      let now += max([len(a:content[line]) + a:newline_as_one - col, 0])
+
+      let line += 1
+      let col = 0
+    endif
+  endwhile
+  return v:null
+endfunction
+
+
+" }}}
+
 
 " export
 
@@ -441,20 +642,20 @@ endfunction
 
 
 
-" test
+" test {{{
 
 function! coquille#ide#Test()
-  exe g:assert('s:pos_lt([0, 1], [0, 2])')
-  exe g:assert('!s:pos_lt([0, 2], [0, 1])')
-  exe g:assert('!s:pos_lt([0, 2], [0, 2])')
-  exe g:assert('s:pos_lt([1, 2], [3, 4])')
-  exe g:assert('!s:pos_lt([3, 3], [2, 2])')
+  exe g:PAssert('s:pos_lt([0, 1], [0, 2])')
+  exe g:PAssert('!s:pos_lt([0, 2], [0, 1])')
+  exe g:PAssert('!s:pos_lt([0, 2], [0, 2])')
+  exe g:PAssert('s:pos_lt([1, 2], [3, 4])')
+  exe g:PAssert('!s:pos_lt([3, 3], [2, 2])')
 
-  exe g:assert('s:pos_le([0, 1], [0, 2])')
-  exe g:assert('!s:pos_le([0, 2], [0, 1])')
-  exe g:assert('s:pos_le([0, 2], [0, 2])')
-  exe g:assert('s:pos_le([1, 2], [3, 4])')
-  exe g:assert('!s:pos_le([3, 3], [2, 2])')
+  exe g:PAssert('s:pos_le([0, 1], [0, 2])')
+  exe g:PAssert('!s:pos_le([0, 2], [0, 1])')
+  exe g:PAssert('s:pos_le([0, 2], [0, 2])')
+  exe g:PAssert('s:pos_le([1, 2], [3, 4])')
+  exe g:PAssert('!s:pos_le([3, 3], [2, 2])')
 endfunction
 
-call coquille#test#addTestFn(funcref('coquille#ide#Test'))
+" }}}

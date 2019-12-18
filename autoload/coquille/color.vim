@@ -5,13 +5,14 @@ function! coquille#color#defineColorScheme() abort
 
   let coq_checked_bg = s:toString(s:col_mult(bg_tup, [1.2, 1.8, 1.2]))
   let coq_queued_bg    = s:toString(s:col_mult(bg_tup, [1, 1, 2.6]))
-  let coq_checked_warn_bg       = s:toString(s:col_mult(bg_tup, [3, 2, 1]))
+  " let coq_checked_warn_bg       = s:toString(s:col_mult(bg_tup, [3, 2, 1]))
 
   exe 'hi default CoqChecked      ctermbg=17  guibg=' .. coq_checked_bg
   exe 'hi default CoqQueued       ctermbg=60  guibg=' .. coq_queued_bg
   exe 'hi default CoqMarkedWarn   ctermbg=60  gui=undercurl guisp=Yellow'
-  exe 'hi default CoqCheckedWarn  ctermbg=60  gui=undercurl guisp=Yellow guibg=' .. coq_checked_warn_bg
+  exe 'hi default CoqCheckedWarn  ctermbg=60  gui=undercurl guisp=Yellow guibg=' .. coq_checked_bg
   exe 'hi default CoqMarkedError  ctermbg=Red gui=undercurl guisp=Red'
+  exe 'hi default CoqCheckedError  ctermbg=Red gui=undercurl guisp=Red guibg=' .. coq_checked_bg
 endfunction
 
 
@@ -35,5 +36,3 @@ function! coquille#color#Test()
   exe g:PAssert('s:toTuple("#ABCDEF") == [171, 205, 239]')
   exe g:PAssert('s:toString([171, 205, 239]) ==? "#abcdef"')
 endfunction
-
-call coquille#test#addTestFn(funcref('coquille#color#Test'))

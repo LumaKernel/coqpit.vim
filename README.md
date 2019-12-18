@@ -84,7 +84,7 @@ commands :
 
 - CoqNext
 - CoqToCursor
-- CoqUndo
+- coqBack
 - CoqKill
 
 available to you.
@@ -124,7 +124,7 @@ You can set the following variable to modify Coquille's behavior:
 
     g:coquille_auto_move            Set it to 'true' if you want Coquille to
         (default = 'false')         move your cursor to the end of the lock zone
-                                    after calls to CoqNext or CoqUndo
+                                    after calls to CoqNext or coqBack
 
 Screenshoots
 ------------
