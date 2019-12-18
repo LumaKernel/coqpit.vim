@@ -3,8 +3,8 @@ function! coquille#color#defineColorScheme() abort
   ECHO "colo"
   let bg_tup = s:toTuple(synIDattr(hlID('Normal'), 'bg#'))
 
-  let coq_checked_bg = s:toString(s:col_mult(bg_tup, [1.2, 1.8, 1.2]))
-  let coq_queued_bg    = s:toString(s:col_mult(bg_tup, [1, 1, 2.6]))
+  let coq_checked_bg = s:toString(s:col_mult(bg_tup, [1, 1, 2.6]))
+  let coq_queued_bg  = s:toString(s:col_mult(bg_tup, [1.2, 1.8, 1.2]))
   " let coq_checked_warn_bg       = s:toString(s:col_mult(bg_tup, [3, 2, 1]))
 
   exe 'hi default CoqChecked      ctermbg=17  guibg=' .. coq_checked_bg

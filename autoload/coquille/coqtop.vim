@@ -21,7 +21,7 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
 
   let self.sentenceQueue = []  " : List<[Sentence, any]>
   let self.waiting = 0
-  let self.abandon_next = 0
+  let self.abandon = 0
 
   let coqtop_cmd = [
   \  'coqtop',
@@ -60,17 +60,17 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
   " ECHO "got!!"
   " ECHO a:msg
   
-  if self.abandon_next
-    let self.abandon_next = 0
-    return
-  endif
-
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
 
-  if !empty(xml.find('value'))
+  for value in xml.findAll('value')
+    exe s:assert('self.abandon >= 0')
+    if self.abandon
+      let self.abandon -= 1
+      continue
+    endif
+
     let self.waiting = 0
-    let value = xml.find('value')
 
     call self.cb(value)
 
@@ -79,7 +79,7 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
     endfor
 
     let option = xml.find("value").find("option")
-  endif
+  endfor
 
 
   for feedback in xml.findAll('feedback')
@@ -153,7 +153,7 @@ endfunction
 
 function! s:CoqTopHandler.interrupt() abort
   if self.waiting
-    let self.abandon_next = 1
+    let self.abandon += 1
   endif
   let self.waiting = 0
 endfunction!
@@ -219,7 +219,7 @@ function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0})
 endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
   function! self.addCallback(value) abort closure
-    let new_state_id = a:value.find("state_id").attr.val
+    let new_state_id = str2nr(a:value.find("state_id").attr.val)
     let self.tip = new_state_id
     if a:value.attr.val == "good"
       let self.state_id = new_state_id
@@ -283,7 +283,7 @@ endfunction
 function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
   function! self.editAtCallback(value) abort closure
     if a:value.attr.val != 'good'
-      let forced_state_id = a:value.find('state_id').attr.val
+      let forced_state_id = str2nr(a:value.find('state_id').attr.val)
       let self.tip = forced_state_id
       call a:callback(1, forced_state_id)
     else

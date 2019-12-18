@@ -2,9 +2,6 @@
 " Coquille IDE
 " ============
 
-" TODO : Queue はこっちで管理
-" TODO : result が帰ってきたら，queue を処理
-" TODO : 編集によって queue を縮める
 " TODO : 編集と coqtocursor を同一に
 " TODO : ただしオプションで，編集で何も変わらないように
 " TODO : 実行中より前に戻すとき，(中断の発行と，)EditAtの発行を
@@ -12,12 +9,16 @@
 "        - feedback の worker の名前を溜め込んどけば中断できるかも
 "        - 最悪 re-launch できますよ，は大事だよね
 " TODO : Check の終わりは Goals の返却の終わり，にしたほうがいいかもしれない
+" TODO : Axiom
 
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
 let s:IDE = {}
 let s:bufnr_to_IDE = {}
+
+let s:auto_move = coquille#config_name('auto_move', 0)
+let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 0)
 
 function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
@@ -67,6 +68,13 @@ endfunction
 
 function! s:IDE.get_last() abort
   return get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
+endfunction
+
+function! s:IDE.top_forced() abort
+  if len(self.queue) == 0 && self.coqtop_handler.waiting
+    call self.coqtop_handler.interrupt()
+  endif
+  call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
 endfunction
 
 " state_id_to_range {{{
@@ -132,7 +140,7 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
     exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
-      call self.coq_shrink_to_pos(spos)
+      call self._shrink_to(spos, v:none, 0)
       call add(self.hls, ["error", mes_range])
     elseif a:level == "warning"
       call add(self.hls, ["warning", mes_range])
@@ -155,17 +163,18 @@ endfunction
 "
 " <pos> [shrinked range] (old range)
 "
+" shrink_errors=1 : this is for internal option
+"
 " return [bool] updated
 " _shrink_to(pos, ceil=0) {{{
-function! s:IDE._shrink_to(pos, ceil=0) abort
+function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   if a:pos is v:null
     return 0
   endif
 
   let last = [-1]
-  let updated = 1
+  let updated = 0
 
-  " TODO : maybe last queue is running. how to treat it ?
   while len(self.queue) > 0
         \ && s:pos_lt(a:pos, self.queue[-1])
     let last = [0, remove(self.queue, -1)]
@@ -187,14 +196,19 @@ function! s:IDE._shrink_to(pos, ceil=0) abort
     endif
   endif
 
-
-  for i in reverse(range(len(self.hls)))
-    if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
-      call remove(self.hls, i)
-    endif
-  endfor
+  if a:shrink_errors
+    for i in reverse(range(len(self.hls)))
+      if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
+        call remove(self.hls, i)
+      endif
+    endfor
+  endif
 
   silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
+
+  if updated > 0
+    call self.top_forced()
+  endif
 
   return updated > 0
 endfunction
@@ -238,7 +252,9 @@ function! s:IDE._after_textchange() abort
     let pos[1] = max([0, pos[1]-1])
   endif
 
-  call self.coq_shrink_to_pos(pos)
+  if self._shrink_to(pos)
+    call self.recolor()
+  endif
 endfunction
 " }}}
 
@@ -376,7 +392,7 @@ function! s:IDE._make_after_result(range) abort
     call remove(self.queue, 0)
 
     if a:is_err
-      call self._shrink_to(spos)
+      call self._shrink_to(spos, v:none, 0)
       let self.queue = []
 
       if a:err_loc isnot v:null
@@ -424,7 +440,7 @@ function! s:IDE.coq_next() abort
   endif
 
   call self._shrink_to(last)
-  
+
   if len(self.queue) == 0
     let self.info_message = []
   endif
@@ -435,7 +451,7 @@ function! s:IDE.coq_next() abort
   call self.recolor()
   call self.refreshInfo()
 
-  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
+  if coquille#get_buffer_config(s:auto_move)
     call self.move(sentence_end_pos)
   endif
 endfunction
@@ -449,25 +465,25 @@ function! s:IDE.coq_back() abort
 
   if len(self.queue) > 0
     call remove(self.queue, -1)
+    call self.top_forced()
   elseif len(self.sentence_end_pos_list) > 1
     let self.info_message = []
 
     let removed = remove(self.sentence_end_pos_list, -1)
     silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
-    let new_state_id = self.state_id_list[-1]
-    call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
+    call self.top_forced()
   else 
     exe s:assert('len(self.sentence_end_pos_list) == 1')
     return
   endif
 
-  if exists("g:coquille_auto_move") && g:coquille_auto_move is 1
-    call self.move(self.get_last())
-  endif
-
   call self.recolor()
   call self.refreshInfo()
+
+  if coquille#get_buffer_config(s:auto_move)
+    call self.move(self.get_last())
+  endif
 endfunction
 " }}}
 
@@ -483,7 +499,9 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
 
     let epos = range[1]
 
-    call self.coq_shrink_to_pos(epos)
+    if self._shrink_to(epos, v:none, 0)
+      call self.recolor()
+    endif
   else
     exe s:assert('index(self.state_id_list, a:state_id) >= 0')
     while self.state_id_list[-1] != a:state_id
@@ -502,28 +520,114 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
     return
   endif
 
-  let pos = a:pos
+  if s:pos_le(self.get_last(), a:pos)
+    return
+  endif
+
   let content = self.getContent()
 
-  let updated = self._shrink_to(pos, a:ceil)
+  let updated = self._shrink_to(a:pos, a:ceil)
   if !updated
     return
   endif
 
-  if len(self.queue) > 0
-    return
+  if len(self.queue) == 0
+    let self.info_message = []
   endif
-
-  let self.info_message = []
-
-  call self.coqtop_handler.interrupt()
-  exe s:assert('self.coqtop_handler.waiting == 0')
-
-  let new_state_id = self.state_id_list[-1]
-  call self.coqtop_handler.editAt(new_state_id, self._after_edit_at)
 
   call self.recolor()
   call self.refreshInfo()
+endfunction
+" }}}
+
+" coq_expand_to_pos {{{
+function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
+  if !self.is_initiated()
+    return
+  endif
+
+  let content = self.getContent()
+  let last = self.get_last()
+
+  exe s:assert('last[1] >= 1')
+  if last[1] == 0
+    return
+  endif
+
+  let sentence_end_pos = coqlang#nextSentencePos(content, last)
+
+  if sentence_end_pos is v:null
+    break
+  endif
+
+  call self._shrink_to(last)
+
+  if len(self.queue) == 0
+    let self.info_message = []
+  endif
+
+  let last[1] -= 1
+
+  if s:pos_le(a:pos, last)
+    return
+  endif
+
+  while s:pos_le(last, a:pos)
+    let sentence_end_pos = coqlang#nextSentencePos(content, last)
+    let last = sentence_end_pos
+    exe s:assert('last[1] >= 1')
+    let last[1] -= 1
+
+    if sentence_end_pos is v:null
+      break
+    endif
+
+    call add(self.queue, sentence_end_pos)
+  endwhile
+
+  if !ceil && a:pos != last
+    call remove(self.queue, -1)
+  endif
+
+  call self._process_queue()
+
+  call self.recolor()
+  call self.refreshInfo()
+endfunction
+" }}}
+
+" coq_to_pos {{{
+function! s:IDE.coq_to_pos(pos, ceil=0) abort
+  if !self.is_initiated()
+    return
+  endif
+
+  let last = self.get_last()
+
+  if s:pos_lt(a:pos, last)
+    call self.coq_shrink_to_pos(a:pos, a:ceil)
+  else
+    call self.coq_expand_to_pos(a:pos, a:ceil)
+  endif
+endfunction
+" }}}
+
+" coq_to_cursor {{{
+function! s:IDE.coq_to_cursor(ceil=v:null) abort
+  if self.handling_bufnr != bufnr('%')
+    return
+  endif
+
+  let curpos = getcurpos()
+  let ceil = 0
+
+  if a:ceil isnot v:null
+    ceil = a:ceil
+  else
+    let ceil = coquille#get_buffer_config(s:cursor_ceiling)
+  endif
+
+  call self.coq_to_cursor(curpos, ceil)
 endfunction
 " }}}
 
@@ -629,7 +733,6 @@ endfunction
 function! coquille#ide#makeInstance(...) abort
   return call(s:IDE.new, a:000)
 endfunction
-
 
 
 " test {{{

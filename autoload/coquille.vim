@@ -4,10 +4,6 @@
 
 let s:current_dir=expand("<sfile>:p:h") 
 
-if !exists('g:coquille_auto_move')
-    let g:coquille_auto_move = 0
-endif
-
 function! coquille#reset_panels() abort
   if exists("b:goal_buf") && buffer_name(b:goal_buf) == "Goals"
     silent! execute 'bdelete' . b:goal_buf
@@ -94,7 +90,7 @@ function! coquille#launch(...)
   " command! -buffer GotoDot py3 coquille.goto_last_sent_dot()
   command! -buffer CoqNext call b:coquilleIDE.coq_next()
   command! -buffer CoqBack call b:coquilleIDE.coq_back()
-  " command! -buffer CoqToCursor py3 coquille.coq_to_cursor()
+  command! -buffer CoqToCursor call b:coquilleIDE.coq_to_cursor()
   command! -buffer CoqRearrange call coquille#reset_panels()
   command! -buffer CoqKill call coquille#killSession()
 
@@ -117,3 +113,22 @@ function! coquille#register()
 
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
 endfunction
+
+
+function! coquille#config_name(name, default) abort
+  if !exists('g:coquille_' .. a:name)
+    let g:['coquille_' .. a:name] = a:default
+  endif
+  return a:name
+endfunction
+
+function! coquille#get_buffer_config(name) abort
+  if exists('b:coquille_' .. a:name) && b:['coquille_' .. a:name] is 1
+    return 1
+  endif
+  if exists('g:coquille_' .. a:name) && g:['coquille_' .. a:name] is 1
+    return 1
+  endif
+  return 0
+endfunction
+
