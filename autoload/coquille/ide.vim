@@ -2,7 +2,7 @@
 " Coquille IDE
 " ============
 
-" TODO : ただしオプションで，編集で何も変わらないように
+" TODO : ただしオプションで，編集で Goals は変わらないように
 " TODO : 最悪 re-launch できますよ，は大事だよね
 " TODO : Axiom
 " TODO : Goals
@@ -15,6 +15,7 @@ let s:bufnr_to_IDE = {}
 
 let s:auto_move = coquille#config_name('auto_move', 0)
 let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 0)
+let s:strict_check = coquille#config_name('strict_check', 0)
 
 function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
@@ -40,17 +41,20 @@ function! s:IDE.new(bufnr, args = []) abort
 
   let self.goal_message = []
   let self.info_message = []
+  let self.last_goal_check = -1
 
   function! self.after_init(state_id) abort closure
     exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
     call add(self.sentence_end_pos_list, [0, 0])
     call add(self.state_id_list, a:state_id)
+    let self.last_goal_check = a:state_id
     call self._process_queue()
   endfunction
 
   let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, function(self.after_init, self))
-  call self.coqtop_handler.set_info_callback(self._infoCallback)
-  call self.coqtop_handler.add_after_callback(self._after_callback)
+  call self.coqtop_handler.set_info_callback(self._info)
+  call self.coqtop_handler.set_add_axiom_callback(self._add_axiom)
+  call self.coqtop_handler.add_after_callback(self._check_queue)
 
   return self
 endfunction
@@ -75,7 +79,7 @@ function! s:IDE._after_shrink() abort
   endif
 endfunction
 
-" state_id_to_range {{{
+" _state_id_to_range {{{
 function! s:IDE._state_id_to_range(state_id) abort
   exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
 
@@ -105,24 +109,11 @@ endfunction
 
 " -- -- callbacks to CoqTopHandler operations {{{
 
-function! s:IDE._goalCallback(goals) abort
-  " TODO
-  let goal_message = []
-  if a:goals is v:null
-  else
-    if len(a:goals) == 0
-      let goal_message = ["No goals."]
-    else
-      let goal_message = a:goals
-    endif
-  endif
-
-  call self.refreshGoal()
-endfunction
-
-function! s:IDE._infoCallback(state_id, level, msg, loc) abort
+" info {{{
+function! s:IDE._info(state_id, level, msg, loc) abort
   let range = self._state_id_to_range(a:state_id)
   if range is v:null
+    call self._process_queue()
     return
   endif
   let [spos, epos] = range
@@ -149,11 +140,69 @@ function! s:IDE._infoCallback(state_id, level, msg, loc) abort
     endif
   endif
 
-  " call self._process_queue()
+  call self.recolor()
+  call self.refreshInfo()
+  call self._check_queue()
+endfunction
+" }}}
+
+" goal {{{
+function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
+  let content = self.getContent()
+
+  if a:is_err
+    let range = self._state_id_to_range(a:state_id)
+
+    if range is v:null
+      echoerr '[Coquille IDE] Internal error.'
+      call _process_queue()
+      return
+    endif
+
+    let [spos, epos] = range
+
+    call self._shrink_to(epos, v:none, 0)
+    let self.queue = []
+
+    if a:err_loc isnot v:null
+      let [start, end] = a:err_loc
+      let mes_range = [s:steps(content, epos, start, 1), s:steps(content, epos, end, 1)]
+      call add(self.hls, ['error', mes_range])
+    endif
+
+    if a:msg != ''
+      let self.info_message += [a:msg]
+    endif
+  else
+    if len(a:msg) == 0
+      let self.goal_message = ["No goals."]
+    else
+      let self.goal_message = a:msg
+    endif
+  endif
+
+  call self.recolor()
+  call self.refreshGoal()
+  call self.refreshInfo()
+  call self._check_queue()
+endfunction
+" }}}
+
+" axiom {{{
+function! s:IDE._add_axiom(state_id) abort
+  let range = self._state_id_to_range(a:state_id)
+  if range is v:null
+    return
+  endif
+
+  let [spos, epos] = range
+
+  call add(self.hls, ["axiom", range])
 
   call self.recolor()
   call self.refreshInfo()
 endfunction
+" }}}
 
 " }}}
 
@@ -194,13 +243,13 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
     endif
   endif
 
-  if a:shrink_errors
-    for i in reverse(range(len(self.hls)))
-      if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
+  for i in reverse(range(len(self.hls)))
+    if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
+      if a:shrink_errors || self.hls[i][0] == 'axiom'
         call remove(self.hls, i)
       endif
-    endfor
-  endif
+    endif
+  endfor
 
   silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
@@ -250,14 +299,25 @@ function! s:IDE._after_textchange() abort
     let pos[1] = max([0, pos[1]-1])
   endif
 
-  if self._shrink_to(pos)
-    call self.recolor()
-  endif
+  call self._shrink_to(pos)
+
+  call self.recolor()
+  call self._check_queue()
 endfunction
 " }}}
 
-" _after_callback {{{
-function! s:IDE._after_callback() abort
+" _check_queue {{{
+function! s:IDE._check_queue() abort
+  if self.coqtop_handler.waiting == 0
+      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:strict_check))
+    if self.last_goal_check != self.state_id_list[-1]
+      exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
+      let self.goal_message = []
+      let self.last_goal_check = self.state_id_list[-1]
+      call self.coqtop_handler.refreshGoalInfo(self._goal)
+    endif
+  endif
+
   call self._process_queue()
 endfunction
 " }}}
@@ -325,11 +385,11 @@ function! s:IDE.recolor() abort
   call self._cache_buffer()
 
   for id in self.colored
-    call matchdelete(id)
+    silent! call matchdelete(id)
   endfor
+  let self.colored = []
 
   if len(self.state_id_list)
-    let self.colored = []
     let last_checked = self.sentence_end_pos_list[-1]
     let last_queued = get(self.queue, -1, last_checked)
 
@@ -348,6 +408,9 @@ function! s:IDE.recolor() abort
         let priority = 30
       elseif level == 'warning'
         let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
+        let priority = 20
+      elseif level == 'axiom'
+        let group = 'CoqCheckedAxiom'
         let priority = 20
       endif
       let self.colored += s:matchaddrange(maxlen, group, range, priority)
@@ -381,7 +444,12 @@ endfunction
 function! s:IDE._make_after_result(range) abort
   function! self.after_result(state_id, is_err, msg, err_loc) abort closure
     let [spos, epos] = a:range
-    let refresh = len(self.queue) == 0
+
+    if self.sentence_end_pos_list[-1] != spos || len(self.queue) == 0
+      call self._process_queue()
+      return
+    endif
+
     let content = self.getContent()
     let next_queue = self.queue[0]
 
@@ -405,18 +473,11 @@ function! s:IDE._make_after_result(range) abort
     else
       call add(self.sentence_end_pos_list, next_queue)
       call add(self.state_id_list, a:state_id)
-      " call self._process_queue()
-    endif
-
-    if len(self.queue) == 0
-      " this is last one
-      " call Goals
-      " TODO
-      call self.coqtop_handler.refreshGoalInfo()
     endif
 
     call self.recolor()
     call self.refreshInfo()
+    call self._check_queue()
   endfunction
 
   return function(self.after_result, self)
@@ -444,6 +505,7 @@ function! s:IDE.coq_next() abort
   endif
 
   call add(self.queue, sentence_end_pos)
+
   call self._process_queue()
 
   call self.recolor()
@@ -476,8 +538,10 @@ function! s:IDE.coq_back() abort
     return
   endif
 
+  call self._shrink_to(self.get_last(), v:none, 0)
   call self.recolor()
   call self.refreshInfo()
+  call self._check_queue()
 
   if coquille#get_buffer_config(s:auto_move)
     call self.move(self.get_last())
@@ -499,15 +563,13 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
 
     if self._shrink_to(epos, v:none, 0)
       call self.recolor()
+      call self._check_queue()
     endif
   else
     exe s:assert('index(self.state_id_list, a:state_id) >= 0')
     while self.state_id_list[-1] != a:state_id
       call remove(self.state_id_list[-1])
     endwhile
-
-    call self.coqtop_handler.refreshGoalInfo()
-    " call self._process_queue()
   endif
 endfunction
 " }}}
@@ -524,7 +586,7 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
 
   let content = self.getContent()
 
-  let updated = self._shrink_to(a:pos, a:ceil)
+  let updated = self._shrink_to(a:pos, a:ceil, 0)
   if !updated
     return
   endif
@@ -582,10 +644,9 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
     call remove(self.queue, -1)
   endif
 
-  call self._process_queue()
-
   call self.recolor()
   call self.refreshInfo()
+  call self._check_queue()
 endfunction
 " }}}
 

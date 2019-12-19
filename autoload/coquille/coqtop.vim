@@ -43,6 +43,7 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
 
 
   let self.info = {...->0}
+  let self.add_axiom = {...->0}
   let self.after_callback_fns = []
 
   let self.job = job_start(coqtop_cmd, job_options)
@@ -57,8 +58,8 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  " ECHO "got!!"
-  " ECHO a:msg
+  " echom "got!!"
+  " echom a:msg
   
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -102,13 +103,17 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
       endif
 
       call self.info(state_id, level, msg, err_loc)
+    elseif content.attr.val == 'addedaxiom'
+      let state_id = str2nr(feedback.find('state_id').attr.val)
+      call self.add_axiom(state_id)
     endif
   endfor
 endfunction
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
   " TODO
-  throw "[CoqTop Handler] Internal Error"
+  echoerr "[CoqTop Handler] Internal error. Please report issue in " .. coquille#repository_url .. " ."
+  echoerr msg
 endfunction
 " }}}
 
@@ -142,12 +147,12 @@ function! s:CoqTopHandler._call(msg, cb) abort
   endif
 
   " TODO : FOR DEBUG
-  " ECHO "send!!"
-  " ECHO a:msg
+  " echom "send!!"
+  " echom a:msg
 
   if self.running()
     let self.waiting = 1
-    let self.cb = a:cb
+    let self.cb = s:bind_itself(a:cb)
     call ch_sendraw(self.job, a:msg . "\n")
   endif
 endfunction
@@ -167,6 +172,14 @@ endfunction!
 " info {{{
 function! s:CoqTopHandler.set_info_callback(callback = {...->0})
   let self.info = s:bind_itself(a:callback)
+endfunction
+" }}}
+
+" callback : (state_id) -> any
+" set_add_axiom_callback(callback?) (empty to unset)
+" add_axiom {{{
+function! s:CoqTopHandler.set_add_axiom_callback(callback = {...->0})
+  let self.add_axiom = s:bind_itself(a:callback)
 endfunction
 " }}}
 
@@ -221,11 +234,10 @@ function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0})
 endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
   function! self.addCallback(value) abort closure
-    let new_state_id = str2nr(a:value.find("state_id").attr.val)
+    let state_id = str2nr(a:value.find("state_id").attr.val)
     if a:value.attr.val == "good"
-      let self.tip = new_state_id
-      let self.state_id = new_state_id
-      call a:callback(new_state_id, 0, '', v:null)
+      let self.tip = state_id
+      call a:callback(state_id, 0, '', v:null)
     else
       let msg = ''
       let err_loc = v:null
@@ -241,7 +253,7 @@ function! s:CoqTopHandler._makeAddCallback(callback) abort
         endif
       endif
 
-      call a:callback(new_state_id, 1, msg, err_loc)
+      call a:callback(state_id, 1, msg, err_loc)
     endif
   endfunction
 
@@ -255,7 +267,8 @@ endfunction
 function! s:CoqTopHandler.refreshGoalInfo(callback = {...->0}) abort
   call self._call(
     \ '<call val="Goal"><unit /></call>'
-    \ , self._makeGoalCallback(a:callback))
+    \ , self._makeGoalCallback(a:callback)
+    \ )
 endfunction
 function! s:CoqTopHandler._makeGoalCallback(callback) abort
   function! self.goalCallback(value) abort closure
@@ -263,11 +276,29 @@ function! s:CoqTopHandler._makeGoalCallback(callback) abort
       let option = a:value.find("option")
       if !empty(option)
         if has_key(option.attr, 'val') && option.attr['val'] == 'none'
-          call a:callback([])
+          " No goals.
+          call a:callback(-1, 0, [], v:null)
         endif
       else
-        call a:callback(["hi"])
+        call a:callback(-1, 0, ['hi'], v:null)
       endif
+    else
+      let state_id = str2nr(a:value.find("state_id").attr.val)
+      let msg = ''
+      let err_loc = v:null
+
+      let attr = a:value.attr
+      if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
+        let err_loc = [attr['loc_s'], attr['loc_e']]
+      endif
+
+      if !empty(a:value.find('pp'))
+        if len(a:value.find('pp').child)
+          let msg = s:unescape(a:value.find('pp').child[0])
+        endif
+      endif
+
+      call a:callback(state_id, 1, msg, err_loc)
     endif
   endfunction
 

@@ -132,3 +132,4 @@ function! coquille#get_buffer_config(name) abort
   return 0
 endfunction
 
+let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
