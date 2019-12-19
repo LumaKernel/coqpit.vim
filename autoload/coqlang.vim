@@ -7,6 +7,8 @@ let s:COMMENT_START_regex = '(\*'
 let s:COMMENT_END_regex = '\*)'
 let s:STRING_DELIM_regex = '"'
 let s:DOT_regex = '\.\%($\| \|\n\|\t\)'
+let s:BEFORE_BRACE_START_regex = '\[\|\d\|{'
+let s:BRACE_START_regex = '{'
 
 
 " library for Coq as a language
@@ -24,6 +26,7 @@ endfunction
 
 " Return range corresponding to one sentense.
 " Assumeing sentense starts just `from_pos`.
+"
 "
 " content : [string]
 " from_pos : Pos
@@ -89,11 +92,6 @@ endfunction  " }}}
 " namely exclusive in that line.
 " Return v:null if never close sentence.
 "
-" Examples:
-"   - nextSentencePos(["hi."], [0, 0]) == [0, 3]
-"   - nextSentencePos([" hello."], [0, 0]) == [0, 7]
-"   - nextSentencePos(["(* oh... *)","--."], [0, 0]) == [1, 2]
-"
 "
 " content : [string]
 " from_pos : Pos | null
@@ -109,16 +107,21 @@ function! coqlang#nextSentencePos(content, from_pos) abort
   let [line, col] = nonblank_pos
 
   " reference : https://coq.inria.fr/refman/proof-engine/proof-handling.html
-  let braces = ['{', '}']
   let bullets = ['-', '+', '*']
 
   " -- check whether encountering bullets or braces
   "  simply, we assume these as sentence even if outside proof mode
   "  it works well
 
-  if count(braces, a:content[line][col])
+  " brace start
+  if match(a:content[line][col], s:BEFORE_BRACE_START_regex) == 0
+    return coqlang#nextBraceStart(a:content, [line, col])
+  endif
+  " brace end
+  if a:content[line][col] == '}'
     return [line, col + 1]
   endif
+  " bullets
   if count(bullets, a:content[line][col])
     let bullet = a:content[line][col]
     while bullet == a:content[line][col + 1]
@@ -147,13 +150,6 @@ endfunction  " }}}
 
 " Find next position whose nested level is zero. (exclusive)
 " Return v:null if never close.
-"
-" Examples:
-"   - skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
-"   - skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
-"   - skipComment([" (* *) hello"], [0, 3]) == [0, 6]
-"   - skipComment([" (* ", "(*", "*)*)--"], [0, 3]) == [2, 4]
-"   - skipComment([' (* " "" *) "" " *) hello'], [0, 3]) == [0, 19]
 "
 "
 " content : [string]
@@ -205,10 +201,6 @@ endfunction  " }}}
 " Find next position where string ends. (exclusive)
 " Return v:null if never close.
 "
-" Examples:
-"   - skipString(['" "yo.'], [0, 1]) == [0, 3]
-"   - skipString([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
-"
 "
 " content : [string]
 " from_pos : Pos | null
@@ -243,11 +235,6 @@ endfunction  " }}}
 " Find next position where dot appears. (exclusive)
 " Return v:null if never appears.
 "
-" Examples:
-"   - nextDot(["Hi."], [0, 0]) == [0, 3]
-"   - nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
-"
-"
 " content : [string]
 " from_pos : Pos | null
 "
@@ -266,7 +253,8 @@ function! coqlang#nextDot(content, from_pos) abort
   let next = sort([
     \   [match(trail, s:COMMENT_START_regex), 0],
     \   [match(trail, s:STRING_DELIM_regex), 1],
-    \   [match(trail, s:DOT_regex), 2]
+    \   [match(trail, s:DOT_regex), 2],
+    \   [match(trail, s:BEFORE_BRACE_START_regex), 3],
     \ ])
 
   for token in next
@@ -278,15 +266,57 @@ function! coqlang#nextDot(content, from_pos) abort
         return coqlang#nextDot(a:content, com_end)
       elseif token[1] == 1
         " string start "
-        let com_end = coqlang#skipString(a:content, [line, col + 1])
-        return coqlang#nextDot(a:content, com_end)
+        let str_end = coqlang#skipString(a:content, [line, col + 1])
+        return coqlang#nextDot(a:content, str_end)
       elseif token[1] == 2
-        " dot
+        " before dot
         return [line, col + 1]
       endif
     endif
   endfor
   return coqlang#nextDot(a:content, [line + 1, 0])
+endfunction  " }}}
+
+
+" content : [string]
+" from_pos : Pos | null
+"
+" return Pos | null
+" nextBraceStart(content, from_pos) {{{
+function! coqlang#nextBraceStart(content, from_pos) abort
+  let nonblank_pos = coqlang#skipBlanks(a:content, a:from_pos)
+  if nonblank_pos is v:null
+    return v:null
+  endif
+
+  let [line, col] = nonblank_pos
+
+  let trail = a:content[line][col:]
+
+  let next = sort([
+    \   [match(trail, s:COMMENT_START_regex), 0],
+    \   [match(trail, s:STRING_DELIM_regex), 1],
+    \   [match(trail, s:BRACE_START_regex), 2]
+    \ ])
+
+  for token in next
+    if token[0] != -1
+      let col += token[0]
+      if token[1] == 0
+        " comment start (*
+        let com_end = coqlang#skipComment(a:content, [line, col + 2])
+        return coqlang#nextBraceStart(a:content, com_end)
+      elseif token[1] == 1
+        " string start "
+        let str_end = coqlang#skipString(a:content, [line, col + 1])
+        return coqlang#nextBraceStart(a:content, str_end)
+      elseif token[1] == 2
+        " brance end
+        return [line, col + 1]
+      endif
+    endif
+  endfor
+  return coqlang#nextBraceStart(a:content, [line + 1, 0])
 endfunction  " }}}
 
 
@@ -305,17 +335,44 @@ function! coqlang#Test()
   PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
   PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
   PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#nextSentencePos(['(**){(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#nextSentencePos(['(**)}(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#nextSentencePos(['{simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['{-'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['-{'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['}simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['}-'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['-}'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['--}'], [0, 0]) == [0, 2]
+  PAssert coqlang#nextSentencePos(['(**)[a]:{simpl.'], [0, 0]) == [0, 9]
+  " Hiragana is basically represented by 3 bytes in utf-8
+  PAssert coqlang#nextSentencePos(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
+  PAssert coqlang#nextSentencePos(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
 
   PAssert coqlang#skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
   PAssert coqlang#skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
   PAssert coqlang#skipComment([" (* *) hello"], [0, 3]) == [0, 6]
   PAssert coqlang#skipComment([" (* ", "(*", "*)*)--"], [0, 3]) == [2, 4]
   PAssert coqlang#skipComment([' (* " "" *) "" " *) hello'], [0, 3]) == [0, 19]
+  PAssert coqlang#skipComment(['(**', ')'], [0, 2]) is v:null
+  PAssert coqlang#skipComment(['(**', '(*', '*)'], [0, 2]) is v:null
 
   PAssert coqlang#skipString(['" "yo.'], [0, 1]) == [0, 3]
   PAssert coqlang#skipString([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
+  PAssert coqlang#skipString(['""'], [0, 1]) == [0, 2]
+  PAssert coqlang#skipString(['"'], [0, 1]) is v:null
+  PAssert coqlang#skipString(['"', '"'], [0, 1]) == [1, 1]
+  PAssert coqlang#skipString(['"""', '""'], [0, 1]) is v:null
 
   PAssert coqlang#nextDot(["Hi."], [0, 0]) == [0, 3]
   PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
   PAssert coqlang#nextDot(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
+
+  PAssert coqlang#nextBraceStart(['{'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextBraceStart(['{(**)'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextBraceStart(['0 : {'], [0, 0]) == [0, 5]
+  PAssert coqlang#nextBraceStart(['13:(**){'], [0, 0]) == [0, 8]
+  PAssert coqlang#nextBraceStart(['[(**)foo  ]: (*}*){'], [0, 0]) == [0, 19]
+  PAssert coqlang#nextBraceStart(['[ f_o_o(*', ' {{*) ] (* *) :{(* *)'], [0, 0]) == [1, 16]
+  PAssert coqlang#nextBraceStart(["[ ふー'", ' (*}]*)] (* *) :{(* *)'], [0, 0]) == [1, 17]
 endfunction

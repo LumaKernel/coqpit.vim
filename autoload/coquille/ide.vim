@@ -534,7 +534,7 @@ function! s:IDE.coq_back() abort
     silent! unlet self.state_id_list[len(self.sentence_end_pos_list):-1]
 
     call self._after_shrink()
-  else 
+  else
     exe s:assert('len(self.sentence_end_pos_list) == 1')
     return
   endif

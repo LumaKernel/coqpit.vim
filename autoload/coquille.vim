@@ -2,14 +2,14 @@
 " coquille
 " ========
 
-let s:current_dir=expand("<sfile>:p:h") 
+let s:current_dir=expand('<sfile>:p:h')
 
 function! coquille#reset_panels() abort
-  if exists("b:goal_buf") && buffer_name(b:goal_buf) == "Goals"
+  if exists('b:goal_buf') && buffer_name(b:goal_buf) ==# 'Goals'
     silent! execute 'bdelete' . b:goal_buf
   endif
 
-  if exists("b:info_buf") && buffer_name(b:info_buf) == "Infos"
+  if exists('b:info_buf') && buffer_name(b:info_buf) ==# 'Infos'
     silent! execute 'bdelete' . b:info_buf
   endif
 
@@ -20,14 +20,14 @@ function! coquille#reset_panels() abort
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let l:goal_buf = bufnr("%")
+    let l:goal_buf = bufnr('%')
   rightbelow new Infos
     setlocal buftype=nofile
     setlocal filetype=coq-infos
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let l:info_buf = bufnr("%")
+    let l:info_buf = bufnr('%')
   execute l:winnr . 'winc w'
   
   let b:goal_buf = l:goal_buf
@@ -37,8 +37,8 @@ function! coquille#reset_panels() abort
 endfunction
 
 function! coquille#killSession()
-    execute 'bdelete' . s:goal_buf
-    execute 'bdelete' . s:info_buf
+    execute 'bdelete' .. b:goal_buf
+    execute 'bdelete' .. b:info_buf
     py3 coquille.kill_coqtop()
 
     setlocal ei=InsertEnter
@@ -79,7 +79,7 @@ endfunction
 
 " restart coquille IDE
 function! coquille#launch(...)
-  if exists("b:coquille#IDE")
+  if exists('b:coquille#IDE')
     silent! call b:coquilleIDE.kill()
   endif
 

@@ -112,7 +112,7 @@ endfunction
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
   " TODO
-  echoerr "[CoqTop Handler] Internal error. Please report issue in " .. coquille#repository_url .. " ."
+  echoerr "[CoqTop Handler] Internal error. Please report issue in " .. g:coquille#repository_url .. " ."
   echoerr msg
 endfunction
 " }}}
@@ -190,7 +190,7 @@ function! s:CoqTopHandler.add_after_callback(callback = {...->0})
 endfunction
 " }}}
 
-" interacting with CoqTop User {{{ 
+" interacting with CoqTop User {{{
 
 
 " ._init(callback)
