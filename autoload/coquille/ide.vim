@@ -53,7 +53,7 @@ function! s:IDE.new(bufnr, args = []) abort
     call self._process_queue()
   endfunction
 
-  let self.coqtop_handler = coquille#coqtop#makeInstance(a:args, function(self.after_init, self))
+  let self.coqtop_handler = coquille#CoqTopHandler#new(a:args, function(self.after_init, self))
   call self.coqtop_handler.set_info_callback(self._info)
   call self.coqtop_handler.set_add_axiom_callback(self._add_axiom)
   call self.coqtop_handler.add_after_callback(self._check_queue)
@@ -310,7 +310,7 @@ endfunction
 " _check_queue {{{
 function! s:IDE._check_queue() abort
   if self.coqtop_handler.waiting == 0
-      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:strict_check))
+      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:strict_check, 0))
     if self.last_goal_check != self.state_id_list[-1]
       exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
       let self.goal_message = []
@@ -425,7 +425,7 @@ endfunction
 
 " process queue {{{
 function! s:IDE._process_queue()
-  if self.coqtop_handler.waiting || len(self.queue) == 0
+  if !self.coqtop_handler.running() || self.coqtop_handler.waiting || len(self.queue) == 0
     return
   endif
 
@@ -512,7 +512,7 @@ function! s:IDE.coq_next() abort
   call self.recolor()
   call self.refreshInfo()
 
-  if coquille#get_buffer_config(s:auto_move)
+  if coquille#get_buffer_config(s:auto_move, 0)
     call self.move(sentence_end_pos)
   endif
 endfunction
@@ -544,7 +544,7 @@ function! s:IDE.coq_back() abort
   call self.refreshInfo()
   call self._check_queue()
 
-  if coquille#get_buffer_config(s:auto_move)
+  if coquille#get_buffer_config(s:auto_move, 0)
     call self.move(self.get_last())
   endif
 endfunction
@@ -681,7 +681,7 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
   if a:ceil isnot v:null
     ceil = a:ceil
   else
-    let ceil = coquille#get_buffer_config(s:cursor_ceiling)
+    let ceil = coquille#get_buffer_config(s:cursor_ceiling, 0)
   endif
 
   call self.coq_to_pos(pos, ceil)
@@ -787,14 +787,14 @@ endfunction
 
 " export
 
-function! coquille#ide#makeInstance(...) abort
+function! coquille#IDE#new(...) abort
   return call(s:IDE.new, a:000)
 endfunction
 
 
 " test {{{
 
-function! coquille#ide#Test()
+function! coquille#IDE#Test()
   exe g:PAssert('s:pos_lt([0, 1], [0, 2])')
   exe g:PAssert('!s:pos_lt([0, 2], [0, 1])')
   exe g:PAssert('!s:pos_lt([0, 2], [0, 2])')

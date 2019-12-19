@@ -2,15 +2,37 @@
 " coquille
 " ========
 
+
+let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
+
+function! coquille#config_name(name, default) abort
+  if !exists('g:coquille_' .. a:name)
+    let g:['coquille_' .. a:name] = a:default
+  endif
+  return a:name
+endfunction
+
+function! coquille#get_buffer_config(name, default) abort
+  if exists('b:coquille_' .. a:name)
+    return b:['coquille_' .. a:name]
+  endif
+  if exists('g:coquille_' .. a:name)
+    return g:['coquille_' .. a:name]
+  endif
+  return a:default
+endfunction
+
+
+
 let s:current_dir=expand('<sfile>:p:h')
 
 function! coquille#reset_panels() abort
   if exists('b:goal_buf') && buffer_name(b:goal_buf) ==# 'Goals'
-    silent! execute 'bdelete' . b:goal_buf
+    silent! execute 'bdelete' .. b:goal_buf
   endif
 
   if exists('b:info_buf') && buffer_name(b:info_buf) ==# 'Infos'
-    silent! execute 'bdelete' . b:info_buf
+    silent! execute 'bdelete' .. b:info_buf
   endif
 
   let l:winnr = winnr()
@@ -28,7 +50,7 @@ function! coquille#reset_panels() abort
     setlocal nocursorline
     setlocal nocursorcolumn
     let l:info_buf = bufnr('%')
-  execute l:winnr . 'winc w'
+  execute l:winnr .. 'winc w'
   
   let b:goal_buf = l:goal_buf
   let b:info_buf = l:info_buf
@@ -39,9 +61,9 @@ endfunction
 function! coquille#killSession()
     execute 'bdelete' .. b:goal_buf
     execute 'bdelete' .. b:info_buf
-    py3 coquille.kill_coqtop()
+    " py3 coquille.kill_coqtop()
 
-    setlocal ei=InsertEnter
+    setlocal eventignore=InsertEnter
 endfunction
 
 function! coquille#rawQuery(...)
@@ -83,7 +105,7 @@ function! coquille#launch(...)
     silent! call b:coquilleIDE.kill()
   endif
 
-  let b:coquilleIDE = coquille#ide#makeInstance(bufnr('%'), a:000)
+  let b:coquilleIDE = coquille#IDE#new(bufnr('%'), a:000)
   let b:coquille_running = 1
 
   " make the different commands accessible
@@ -114,22 +136,3 @@ function! coquille#register()
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
 endfunction
 
-
-function! coquille#config_name(name, default) abort
-  if !exists('g:coquille_' .. a:name)
-    let g:['coquille_' .. a:name] = a:default
-  endif
-  return a:name
-endfunction
-
-function! coquille#get_buffer_config(name) abort
-  if exists('b:coquille_' .. a:name) && b:['coquille_' .. a:name] is 1
-    return 1
-  endif
-  if exists('g:coquille_' .. a:name) && g:['coquille_' .. a:name] is 1
-    return 1
-  endif
-  return 0
-endfunction
-
-let coquille#repository_url = 'https://github.com/LumaKernel/coquille'

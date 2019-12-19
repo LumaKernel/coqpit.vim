@@ -22,8 +22,8 @@ function! coquille#goals#xml2strs(goals)
   for idx in range(nr_subgoals)
     let goal = list[idx]
     " let id = goal.child[0].child[0]
-    let hyps = map(goal.child[1].child, 'coquille#goals#richpp2str(v:val)')
-    let ccl = coquille#goals#richpp2str(goal.child[2])
+    let hyps = map(goal.child[1].child, 'coquille#xml#2str(v:val)')
+    let ccl = coquille#xml#2str(goal.child[2])
 
     if idx == 0
       let res += coquille#goals#hyps2strs(hyps)
@@ -57,8 +57,8 @@ function! s:unfocused2strs(goals)
   for idx in range(nr_unfocused)
     let goal = list_unfocused[idx]
     " let id = goal.child[0].child[0]
-    " let hyps = map(goal.child[1].child, 'coquille#goals#richpp2str(v:val)')
-    let ccl = coquille#goals#richpp2str(goal.child[2])
+    " let hyps = map(goal.child[1].child, 'coquille#xml#2str(v:val)')
+    let ccl = coquille#xml#2str(goal.child[2])
   
     let res += ['======================== ( ' .. (idx + 1) .. ' / ' .. nr_unfocused .. ' )']
     let res += split(ccl, "\n")
@@ -81,8 +81,8 @@ function! s:gaveup2strs(goals)
   for idx in range(nr_gaveup)
     let goal = list_gaveup[idx]
     " let id = goal.child[0].child[0]
-    " let hyps = map(goal.child[1].child, 'coquille#goals#richpp2str(v:val)')
-    let ccl = coquille#goals#richpp2str(goal.child[2])
+    " let hyps = map(goal.child[1].child, 'coquille#xml#2str(v:val)')
+    let ccl = coquille#xml#2str(goal.child[2])
   
     let res += split(ccl, "\n")
   endfor
@@ -99,24 +99,5 @@ function! coquille#goals#hyps2strs(hyps)
     let res += split(hyp, "\n")
   endfor
   return res
-endfunction
-
-function! coquille#goals#richpp2str(richpp)
-  if type(a:richpp) == v:t_string
-    return coquille#goals#unescape(a:richpp)
-  endif
-
-  let res = ''
-  for el in a:richpp.child
-    let res ..= coquille#goals#richpp2str(el)
-  endfor
-
-  return res
-endfunction
-
-function! coquille#goals#unescape(str) abort
-  return a:str
-    \->substitute('&nbsp;', ' ', 'g')
-    \->substitute('&apos;', "'", 'g')
 endfunction
 
