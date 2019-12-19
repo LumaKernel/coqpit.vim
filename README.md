@@ -11,9 +11,9 @@ a
 TODO
 ----
 
-- [ ] Clearify dependencies
-  - [x] ~~python version~~
-  - [ ] Coq version
+- [ ] Goals syntax
+- [ ] Infos syntax
+- [ ] Query commands
 - [ ] Multiple buffer support
   - [ ] one buffer attaches one goal-window and one info-window
 - [ ] More flexible settings
@@ -23,19 +23,48 @@ TODO
   - [ ] `auto open window`
   - [ ] `rearrange after focus`
   - [ ] `rerun after focus`
-- [ ] Fix bugs
-- [ ] Highlighting Erros in Editor
+- [ ] Jump to Last
+- [ ] document about custimize window
+
+- [ ] Screenshots
+
+- [x] version chekcking
+
+- windows gui checking
+  - [x] Coq 3.5pl3 works
+  - [ ] Coq 3.6 works
+  - [x] Coq 3.7 works
+  - [ ] Coq 3.8 works
+  - [x] Coq 3.9 works
+  - [x] Coq 3.10 works
+  - [x] Coq 3.11beta works
+  - [x] `coqtopide.opt.exe`  works
+
+- windows cui checking ( `win32unix` )
+  - [x] Coq 3.7 works
+  - [x] Coq 3.9 works
+
+- [x] specifying Coq binary
+  - [x] `g:coquille_coq_executable`
+- [x] Clearify dependencies
+  - [x] ~~python version~~
+  - [x] Coq version
+- [x] Fix bugs
+  - found bugs in original version were almostly fixed.
+- [x] Highlighting Erros in Editor
 - [x] Python2 to Python3 ... ? ( Is it needed ? )
   - re-write in vim script !!
+- [x] write tests
+
+- [x] ~~Jump to Error line~~
+  - Maybe not needed.
+
+Not easy ones.
+
 - [ ] Vim friendly Search Interface
 - [ ] Compile Coq in Vim
   - [ ] `rerun after compile`
-- [ ] write tests
-- [ ] document about custimize window
-- [ ] Jump to Last
 - [ ] Queue all command
-- [x] ~~Jump to Error line~~
-  - Maybe not needed.
 - [ ] Jump to Axiom
   - Sounds good for rewriting `admit.`
 - [ ] Setting by Global Variables
@@ -57,7 +86,13 @@ Dependencies
 
 - Vim 8.0 or above ( `+job`, `+lambda`, etc; recommend you `+huge` )
 - [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
-- Coq 3.7 (WIP)
+  - (WIP) how about built-in
+- Coq 8.5 or above. Checked versions below.
+  - Coq8.5pl3
+  - Coq8.7
+  - Coq8.9
+  - Coq8.10
+  - Coq8.11 (beta)
 
 
 ---
@@ -89,13 +124,13 @@ branch.
 Getting started
 ---------------
 
-To launch Coquille on your Coq file, run `:CoqLaunch` which will make the
+To start Coquille IDE on your Coq file, run `:CoqLaunch` ( or set `g:coquille_auto_launch=1` before loading ) which will make the
 commands :
 
 - CoqNext
+- CoqBack
 - CoqToCursor
-- coqBack
-- CoqKill
+- CoqRearrange
 
 available to you.
 
