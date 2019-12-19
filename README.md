@@ -7,34 +7,44 @@ WIP
 
 a
 
+
 TODO
 ----
 
-* Clearify dependencies
-  * python version
-  * Coq version
-* Multiple buffer support
-  * one buffer to one goal-window and one info-window
-* More flexible settings
-  * Reset window
-  * CoqToCursor with ceiling (now, flooring)
-  * `auto launch`
-  * `auto open window`
-  * `rearrange after focus`
-  * `rerun after focus`
-* Fix bugs
-* Highlighting Erros in Editor
-* Python2 to Python3 ... ? ( Is it needed ? )
-  * write in vim script !!
-* Vim friendly Search Interface
-* Compile Coq in Vim
-  * `rerun after compile`
-* write tests
-* document about custimize window
-* Jump to Cursor
-* Jump to Error line
-  * location list
-  * ... or ?
+- [ ] Clearify dependencies
+  - [x] ~~python version~~
+  - [ ] Coq version
+- [ ] Multiple buffer support
+  - [ ] one buffer attaches one goal-window and one info-window
+- [ ] More flexible settings
+  - [ ] Reset window
+  - [x] CoqToCursor with ceiling (now, flooring)
+  - [ ] `auto launch`
+  - [ ] `auto open window`
+  - [ ] `rearrange after focus`
+  - [ ] `rerun after focus`
+- [ ] Fix bugs
+- [ ] Highlighting Erros in Editor
+- [x] Python2 to Python3 ... ? ( Is it needed ? )
+  - re-write in vim script !!
+- [ ] Vim friendly Search Interface
+- [ ] Compile Coq in Vim
+  - [ ] `rerun after compile`
+- [ ] write tests
+- [ ] document about custimize window
+- [ ] Jump to Last
+- [ ] Queue all command
+- [x] ~~Jump to Error line~~
+  - Maybe not needed.
+- [ ] Jump to Axiom
+  - Sounds good for rewriting `admit.`
+- [ ] Setting by Global Variables
+  - Hm, it's nasty... make just a function to configure.
+
+Goal
+----
+
+What this script can read is what the compiler can.
 
 ---
 
@@ -45,9 +55,9 @@ favorite editor.
 Dependencies
 ------------
 
-- Vim 8.0 or above with `+job`, `+lambda`
+- Vim 8.0 or above ( `+job`, `+lambda`, etc; recommend you `+huge` )
 - [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
-- Coq 3.7
+- Coq 3.7 (WIP)
 
 
 ---

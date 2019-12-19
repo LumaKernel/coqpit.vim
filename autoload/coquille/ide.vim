@@ -2,10 +2,12 @@
 " Coquille IDE
 " ============
 
-" TODO : ただしオプションで，編集で Goals は変わらないように
-" TODO : 最悪 re-launch できますよ，は大事だよね
-" TODO : Axiom
 " TODO : Goals
+
+" TODO : オプションで，編集で Infos/Goals は変わらないように
+" TODO : 最悪 re-launch できますよ，は大事だよね
+" TODO : Infos
+" TODO : ハイライトをウィンドウ変項などに耐えるようにする
 
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
@@ -15,7 +17,7 @@ let s:bufnr_to_IDE = {}
 
 let s:auto_move = coquille#config_name('auto_move', 0)
 let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 0)
-let s:strict_check = coquille#config_name('strict_check', 0)
+let s:strict_check = coquille#config_name('strict_check', 1)
 
 function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
@@ -174,10 +176,9 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
       let self.info_message += [a:msg]
     endif
   else
-    if len(a:msg) == 0
-      let self.goal_message = ["No goals."]
-    else
-      let self.goal_message = a:msg
+    if a:msg isnot v:null
+      " a:msg is xml
+      let self.goal_message = coquille#goals#xml2strs(a:msg)
     endif
   endif
 

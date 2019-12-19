@@ -58,8 +58,8 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  " echom "got!!"
-  " echom a:msg
+  echom "got!!"
+  echom a:msg
   
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -90,7 +90,7 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
     if content.attr.val == 'message'
       let state_id = str2nr(feedback.find('state_id').attr.val)
       let level = content.find('message_level').attr.val
-      let msg = s:unescape(content.find('pp').child[0])
+      let msg = coquille#goals#richpp2str(content.find('richpp'))
       let err_loc = v:null
 
       if level == 'error'
@@ -247,10 +247,8 @@ function! s:CoqTopHandler._makeAddCallback(callback) abort
         let err_loc = [attr['loc_s'], attr['loc_e']]
       endif
 
-      if !empty(a:value.find('pp'))
-        if len(a:value.find('pp').child)
-          let msg = s:unescape(a:value.find('pp').child[0])
-        endif
+      if !empty(a:value.find('richpp'))
+        let msg = coquille#goals#richpp2str(a:value.find('richpp'))
       endif
 
       call a:callback(state_id, 1, msg, err_loc)
@@ -273,14 +271,13 @@ endfunction
 function! s:CoqTopHandler._makeGoalCallback(callback) abort
   function! self.goalCallback(value) abort closure
     if a:value.attr.val == 'good'
+
       let option = a:value.find("option")
-      if !empty(option)
-        if has_key(option.attr, 'val') && option.attr['val'] == 'none'
-          " No goals.
-          call a:callback(-1, 0, [], v:null)
-        endif
+      if !empty(option) && has_key(option.attr, 'val') && option.attr['val'] == 'none'
+        " No goal ( in CoqIDE, nothing is displayed )
+        call a:callback(-1, 0, v:null, v:null)
       else
-        call a:callback(-1, 0, ['hi'], v:null)
+        call a:callback(-1, 0, a:value.find('goals'), v:null)
       endif
     else
       let state_id = str2nr(a:value.find("state_id").attr.val)
@@ -292,10 +289,8 @@ function! s:CoqTopHandler._makeGoalCallback(callback) abort
         let err_loc = [attr['loc_s'], attr['loc_e']]
       endif
 
-      if !empty(a:value.find('pp'))
-        if len(a:value.find('pp').child)
-          let msg = s:unescape(a:value.find('pp').child[0])
-        endif
+      if !empty(a:value.find('richpp'))
+        let msg = coquille#goals#richpp2str(a:value.find('richpp'))
       endif
 
       call a:callback(state_id, 1, msg, err_loc)
@@ -343,11 +338,6 @@ function! s:createElement(name, attr, ...) abort
     call element.value(a:000[0])
   endif
   return element
-endfunction
-
-function! s:unescape(str) abort
-  return a:str
-    \->substitute('&nbsp;', ' ', 'g')
 endfunction
 
 function! s:bind_itself(fn) abort
