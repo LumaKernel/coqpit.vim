@@ -16,16 +16,16 @@ syn case match
 syn match   coqNumberGoals       '\d\+ subgoals\?' nextgroup=coqGoal
 
 " Hypothesis
-syn region  coqHypothesisBlock  contains=coqHypothesis start="^[_[:alpha:]][_'[:alnum:]]*\s*:" end="^$" keepend
+syn region  coqHypothesisBlock  contains=coqHypothesis start="^[_[:alpha:]][_'[:alnum:]]*\s*:" end=".$" keepend
 syn region  coqHypothesis       contained contains=coqHypothesisBody matchgroup=coqIdent start="^[_[:alpha:]][_'[:alnum:]]*" matchgroup=NONE end="^\S"me=e-1
 syn region  coqHypothesisBody   contained contains=@coqTerm matchgroup=coqVernacPunctuation start=":" matchgroup=NONE end="^\S"me=e-1
 
 " Separator
 syn match   coqGoalNumber       contained "(\s*\d\+\s*\/\s*\d\+\s*)"
-syn region  coqGoalSep          matchgroup=coqGoalLine start='^=\+' matchgroup=NONE end='^$' contains=coqGoalSepNumber
-syn region  coqGoalSepNumber    matchgroup=coqGoalNumber start="(\s*\d\+\s*\/\s*\d\+\s*)" matchgroup=NONE end="^$" contains=@coqTerm
+" syn region  coqGoalSep          matchgroup=coqGoalLine start='^_\+' matchgroup=NONE end='^$' contains=coqGoalSepNumber
+syn match  coqGoalLine          /^_.*$/ contains=coqGoalSepNumber
+syn region  coqGoalSepNumber    matchgroup=coqGoalNumber start="(\s*\d\+\s*\/\s*\d\+\s*)" matchgroup=NONE end=".$" contains=@coqTerm
 
-" TODO
 " Synchronization
 syn sync minlines=50
 syn sync maxlines=500
@@ -43,4 +43,4 @@ hi def link coqGoalLine                  Todo
 hi def link coqGoalNumber                Underlined
 
 
-let b:current_syntax = "coq-goals"
+let b:current_syntax = 'coq-goals'

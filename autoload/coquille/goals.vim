@@ -17,7 +17,7 @@ function! coquille#goals#xml2strs(goals)
 
   let res = []
 
-  let res += [nr_subgoals .. ' subgoal' .. plural, '']
+  let res += [nr_subgoals .. ' subgoal' .. plural]
 
   for idx in range(nr_subgoals)
     let goal = list[idx]
@@ -29,10 +29,8 @@ function! coquille#goals#xml2strs(goals)
       let res += coquille#goals#hyps2strs(hyps)
     endif
 
-    let res += ['']
-    let res += ['======================== ( ' .. (idx + 1) .. ' / ' .. nr_subgoals .. ' )']
+    let res += ['______________________________________(' .. (idx + 1) .. '/' .. nr_subgoals .. ')']
     let res += split(ccl, "\n")
-    let res += ['']
   endfor
 
   return res
@@ -60,7 +58,7 @@ function! s:unfocused2strs(goals)
     " let hyps = map(goal.child[1].child, 'coquille#xml#2str(v:val)')
     let ccl = coquille#xml#2str(goal.child[2])
   
-    let res += ['======================== ( ' .. (idx + 1) .. ' / ' .. nr_unfocused .. ' )']
+    let res += ['______________________________________(' .. (idx + 1) .. '/' .. nr_unfocused .. ')']
     let res += split(ccl, "\n")
   endfor
 

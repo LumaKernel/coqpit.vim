@@ -121,7 +121,7 @@ function! s:IDE._info(state_id, level, msg, loc) abort
   let [spos, epos] = range
   let content = self.getContent()
 
-  let self.info_message += [a:msg]
+  let self.info_message += split(a:msg, "\n")
 
   if a:loc isnot v:null
     let [start, end] = a:loc
@@ -173,7 +173,7 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
     endif
 
     if a:msg != ''
-      let self.info_message += [a:msg]
+      let self.info_message += split(a:msg, "\n")
     endif
   else
     if a:msg isnot v:null
