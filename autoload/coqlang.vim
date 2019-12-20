@@ -254,7 +254,6 @@ function! coqlang#nextDot(content, from_pos) abort
     \   [match(trail, s:COMMENT_START_regex), 0],
     \   [match(trail, s:STRING_DELIM_regex), 1],
     \   [match(trail, s:DOT_regex), 2],
-    \   [match(trail, s:BEFORE_BRACE_START_regex), 3],
     \ ])
 
   for token in next
@@ -321,34 +320,6 @@ endfunction  " }}}
 
 
 function! coqlang#Test()
-  PAssert coqlang#nextSentencePos(["hi."], [0, 0]) == [0, 3]
-  PAssert coqlang#nextSentencePos(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
-  PAssert coqlang#nextSentencePos(["hi.hey."], [0, 0]) == [0, 7]
-  PAssert coqlang#nextSentencePos(["hi.\they."], [0, 0]) == [0, 3]
-  PAssert coqlang#nextSentencePos(["hi.","hey."], [0, 0]) == [0, 3]
-  PAssert coqlang#nextSentencePos(["hi.(**)hey."], [0, 0]) == [0, 11]
-  PAssert coqlang#nextSentencePos([" hello."], [0, 0]) == [0, 7]
-  PAssert coqlang#nextSentencePos(["(* oh... *)","--."], [0, 0]) == [1, 2]
-  PAssert coqlang#nextSentencePos(["Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 8]
-  PAssert coqlang#nextSentencePos(["", "Axiom A.", "Variable B:Prob."], [0, 0]) == [1, 8]
-  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
-  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
-  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
-  PAssert coqlang#nextSentencePos(['(**){(**)'], [0, 0]) == [0, 5]
-  PAssert coqlang#nextSentencePos(['(**)}(**)'], [0, 0]) == [0, 5]
-  PAssert coqlang#nextSentencePos(['{simpl.'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['{-'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['-{'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['}simpl.'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['}-'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['-}'], [0, 0]) == [0, 1]
-  PAssert coqlang#nextSentencePos(['--}'], [0, 0]) == [0, 2]
-  PAssert coqlang#nextSentencePos(['(**)[a]:{simpl.'], [0, 0]) == [0, 9]
-  " Hiragana is basically represented by 3 bytes in utf-8
-  PAssert coqlang#nextSentencePos(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
-  PAssert coqlang#nextSentencePos(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
-
   PAssert coqlang#skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
   PAssert coqlang#skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
   PAssert coqlang#skipComment([" (* *) hello"], [0, 3]) == [0, 6]
@@ -367,6 +338,7 @@ function! coqlang#Test()
   PAssert coqlang#nextDot(["Hi."], [0, 0]) == [0, 3]
   PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
   PAssert coqlang#nextDot(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
+  PAssert coqlang#nextDot(['', "Compute 1."], [0, 0]) == [1, 10]
 
   PAssert coqlang#nextBraceStart(['{'], [0, 0]) == [0, 1]
   PAssert coqlang#nextBraceStart(['{(**)'], [0, 0]) == [0, 1]
@@ -375,4 +347,36 @@ function! coqlang#Test()
   PAssert coqlang#nextBraceStart(['[(**)foo  ]: (*}*){'], [0, 0]) == [0, 19]
   PAssert coqlang#nextBraceStart(['[ f_o_o(*', ' {{*) ] (* *) :{(* *)'], [0, 0]) == [1, 16]
   PAssert coqlang#nextBraceStart(["[ ふー'", ' (*}]*)] (* *) :{(* *)'], [0, 0]) == [1, 17]
+
+  PAssert coqlang#nextSentencePos(["hi."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
+  PAssert coqlang#nextSentencePos(["hi.hey."], [0, 0]) == [0, 7]
+  PAssert coqlang#nextSentencePos(["hi.\they."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["hi.","hey."], [0, 0]) == [0, 3]
+  PAssert coqlang#nextSentencePos(["hi.(**)hey."], [0, 0]) == [0, 11]
+  PAssert coqlang#nextSentencePos([" hello."], [0, 0]) == [0, 7]
+  PAssert coqlang#nextSentencePos(["(* oh... *)","--."], [0, 0]) == [1, 2]
+  PAssert coqlang#nextSentencePos(["Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 8]
+  PAssert coqlang#nextSentencePos(["", "Axiom A.", "Variable B:Prob."], [0, 0]) == [1, 8]
+  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
+  PAssert coqlang#nextSentencePos(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#nextSentencePos(['', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#nextSentencePos(['(*  *)', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#nextSentencePos(['(* "*)" *)', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#nextSentencePos(['(**){(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#nextSentencePos(['(**)}(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#nextSentencePos(['{simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['{-'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['-{'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['}simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['}-'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['-}'], [0, 0]) == [0, 1]
+  PAssert coqlang#nextSentencePos(['--}'], [0, 0]) == [0, 2]
+  PAssert coqlang#nextSentencePos(['(**)[a]:{simpl.'], [0, 0]) == [0, 9]
+  " Hiragana is basically represented by 3 bytes in utf-8
+  PAssert coqlang#nextSentencePos(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
+  PAssert coqlang#nextSentencePos(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
+
 endfunction

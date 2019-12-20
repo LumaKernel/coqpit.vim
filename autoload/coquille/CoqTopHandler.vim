@@ -73,8 +73,8 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  echom "got!!"
-  echom a:msg
+  " echom "got!!"
+  " echom a:msg
   
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -232,11 +232,14 @@ endfunction
 " send Add < send sentence > {{{
 function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0}) abort
   exe s:assert('a:state_id == self.tip')
+
+  echom s:createElement("string", {}, a:sentence).toString()
+
   call self._call('
     \<call val="Add">
       \<pair>
         \<pair>
-          \' .. s:createElement("string", {}, a:sentence).toString() .. '
+          \<string>' .. coquille#xml#escape(a:sentence) .. '</string>
           \<int>-1</int>
         \</pair>
         \<pair>

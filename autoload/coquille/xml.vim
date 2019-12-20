@@ -12,9 +12,24 @@ function! coquille#xml#2str(xml)
   return res
 endfunction
 
+" CoqTop only supports &lt; , &gt; , &quot; , &apos , &amp;
+" though &#34; euqals to &quot;
+function! coquille#xml#escape(str) abort
+  return a:str
+    \->substitute('&', '\&amp;', 'g')
+    \->substitute('<', '\&lt;', 'g')
+    \->substitute('>', '\&gt;', 'g')
+    \->substitute('"', '\&quot;', 'g')
+    \->substitute("'", '\&apos;', 'g')
+endfunction
+
 function! coquille#xml#unescape(str) abort
   return a:str
-    \->substitute('&nbsp;', ' ', 'g')
-    \->substitute('&apos;', "'", 'g')
+    \->substitute('\c&lt;', '<', 'g')
+    \->substitute('\c&gt;', '>', 'g')
+    \->substitute('\c&nbsp;', ' ', 'g')
+    \->substitute('\c&apos;', "'", 'g')
+    \->substitute('\c&quot;', '"', 'g')
+    \->substitute('\c&amp;', '\&', 'g')
 endfunction
 
