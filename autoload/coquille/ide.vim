@@ -2,8 +2,6 @@
 " Coquille IDE
 " ============
 
-" TODO : Goals
-
 " TODO : オプションで，編集で Infos/Goals は変わらないように
 " TODO : 最悪 re-launch できますよ，は大事だよね
 " TODO : Infos
