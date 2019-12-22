@@ -6,7 +6,7 @@
 let s:COMMENT_START_regex = '(\*'
 let s:COMMENT_END_regex = '\*)'
 let s:STRING_DELIM_regex = '"'
-let s:DOT_regex = '\.\%($\| \|\n\|\t\)'
+let s:DOT_regex = '\.\%($\| \|\n\|\t\)\@='
 let s:BEFORE_BRACE_START_regex = '\[\|\d\|{'
 let s:BRACE_START_regex = '{'
 
@@ -176,7 +176,7 @@ function! coqlang#skipComment(content, from_pos, nested = 1) abort
     \   [match(trail, s:COMMENT_START_regex), 0],
     \   [match(trail, s:COMMENT_END_regex), 1],
     \   [match(trail, s:STRING_DELIM_regex), 2]
-    \ ])
+    \ ], function('s:pos_cmp'))
 
     for token in next
     if token[0] != -1
@@ -254,7 +254,7 @@ function! coqlang#nextDot(content, from_pos) abort
     \   [match(trail, s:COMMENT_START_regex), 0],
     \   [match(trail, s:STRING_DELIM_regex), 1],
     \   [match(trail, s:DOT_regex), 2],
-    \ ])
+    \ ], function('s:pos_cmp'))
 
   for token in next
     if token[0] != -1
@@ -296,7 +296,7 @@ function! coqlang#nextBraceStart(content, from_pos) abort
     \   [match(trail, s:COMMENT_START_regex), 0],
     \   [match(trail, s:STRING_DELIM_regex), 1],
     \   [match(trail, s:BRACE_START_regex), 2]
-    \ ])
+    \ ], function('s:pos_cmp'))
 
   for token in next
     if token[0] != -1
@@ -319,6 +319,16 @@ function! coqlang#nextBraceStart(content, from_pos) abort
 endfunction  " }}}
 
 
+" internal
+
+
+function! s:pos_cmp(pos1, pos2) abort
+  return a:pos1[0] != a:pos2[0] ? a:pos1[0] - a:pos2[0] : a:pos1[1] - a:pos2[1]
+endfunction
+
+
+
+
 function! coqlang#Test()
   PAssert coqlang#skipComment(["hi (**) ."], [0, 0], 0) == [0, 0]
   PAssert coqlang#skipComment([" (* *) hello"], [0, 0], 0) == [0, 0]
@@ -339,6 +349,7 @@ function! coqlang#Test()
   PAssert coqlang#nextDot(["Hi (* yay *)", ' " *) hi" .'], [0, 4]) == [1, 11]
   PAssert coqlang#nextDot(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
   PAssert coqlang#nextDot(['', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#nextDot(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2]) == [3, 6]
 
   PAssert coqlang#nextBraceStart(['{'], [0, 0]) == [0, 1]
   PAssert coqlang#nextBraceStart(['{(**)'], [0, 0]) == [0, 1]
@@ -390,4 +401,8 @@ function! coqlang#Test()
   PAssert coqlang#nextSentencePos(['A.', '', '', 'CC x. DD. (* *)', '', 'E.'], [0, 2]) == [3, 5]
   PAssert coqlang#nextSentencePos(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2]) == [3, 6]
   PAssert coqlang#nextSentencePos(['A.', '', '', 'Goal True. Admitted. (* *)', '', 'E.'], [0, 2]) == [3, 10]
+
+  PAssert coqlang#nextSentencePos(['[nyan] : foo.', '{'], [0, 0]) == [0, 13]
+  PAssert coqlang#nextSentencePos(['[nyan] : {foo. }'], [0, 0]) == [0, 10]
+  PAssert coqlang#nextSentencePos(['[nyan] : { }'], [0, 0]) == [0, 10]
 endfunction
