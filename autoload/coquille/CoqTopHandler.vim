@@ -233,8 +233,6 @@ endfunction
 function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0}) abort
   exe s:assert('a:state_id == self.tip')
 
-  echom s:createElement("string", {}, a:sentence).toString()
-
   call self._call('
     \<call val="Add">
       \<pair>
