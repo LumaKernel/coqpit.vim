@@ -378,5 +378,4 @@ function! coqlang#Test()
   " Hiragana is basically represented by 3 bytes in utf-8
   PAssert coqlang#nextSentencePos(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
   PAssert coqlang#nextSentencePos(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
-
 endfunction
