@@ -41,13 +41,13 @@ function! s:unfocused2strs(goals)
 
   let list_unfocused = []
   for el in list_pair_unfocused
-    let list_unfocused += el.child[0].child  " TODO : what ?
+    let list_unfocused += el.child[0].child
     let list_unfocused += el.child[1].child
   endfor
   let nr_unfocused = len(list_unfocused)
 
   if nr_unfocused == 0
-    return s:gaveup2strs(a:goals)
+    return s:shelves2strs(a:goals)
   endif
   
   let res = ['This subproof is complete, but there are some unfocused goals:', '']
@@ -63,6 +63,31 @@ function! s:unfocused2strs(goals)
   endfor
 
   res += ['']
+
+  return res
+endfunction
+
+function! s:shelves2strs(goals)
+  let list_shelves = a:goals.child[2].child
+  let nr_shelves = len(list_shelves)
+
+  if nr_shelves == 0
+    return s:gaveup2strs(a:goals)
+  endif
+  
+
+  let res = ['All the remaining goals are on the shelf:', '']
+
+  for idx in range(nr_shelves)
+    let goal = list_shelves[idx]
+    " let id = goal.child[0].child[0]
+    " let hyps = map(goal.child[1].child, 'coquille#xml#2str(v:val)')
+    let ccl = coquille#xml#2str(goal.child[2])
+  
+    let res += split(ccl, "\n")
+  endfor
+
+  let res += ['']
 
   return res
 endfunction
