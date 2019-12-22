@@ -24,8 +24,8 @@ syn match  coqGoalDescription   /^.*\%$/
 syn match   coqNumberGoals       '\d\+ subgoals\?' nextgroup=coqGoal
 
 " Hypothesis
-syn region  coqHypothesisBlock  contains=coqHypothesis start="^\K\k*\s*\%(\s*,\s*\K\k*\s*\)*:" end=".$" keepend
-syn region  coqHypothesis       contained contains=coqHypothesisBody,coqHypothesis matchgroup=coqIdent start="\K\k*" matchgroup=NONE end=".$" keepend
+syn region  coqHypothesisBlock  contains=coqHypothesis start="^\K[[:keyword:]']*\s*\%(\s*,\s*\K[[:keyword:]']*\s*\)*:" end=".$" keepend
+syn region  coqHypothesis       contained contains=coqHypothesisBody,coqHypothesis matchgroup=coqIdent start="\K[[:keyword:]']*" matchgroup=NONE end=".$" keepend
 syn region  coqHypothesisBody   contained contains=@coqTerm matchgroup=coqVernacPunctuation start=":" matchgroup=NONE end=".$" keepend
 
 " Separator
