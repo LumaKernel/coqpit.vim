@@ -491,7 +491,7 @@ endfunction
 function! s:IDE.coq_next() abort
   let content = self.getContent()
   let last = self.get_last()
-  let sentence_end_pos = coqlang#nextSentencePos(content, last)
+  let sentence_end_pos = coqlang#next_sentence_range(content, last)
 
   if sentence_end_pos is v:null
     return
@@ -608,7 +608,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
   let content = self.getContent()
   let last = self.get_last()
 
-  let next_endpos = coqlang#nextSentencePos(content, last)
+  let next_endpos = coqlang#next_sentence(content, last)
 
   if next_endpos is v:null
     return
@@ -627,7 +627,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
   endif
 
   while s:pos_lt(last_inclusive, a:pos)
-    let last = coqlang#nextSentencePos(content, last)
+    let last = coqlang#next_sentence(content, last)
 
     if last is v:null
       break
