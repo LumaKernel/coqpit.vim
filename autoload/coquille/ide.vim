@@ -31,8 +31,10 @@ function! s:IDE.new(bufnr, args = []) abort
 
   " checked by coq
   let self.sentence_end_pos_list = []
+
   " queued (exclusive)
   let self.queue = []
+
   " resulted by coqtop
   let self.state_id_list = []
 
@@ -67,7 +69,10 @@ function! s:IDE.is_initiated() abort
 endfunction
 
 function! s:IDE.get_last() abort
-  return get(self.queue, -1, get(self.sentence_end_pos_list, -1, [0, 0]))
+  if len(self.queue) > 0
+    return self.queue[-1]
+  endif
+  return get(self.sentence_end_pos_list, -1, [0, 0])
 endfunction
 
 function! s:IDE._after_shrink() abort
@@ -205,14 +210,16 @@ endfunction
 
 " }}}
 
-" pos : Pos | null
+" Make the situation that
+" queue and sentence checked ends `pos` or before
 "
-" <pos> [shrinked range] (old range)
+"
+" pos : Pos | null
 "
 " shrink_errors=1 : this is for internal option
 "
 " return [bool] updated
-" _shrink_to(pos, ceil=0) {{{
+" _shrink_to(pos, ceil=0, shrink_errors=1) {{{
 function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   if a:pos is v:null
     return 0
@@ -428,35 +435,81 @@ function! s:IDE._process_queue()
   endif
 
   exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
+  exe s:assert('len(self.sentence_end_pos_list) >= 1')
 
   let last_checked = self.sentence_end_pos_list[-1]
   let next_queue = self.queue[0]
 
-  let sentence_range = [last_checked, next_queue]
-  let sentence = join(self.getContent(sentence_range), "\n")
+
+  if s:pos_le(next_queue, last_checked)
+    call remove(self.queue, 0)
+    call self._check_queue()
+    return
+  endif
+
   let state_id = self.state_id_list[-1]
 
-  call self.coqtop_handler.send_sentence(state_id, sentence, self._make_after_result(sentence_range))
+  call self.coqtop_handler.next_sentence_end(state_id, self.getContent(), last_checked, self._make_after_get_sentence_end(state_id, last_checked))
 endfunction
 " }}}
-" IDE._make_after_result(range) {{{
-function! s:IDE._make_after_result(range) abort
+" IDE._make_after_get_sentence_end(state_id, last_checked) {{{
+function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
+  function! self.after_get_sentence_end(is_err, err_msg, err_loc, epos) abort closure
+
+    if self.sentence_end_pos_list[-1] != a:spos
+          \ || len(self.queue) == 0
+          \ || a:state_id != self.state_id_list[-1]
+      call self._process_queue()
+      return
+    endif
+
+    if a:is_err
+      call self._shrink_to(a:spos, v:none, 0)
+      let self.queue = []
+
+      if a:err_loc isnot v:null
+        let [start, end] = a:err_loc
+        let mes_range = [s:steps(content, a:spos, start, 1), s:steps(content, a:spos, end, 1)]
+        call add(self.hls, ["error", mes_range])
+      endif
+
+      if a:err_msg != ''
+        let self.info_message += [a:err_msg]
+      endif
+    else
+      let self.queue[-1] = a:epos
+      let sentence_range = [a:spos, a:epos]
+      let sentence = join(self.getContent(sentence_range), "\n")
+
+      ECHO sentence_range
+
+      call self.coqtop_handler.send_sentence(a:state_id, sentence, self._make_after_result(a:state_id, sentence_range))
+    endif
+
+    call self.recolor()
+    call self.refreshInfo()
+    " call self._check_queue()  " Don't do it
+  endfunction
+
+  return function(self.after_get_sentence_end, self)
+endfunction
+" }}}
+" IDE._make_after_result(old_state_id, range) {{{
+function! s:IDE._make_after_result(old_state_id, range) abort
   function! self.after_result(state_id, is_err, msg, err_loc) abort closure
     let [spos, epos] = a:range
 
-    if self.sentence_end_pos_list[-1] != spos || len(self.queue) == 0
+    if self.sentence_end_pos_list[-1] != spos
+          \ || len(self.queue) == 0
+          \ || a:old_state_id != self.state_id_list[-1]
       call self._process_queue()
       return
     endif
 
     let content = self.getContent()
-    let next_queue = self.queue[0]
-
-    " this result is for self.queue[0]
-
-    call remove(self.queue, 0)
 
     if a:is_err
+      " This easily occurs
       call self._shrink_to(spos, v:none, 0)
       let self.queue = []
 
@@ -470,7 +523,7 @@ function! s:IDE._make_after_result(range) abort
         let self.info_message += [a:msg]
       endif
     else
-      call add(self.sentence_end_pos_list, next_queue)
+      call add(self.sentence_end_pos_list, epos)
       call add(self.state_id_list, a:state_id)
     endif
 
@@ -491,10 +544,12 @@ endfunction
 function! s:IDE.coq_next() abort
   let content = self.getContent()
   let last = self.get_last()
-  let sentence_end_pos = coqlang#next_sentence_range(content, last)
+  let expected_sentence_end_pos = coqlang#next_sentence(content, last)
 
-  if sentence_end_pos is v:null
-    return
+  if expected_sentence_end_pos is v:null
+    let expected_sentence_end_pos = [len(content) - 1, len(content[-1])]
+    " NOTE : making return here is another good choice. But a compiler is more
+    " correct.
   endif
 
   call self._shrink_to(last)
@@ -503,7 +558,7 @@ function! s:IDE.coq_next() abort
     let self.info_message = []
   endif
 
-  call add(self.queue, sentence_end_pos)
+  call add(self.queue, expected_sentence_end_pos)
 
   call self._process_queue()
 
@@ -511,7 +566,7 @@ function! s:IDE.coq_next() abort
   call self.refreshInfo()
 
   if coquille#get_buffer_config(s:auto_move, 0)
-    call self.move(sentence_end_pos)
+    call self.move(expected_sentence_end_pos)
   endif
 endfunction
 " }}}
@@ -679,7 +734,7 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
   if a:ceil isnot v:null
     ceil = a:ceil
   else
-    let ceil = coquille#get_buffer_config(s:cursor_ceiling, 0)
+    let ceil = coquille#get_buffer_config(s:cursor_ceiling, 1)
   endif
 
   call self.coq_to_pos(pos, ceil)

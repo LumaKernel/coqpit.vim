@@ -2,14 +2,17 @@
 " Coq Langugage
 " =============
 
+" This is not strict Coq syntax analyzer.
+" This makes just expections for good experience.
+
 " - patterns
 
 let s:COMMENT_START_regex = '(\*'
 let s:COMMENT_END_regex = '\*)'
 let s:STRING_DELIM_regex = '"'
 let s:DOT_regex = '\.\%($\| \|\n\|\t\)\@='
-let s:GOAL_SELECTOR_START = '\[\|\d\|{'
-let s:BRACE_START_regex = '{'
+let s:GOAL_SELECTOR_START_regex = '\[\|\d\|{'
+let s:GOAL_SELECTOR_MIDDLE_regex = ':'
 
 
 " library for Coq as a language
@@ -41,7 +44,7 @@ endfunction
 " next_sentence_range(content, from_pos) {{{
 function! coqlang#next_sentence_range(content, from_pos) abort
   let [line, col] = a:from_pos
-  let end_pos = next_sentence(a:content, a:from_pos)
+  let end_pos = coqlang#next_sentence(a:content, a:from_pos)
   if end_pos is v:null
     return v:null
   endif
@@ -90,6 +93,25 @@ function! coqlang#skip_blanks(content, from_pos) abort
   return [line, col]
 endfunction  " }}}
 
+" skip_blanks(content, from_pos) {{{
+function! coqlang#skip_blanks_and_comment(content, from_pos) abort
+  let old_pos = [-1, -1]
+  let pos = a:from_pos
+  while old_pos != pos
+    let old_pos = pos
+    let pos = coqlang#skip_blanks(a:content, pos)
+    if pos is v:null | break | endif
+
+    if a:content[pos[0]][pos[1]:pos[1]+1] == '(*'
+      let pos[1] += 2
+      let pos = coqlang#skip_comment(a:content, pos)
+    endif
+    if pos is v:null | break | endif
+  endwhile
+
+  return pos
+endfunction
+" }}}
 
 
 " Find next sentence after from_pos inclusive.
@@ -120,8 +142,22 @@ function! coqlang#next_sentence(content, from_pos) abort
   "  it works well
 
   " brace start
-  if match(a:content[line][col], s:BEFORE_BRACE_START_regex) == 0
-    return coqlang#next_brace_start(a:content, [line, col])
+  if a:content[line][col] == '{'
+    return [line, col + 1]
+  endif
+  " possibly brace start
+  if match(a:content[line][col], s:GOAL_SELECTOR_START_regex) == 0
+    let col += 1
+    let pos = coqlang#next_pattern(a:content, [line, col], s:GOAL_SELECTOR_MIDDLE_regex)
+    if pos is v:null | let pos = [line, col] | endif
+    let pos = coqlang#skip_blanks_and_comment(a:content, pos)
+    if pos is v:null | return v:null | endif
+    if a:content[pos[0]][pos[1]] == '{'
+      let pos[1] += 1
+      return pos
+    endif
+    let pos = coqlang#next_pattern(a:content, pos, s:DOT_regex)
+    return pos
   endif
   " brace end
   if a:content[line][col] == '}'
@@ -147,11 +183,12 @@ function! coqlang#next_sentence(content, from_pos) abort
       return v:null
     endif
 
-    return next_sentence(a:content, com_end)
+    return coqlang#next_sentence(a:content, com_end)
   endif
 
   return coqlang#next_pattern(a:content, [line, col], s:DOT_regex)
-endfunction  " }}}
+endfunction
+" }}}
 
 
 " Find next position whose nested level is zero. (exclusive)
@@ -195,7 +232,7 @@ function! coqlang#skip_comment(content, from_pos, nested = 1) abort
         return coqlang#skip_comment(a:content, [line, col + 2], a:nested - 1)
       elseif token[1] == 2
         " string start "
-        let pos = coqlang#skip_stirng(a:content, [line, col + 1])
+        let pos = coqlang#skip_string(a:content, [line, col + 1])
         return coqlang#skip_comment(a:content, pos, a:nested)
       endif
     endif
@@ -212,8 +249,8 @@ endfunction  " }}}
 " from_pos : Pos | null
 "
 " return Pos | null
-" skip_stirng(content, from_pos) {{{
-function! coqlang#skip_stirng(content, from_pos) abort
+" skip_string(content, from_pos) {{{
+function! coqlang#skip_string(content, from_pos) abort
   let nonblank_pos = coqlang#skip_blanks(a:content, a:from_pos)
   if nonblank_pos is v:null
     return v:null
@@ -228,13 +265,13 @@ function! coqlang#skip_stirng(content, from_pos) abort
   if str_end != -1
     let col += str_end
     if len(trail) > str_end + 1 && trail[str_end + 1] == '"'
-      return coqlang#skip_stirng(a:content, [line, col + 2])
+      return coqlang#skip_string(a:content, [line, col + 2])
     else
       return [line, col + 1]
     endif
   endif
 
-  return coqlang#skip_stirng(a:content, [line + 1, 0])
+  return coqlang#skip_string(a:content, [line + 1, 0])
 endfunction  " }}}
 
 
@@ -269,12 +306,12 @@ function! coqlang#next_pattern(content, from_pos, pattern) abort
       let col += token[0]
       if token[1] == 0
         " comment start (*
-        let com_end = coqlang#skip_comment(a:content, [line, col + 2], a:pattern)
-        return coqlang#next_pattern(a:content, com_end)
+        let com_end = coqlang#skip_comment(a:content, [line, col + 2])
+        return coqlang#next_pattern(a:content, com_end, a:pattern)
       elseif token[1] == 1
         " string start "
-        let str_end = coqlang#skip_stirng(a:content, [line, col + 1], a:pattern)
-        return coqlang#next_pattern(a:content, str_end)
+        let str_end = coqlang#skip_string(a:content, [line, col + 1])
+        return coqlang#next_pattern(a:content, str_end, a:pattern)
       elseif token[1] == 2
         " pattern
         return [line, col + 1]
@@ -305,88 +342,81 @@ function! coqlang#Test()
   PAssert coqlang#skip_comment(['(**', ')'], [0, 2]) is v:null
   PAssert coqlang#skip_comment(['(**', '(*', '*)'], [0, 2]) is v:null
 
-  PAssert coqlang#skip_stirng(['" "yo.'], [0, 1]) == [0, 3]
-  PAssert coqlang#skip_stirng([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
-  PAssert coqlang#skip_stirng(['""'], [0, 1]) == [0, 2]
-  PAssert coqlang#skip_stirng(['"'], [0, 1]) is v:null
-  PAssert coqlang#skip_stirng(['"', '"'], [0, 1]) == [1, 1]
-  PAssert coqlang#skip_stirng(['"""', '""'], [0, 1]) is v:null
+  PAssert coqlang#skip_string(['" "yo.'], [0, 1]) == [0, 3]
+  PAssert coqlang#skip_string([' " ""', ' "" " hi'], [0, 2]) == [1, 5]
+  PAssert coqlang#skip_string(['""'], [0, 1]) == [0, 2]
+  PAssert coqlang#skip_string(['"'], [0, 1]) is v:null
+  PAssert coqlang#skip_string(['"', '"'], [0, 1]) == [1, 1]
+  PAssert coqlang#skip_string(['"""', '""'], [0, 1]) is v:null
 
-  PAssert coqlang#next_pattern(["Hi."], [0, 0], s:DOT_regex) == [0, 3]
-  PAssert coqlang#next_pattern(["Hi (* yay *, s:DOT_regex)", ' " *) hi" .'], [0, 4]) == [1, 11]
-  PAssert coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], s:DOT_regex) == [2, 3]
-  PAssert coqlang#next_pattern(['', "Compute 1."], [0, 0], s:DOT_regex) == [1, 10]
-  PAssert coqlang#next_pattern(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2], s:DOT_regex) == [3, 6]
+  exe g:PAssert('coqlang#next_pattern(["Hi."], [0, 0], s:DOT_regex) == [0, 3]')
+  exe g:PAssert('coqlang#next_pattern(["Hi (* yay *)", '' " *) hi" .''], [0, 4], s:DOT_regex) == [1, 11]')
+  exe g:PAssert('coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], s:DOT_regex) == [2, 3]')
+  exe g:PAssert('coqlang#next_pattern(['''', "Compute 1."], [0, 0], s:DOT_regex) == [1, 10]')
+  exe g:PAssert('coqlang#next_pattern([''A.'', '''', '''', ''CC xx. DD. (* *)'', '''', ''E.''], [0, 2], s:DOT_regex) == [3, 6]')
 
-  PAssert coqlang#next_brace_start(['{'], [0, 0]) == [0, 1]
-  PAssert coqlang#next_brace_start(['{(**)'], [0, 0]) == [0, 1]
-  PAssert coqlang#next_brace_start(['0 : {'], [0, 0]) == [0, 5]
-  PAssert coqlang#next_brace_start(['13:(**){'], [0, 0]) == [0, 8]
-  PAssert coqlang#next_brace_start(['[(**)foo  ]: (*}*){'], [0, 0]) == [0, 19]
-  PAssert coqlang#next_brace_start(['[ f_o_o(*', ' {{*) ] (* *) :{(* *)'], [0, 0]) == [1, 16]
-  PAssert coqlang#next_brace_start(["[ ふー'", ' (*}]*)] (* *) :{(* *)'], [0, 0]) == [1, 17]
-
-  PAssert next_sentence(["hi."], [0, 0]) == [0, 3]
-  PAssert next_sentence(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
-  PAssert next_sentence(["hi.hey."], [0, 0]) == [0, 7]
-  PAssert next_sentence(["hi.\they."], [0, 0]) == [0, 3]
-  PAssert next_sentence(["hi.","hey."], [0, 0]) == [0, 3]
-  PAssert next_sentence(["hi.(**)hey."], [0, 0]) == [0, 11]
-  PAssert next_sentence([" hello."], [0, 0]) == [0, 7]
-  PAssert next_sentence(["(* oh... *)","--."], [0, 0]) == [1, 2]
-  PAssert next_sentence(["Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 8]
-  PAssert next_sentence(["", "Axiom A.", "Variable B:Prob."], [0, 0]) == [1, 8]
-  PAssert next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
-  PAssert next_sentence(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
-  PAssert next_sentence(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
-  PAssert next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
-  PAssert next_sentence(['', "Compute 1."], [0, 0]) == [1, 10]
-  PAssert next_sentence(['(*  *)', "Compute 1."], [0, 0]) == [1, 10]
-  PAssert next_sentence(['(* "*)" *)', "Compute 1."], [0, 0]) == [1, 10]
-  PAssert next_sentence(['(**){(**)'], [0, 0]) == [0, 5]
-  PAssert next_sentence(['(**)}(**)'], [0, 0]) == [0, 5]
-  PAssert next_sentence(['{simpl.'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['{-'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['-{'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['}simpl.'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['}-'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['-}'], [0, 0]) == [0, 1]
-  PAssert next_sentence(['--}'], [0, 0]) == [0, 2]
-  PAssert next_sentence(['(**)[a]:{simpl.'], [0, 0]) == [0, 9]
+  PAssert coqlang#next_sentence(["hi."], [0, 0]) == [0, 3]
+  PAssert coqlang#next_sentence(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]
+  PAssert coqlang#next_sentence(["hi.hey."], [0, 0]) == [0, 7]
+  PAssert coqlang#next_sentence(["hi.\they."], [0, 0]) == [0, 3]
+  PAssert coqlang#next_sentence(["hi.","hey."], [0, 0]) == [0, 3]
+  PAssert coqlang#next_sentence(["hi.(**)hey."], [0, 0]) == [0, 11]
+  PAssert coqlang#next_sentence([" hello."], [0, 0]) == [0, 7]
+  PAssert coqlang#next_sentence(["(* oh... *)","--."], [0, 0]) == [1, 2]
+  PAssert coqlang#next_sentence(["Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 8]
+  PAssert coqlang#next_sentence(["", "Axiom A.", "Variable B:Prob."], [0, 0]) == [1, 8]
+  PAssert coqlang#next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#next_sentence(["-", "Axiom A.", "Variable B:Prob."], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(["-", "Axiom A.", "Variable B:Prob."], [1, 0]) == [1, 8]
+  PAssert coqlang#next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]) == [2, 8]
+  PAssert coqlang#next_sentence(['', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#next_sentence(['(*  *)', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#next_sentence(['(* "*)" *)', "Compute 1."], [0, 0]) == [1, 10]
+  PAssert coqlang#next_sentence(['(**){(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#next_sentence(['(**)}(**)'], [0, 0]) == [0, 5]
+  PAssert coqlang#next_sentence(['{simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['{-'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['-{'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['}simpl.'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['}-'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['-}'], [0, 0]) == [0, 1]
+  PAssert coqlang#next_sentence(['--}'], [0, 0]) == [0, 2]
+  PAssert coqlang#next_sentence(['(**)[a]:{simpl.'], [0, 0]) == [0, 9]
   " Hiragana is basically represented by 3 bytes in utf-8
-  PAssert next_sentence(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
-  PAssert next_sentence(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
+  PAssert coqlang#next_sentence(['(**)[fooわおbar]:{simpl.'], [0, 0]) == [0, 20]
+  PAssert coqlang#next_sentence(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]) == [2, 3]
 
-  PAssert next_sentence(['A.', '', 'C. D. (* *)', 'E.'], [0, 2]) == [2, 2]
-  PAssert next_sentence(['A.', '', '', 'C. D. (* *)', 'E.'], [0, 2]) == [3, 2]
-  PAssert next_sentence(['A.', '', '', 'C x. D. (* *)', 'E.'], [0, 2]) == [3, 4]
-  PAssert next_sentence(['A.', '', '', 'C. D. (* *)', '', 'E.'], [0, 2]) == [3, 2]
-  PAssert next_sentence(['A.', '', '', 'C x. D. (* *)', '', 'E.'], [0, 2]) == [3, 4]
-  PAssert next_sentence(['A.', '', '', 'CC . DD. (* *)', '', 'E.'], [0, 2]) == [3, 4]
-  PAssert next_sentence(['A.', '', '', 'CC x. (* *)', '', 'E.'], [0, 2]) == [3, 5]
-  PAssert next_sentence(['A.', '', '', 'CC x. D. (* *)', '', 'E.'], [0, 2]) == [3, 5]
-  PAssert next_sentence(['A.', '', '', 'CC x. DD. (* *)', '', 'E.'], [0, 2]) == [3, 5]
-  PAssert next_sentence(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2]) == [3, 6]
-  PAssert next_sentence(['A.', '', '', 'Goal True. Admitted. (* *)', '', 'E.'], [0, 2]) == [3, 10]
+  PAssert coqlang#next_sentence(['A.', '', 'C. D. (* *)', 'E.'], [0, 2]) == [2, 2]
+  PAssert coqlang#next_sentence(['A.', '', '', 'C. D. (* *)', 'E.'], [0, 2]) == [3, 2]
+  PAssert coqlang#next_sentence(['A.', '', '', 'C x. D. (* *)', 'E.'], [0, 2]) == [3, 4]
+  PAssert coqlang#next_sentence(['A.', '', '', 'C. D. (* *)', '', 'E.'], [0, 2]) == [3, 2]
+  PAssert coqlang#next_sentence(['A.', '', '', 'C x. D. (* *)', '', 'E.'], [0, 2]) == [3, 4]
+  PAssert coqlang#next_sentence(['A.', '', '', 'CC . DD. (* *)', '', 'E.'], [0, 2]) == [3, 4]
+  PAssert coqlang#next_sentence(['A.', '', '', 'CC x. (* *)', '', 'E.'], [0, 2]) == [3, 5]
+  PAssert coqlang#next_sentence(['A.', '', '', 'CC x. D. (* *)', '', 'E.'], [0, 2]) == [3, 5]
+  PAssert coqlang#next_sentence(['A.', '', '', 'CC x. DD. (* *)', '', 'E.'], [0, 2]) == [3, 5]
+  PAssert coqlang#next_sentence(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2]) == [3, 6]
+  PAssert coqlang#next_sentence(['A.', '', '', 'Goal True. Admitted. (* *)', '', 'E.'], [0, 2]) == [3, 10]
 
-  PAssert next_sentence(['[nyan] : foo.', '{'], [0, 0]) == [0, 13]
-  PAssert next_sentence(['[nyan] : {foo. }'], [0, 0]) == [0, 10]
-  PAssert next_sentence(['[nyan] : { }'], [0, 0]) == [0, 10]
+  PAssert coqlang#next_sentence(['[nyan] : foo.', '{'], [0, 0]) == [0, 13]
+  PAssert coqlang#next_sentence(['[nyan] : {foo. }'], [0, 0]) == [0, 10]
+  PAssert coqlang#next_sentence(['[nyan] : { }'], [0, 0]) == [0, 10]
 
   for el in [
       \ '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:', 
-      \ '1:', '1 : ', '123(**):(**)'
+      \ '1:', '1 : ', '123(**):(**)',
       \ '']
-    PAssert next_sentence([el .. '{ admit. }'], [0, 0]) == [0, 10 + strlen(el)]
-    PAssert next_sentence([el .. 'admit. {  }'], [0, 0]) == [0, 16 + strlen(el)]
-    PAssert next_sentence([el .. 'refine (f _).'], [0, 0]) == [0, 23 + strlen(el)]
-    PAssert next_sentence([el .. 'refine ({ _ ).'], [0, 0]) == [0, 25 + strlen(el)]
-    PAssert next_sentence([el .. 'refine (:{ _ ).'], [0, 0]) == [0, 26 + strlen(el)]
-    PAssert next_sentence([el .. 'refine (1:{ _ ).'], [0, 0]) == [0, 27 + strlen(el)]
-    PAssert next_sentence([el .. 'refine (a:{ _ ).'], [0, 0]) == [0, 27 + strlen(el)]
-    PAssert next_sentence([el .. 'refine ([a:{ _ ).'], [0, 0]) == [0, 28 + strlen(el)]
-    PAssert next_sentence([el .. 'refine (a]:{ _ ).'], [0, 0]) == [0, 28 + strlen(el)]
-    PAssert next_sentence([el .. 'refine ([a]:{ _ ).'], [0, 0]) == [0, 29 + strlen(el)]
+    " TODO : doubled dot can't be parsed by PowerAssert
+    PAssert coqlang#next_sentence([el . '{ admit. }'], [0, 0]) == [0, 1 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'admit. {  }'], [0, 0]) == [0, 6 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine (f _).'], [0, 0]) == [0, 13 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine ({ _ ).'], [0, 0]) == [0, 14 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine (:{ _ ).'], [0, 0]) == [0, 15 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine (1:{ _ ).'], [0, 0]) == [0, 16 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine (a:{ _ ).'], [0, 0]) == [0, 16 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine ([a:{ _ ).'], [0, 0]) == [0, 17 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine (a]:{ _ ).'], [0, 0]) == [0, 17 + strlen(el)]
+    PAssert coqlang#next_sentence([el . 'refine ([a]:{ _ ).'], [0, 0]) == [0, 18 + strlen(el)]
   endfor
 endfunction
-}}}
+" }}}

@@ -275,8 +275,8 @@ function! s:CoqTopHandler._makeAddCallback(callback) abort
 endfunction
 " }}}
 
-" .refreshGoalInfo(callback)
-" callback : TODO
+" .refreshGoalInfo(callback) -> any
+" callback : (state_id, is_err, goals_xml | err_mes, err_loc)
 " send Goal < update Goals > {{{
 function! s:CoqTopHandler.refreshGoalInfo(callback = {...->0}) abort
   call self._call(
@@ -317,7 +317,7 @@ function! s:CoqTopHandler._makeGoalCallback(callback) abort
 endfunction
 " }}}
 
-" callback : (is_err, state_id)
+" callback : (is_err, state_id) -> any
 " send EditAt < move tip > {{{
 function! s:CoqTopHandler.editAt(new_state_id, callback = {...->0}) abort
   call self._call(
@@ -340,8 +340,58 @@ function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
 endfunction
 " }}}
 
+" callback : (xml) -> any
+" send Annotate < get structured code as XML > {{{
+function! s:CoqTopHandler.annotate(code, callback = {...->0}) abort
+  call self._call(
+    \ '<call val="Annotate"><string>' .. coquille#xml#escape(a:code) .. '</string></call>'
+    \ , self._make_after_annotate(a:callback))
+endfunction
+function! s:CoqTopHandler._make_after_annotate(callback) abort
+  function! self.after_annotate(value) abort closure
+    call a:callback(a:value)
+  endfunction
+
+  return function(self.after_annotate, self)
+endfunction
 " }}}
 
+" }}}
+
+
+" next sentence end pos in the tip
+"
+" state_id : int
+" content : [string]
+" from_pos : Pos
+" callback : (is_err, err_mes, err_loc, pos) -> any
+" next_sentence_end(state_id, content, from_pos, callback) {{{
+function! s:CoqTopHandler.next_sentence_end(state_id, content, from_pos, callback = {...->0}) abort
+  exe s:assert('a:state_id == self.tip')
+  let code = join([a:content[a:from_pos[0]][a:from_pos[1]:]] + a:content[a:from_pos[0]+1:], "\n")
+  call self.annotate(code, self._make_after_get_next_end(a:content, a:from_pos, a:callback))
+endfunction
+function! s:CoqTopHandler._make_after_get_next_end(content, from_pos, callback) abort
+  function! self.after_get_next_end(value) abort closure
+    if a:value.attr.val == 'good'
+      call a:callback(0, v:null, v:null, coquille#annotate#associate(a:value, a:content, a:from_pos))
+    else
+      let attr = a:value.attr
+
+      let err_mes = coquille#xml#2str(a:value.find('richpp'))
+      let err_loc = v:null
+
+      if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
+        let err_loc = [attr['loc_s'], attr['loc_e']]
+      endif
+
+      call a:callback(1, err_mes, err_loc, v:null)
+    endif
+  endfunction
+
+  return function(self.after_get_next_end, self)
+endfunction
+" }}}
 
 
 

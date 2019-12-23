@@ -84,7 +84,8 @@ favorite editor.
 Dependencies
 ------------
 
-- Vim 8.0 or above ( `+job`, `+lambda`, etc; recommend you `+huge` )
+- Vim 8.1 or above ( `+job`, `+lambda`, etc; recommend you `+huge` )
+- Vim `has('patch-8.1.1310')` ( default argument )
 - [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
   - (WIP) how about built-in
 - Coq 8.5 or above. Checked versions below.
