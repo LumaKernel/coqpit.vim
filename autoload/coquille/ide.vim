@@ -33,6 +33,8 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.sentence_end_pos_list = []
 
   " queued (exclusive)
+  " List<[Pos, Pos]>
+  " first is for internal, second is for apparence
   let self.queue = []
 
   " resulted by coqtop
@@ -68,9 +70,9 @@ function! s:IDE.is_initiated() abort
   return len(self.sentence_end_pos_list) > 0
 endfunction
 
-function! s:IDE.get_last() abort
+function! s:IDE.get_apparently_last() abort
   if len(self.queue) > 0
-    return self.queue[-1]
+    return self.queue[-1][1]
   endif
   return get(self.sentence_end_pos_list, -1, [0, 0])
 endfunction
@@ -229,7 +231,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   let updated = 0
 
   while len(self.queue) > 0
-        \ && s:pos_lt(a:pos, self.queue[-1])
+        \ && s:pos_lt(a:pos, self.queue[-1][0])
     let last = [0, remove(self.queue, -1)]
     let updated += 1
   endwhile
@@ -314,6 +316,10 @@ endfunction
 
 " _check_queue {{{
 function! s:IDE._check_queue() abort
+  while len(self.queue) && s:pos_le(self.queue[-1][0], self.sentence_end_pos_list[-1])
+    call remove(self.queue, 0)
+  endwhile
+
   if self.coqtop_handler.waiting == 0
       \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:strict_check, 0))
     if self.last_goal_check != self.state_id_list[-1]
@@ -397,7 +403,7 @@ function! s:IDE.recolor() abort
 
   if len(self.state_id_list)
     let last_checked = self.sentence_end_pos_list[-1]
-    let last_queued = get(self.queue, -1, last_checked)
+    let last_queued = self.get_apparently_last()
 
     exe s:assert('s:pos_le(last_checked, last_queued)')
 
@@ -438,7 +444,7 @@ function! s:IDE._process_queue()
   exe s:assert('len(self.sentence_end_pos_list) >= 1')
 
   let last_checked = self.sentence_end_pos_list[-1]
-  let next_queue = self.queue[0]
+  let next_queue = self.queue[0][0]
 
 
   if s:pos_le(next_queue, last_checked)
@@ -477,11 +483,11 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
         let self.info_message += [a:err_msg]
       endif
     else
-      let self.queue[-1] = a:epos
+      if len(self.queue) == 1
+        let self.queue[0][1] = a:epos
+      endif
       let sentence_range = [a:spos, a:epos]
       let sentence = join(self.getContent(sentence_range), "\n")
-
-      ECHO sentence_range
 
       call self.coqtop_handler.send_sentence(a:state_id, sentence, self._make_after_result(a:state_id, sentence_range))
     endif
@@ -502,7 +508,6 @@ function! s:IDE._make_after_result(old_state_id, range) abort
     if self.sentence_end_pos_list[-1] != spos
           \ || len(self.queue) == 0
           \ || a:old_state_id != self.state_id_list[-1]
-      call self._process_queue()
       return
     endif
 
@@ -543,7 +548,7 @@ endfunction
 " coq_next {{{
 function! s:IDE.coq_next() abort
   let content = self.getContent()
-  let last = self.get_last()
+  let last = self.get_apparently_last()
   let expected_sentence_end_pos = coqlang#next_sentence(content, last)
 
   if expected_sentence_end_pos is v:null
@@ -558,7 +563,7 @@ function! s:IDE.coq_next() abort
     let self.info_message = []
   endif
 
-  call add(self.queue, expected_sentence_end_pos)
+  call add(self.queue, [[last[0], last[1] + 1], expected_sentence_end_pos])
 
   call self._process_queue()
 
@@ -592,13 +597,13 @@ function! s:IDE.coq_back() abort
     return
   endif
 
-  call self._shrink_to(self.get_last(), v:none, 0)
+  call self._shrink_to(self.get_apparently_last(), v:none, 0)
   call self.recolor()
   call self.refreshInfo()
   call self._check_queue()
 
   if coquille#get_buffer_config(s:auto_move, 0)
-    call self.move(self.get_last())
+    call self.move(self.get_apparently_last())
   endif
 endfunction
 " }}}
@@ -634,7 +639,7 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
     return
   endif
 
-  if s:pos_le(self.get_last(), a:pos)
+  if s:pos_le(self.get_apparently_last(), a:pos)
     return
   endif
 
@@ -661,7 +666,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
   endif
 
   let content = self.getContent()
-  let last = self.get_last()
+  let last = self.get_apparently_last()
 
   let next_endpos = coqlang#next_sentence(content, last)
 
@@ -682,6 +687,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
   endif
 
   while s:pos_lt(last_inclusive, a:pos)
+    let last_internal = [last[0], last[1] + 1]
     let last = coqlang#next_sentence(content, last)
 
     if last is v:null
@@ -691,7 +697,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
     exe s:assert('last[1] >= 1')
     let last_inclusive = [last[0], last[1] - 1]
 
-    call add(self.queue, last)
+    call add(self.queue, [last_internal, last])
   endwhile
 
   if !a:ceil && a:pos != last_inclusive
@@ -710,7 +716,7 @@ function! s:IDE.coq_to_pos(pos, ceil=0) abort
     return
   endif
 
-  let last = self.get_last()
+  let last = self.get_apparently_last()
 
   if s:pos_lt(a:pos, last)
     call self.coq_shrink_to_pos(a:pos, a:ceil)

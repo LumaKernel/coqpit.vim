@@ -73,8 +73,8 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   " TODO : FOR DEBUG
-  " echom "got!!"
-  " echom a:msg
+  let g:mymes += ["got!!"]
+  let g:mymes += [a:msg]
   
   let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
@@ -162,8 +162,8 @@ function! s:CoqTopHandler._call(msg, cb) abort
   endif
 
   " TODO : FOR DEBUG
-  " echom "send!!"
-  " echom a:msg
+  let g:mymes += ["send!!"]
+  let g:mymes += [a:msg]
 
   if self.running()
     let self.waiting = 1

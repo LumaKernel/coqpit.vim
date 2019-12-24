@@ -7,12 +7,13 @@
 
 " - patterns
 
-let s:COMMENT_START_regex = '(\*'
-let s:COMMENT_END_regex = '\*)'
-let s:STRING_DELIM_regex = '"'
-let s:DOT_regex = '\.\%($\| \|\n\|\t\)\@='
-let s:GOAL_SELECTOR_START_regex = '\[\|\d\|{'
-let s:GOAL_SELECTOR_MIDDLE_regex = ':'
+let g:coqlang#COMMENT_START = '(\*'
+let g:coqlang#COMMENT_END = '\*)'
+let g:coqlang#STRING_DELIM = '"'
+let g:coqlang#DOT = '\.\%($\| \|\n\|\t\)\@='
+let g:coqlang#GOAL_SELECTOR_START = '\[\|\d'
+let g:coqlang#GOAL_SELECTOR_MIDDLE = ':'
+let g:coqlang#BRACE_START = '{'
 
 
 " library for Coq as a language
@@ -146,9 +147,9 @@ function! coqlang#next_sentence(content, from_pos) abort
     return [line, col + 1]
   endif
   " possibly brace start
-  if match(a:content[line][col], s:GOAL_SELECTOR_START_regex) == 0
+  if match(a:content[line][col], g:coqlang#GOAL_SELECTOR_START) == 0
     let col += 1
-    let pos = coqlang#next_pattern(a:content, [line, col], s:GOAL_SELECTOR_MIDDLE_regex)
+    let pos = coqlang#next_pattern(a:content, [line, col], g:coqlang#GOAL_SELECTOR_MIDDLE)
     if pos is v:null | let pos = [line, col] | endif
     let pos = coqlang#skip_blanks_and_comment(a:content, pos)
     if pos is v:null | return v:null | endif
@@ -156,7 +157,7 @@ function! coqlang#next_sentence(content, from_pos) abort
       let pos[1] += 1
       return pos
     endif
-    let pos = coqlang#next_pattern(a:content, pos, s:DOT_regex)
+    let pos = coqlang#next_pattern(a:content, pos, g:coqlang#DOT)
     return pos
   endif
   " brace end
@@ -186,7 +187,7 @@ function! coqlang#next_sentence(content, from_pos) abort
     return coqlang#next_sentence(a:content, com_end)
   endif
 
-  return coqlang#next_pattern(a:content, [line, col], s:DOT_regex)
+  return coqlang#next_pattern(a:content, [line, col], g:coqlang#DOT)
 endfunction
 " }}}
 
@@ -216,9 +217,9 @@ function! coqlang#skip_comment(content, from_pos, nested = 1) abort
   let trail = a:content[line][col:]
 
   let next = sort([
-    \   [match(trail, s:COMMENT_START_regex), 0],
-    \   [match(trail, s:COMMENT_END_regex), 1],
-    \   [match(trail, s:STRING_DELIM_regex), 2]
+    \   [match(trail, g:coqlang#COMMENT_START), 0],
+    \   [match(trail, g:coqlang#COMMENT_END), 1],
+    \   [match(trail, g:coqlang#STRING_DELIM), 2]
     \ ], function('s:pos_cmp'))
 
     for token in next
@@ -260,7 +261,7 @@ function! coqlang#skip_string(content, from_pos) abort
 
   let trail = a:content[line][col:]
 
-  let str_end = match(trail, s:STRING_DELIM_regex)
+  let str_end = match(trail, g:coqlang#STRING_DELIM)
 
   if str_end != -1
     let col += str_end
@@ -296,8 +297,8 @@ function! coqlang#next_pattern(content, from_pos, pattern) abort
   let trail = a:content[line][col:]
 
   let next = sort([
-    \   [match(trail, s:COMMENT_START_regex), 0],
-    \   [match(trail, s:STRING_DELIM_regex), 1],
+    \   [match(trail, g:coqlang#COMMENT_START), 0],
+    \   [match(trail, g:coqlang#STRING_DELIM), 1],
     \   [match(trail, a:pattern), 2]
     \ ], function('s:pos_cmp'))
 
@@ -349,11 +350,11 @@ function! coqlang#Test()
   PAssert coqlang#skip_string(['"', '"'], [0, 1]) == [1, 1]
   PAssert coqlang#skip_string(['"""', '""'], [0, 1]) is v:null
 
-  exe g:PAssert('coqlang#next_pattern(["Hi."], [0, 0], s:DOT_regex) == [0, 3]')
-  exe g:PAssert('coqlang#next_pattern(["Hi (* yay *)", '' " *) hi" .''], [0, 4], s:DOT_regex) == [1, 11]')
-  exe g:PAssert('coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], s:DOT_regex) == [2, 3]')
-  exe g:PAssert('coqlang#next_pattern(['''', "Compute 1."], [0, 0], s:DOT_regex) == [1, 10]')
-  exe g:PAssert('coqlang#next_pattern([''A.'', '''', '''', ''CC xx. DD. (* *)'', '''', ''E.''], [0, 2], s:DOT_regex) == [3, 6]')
+  exe g:PAssert('coqlang#next_pattern(["Hi."], [0, 0], g:coqlang#DOT) == [0, 3]')
+  exe g:PAssert('coqlang#next_pattern(["Hi (* yay *)", '' " *) hi" .''], [0, 4], g:coqlang#DOT) == [1, 11]')
+  exe g:PAssert('coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], g:coqlang#DOT) == [2, 3]')
+  exe g:PAssert('coqlang#next_pattern(['''', "Compute 1."], [0, 0], g:coqlang#DOT) == [1, 10]')
+  exe g:PAssert('coqlang#next_pattern([''A.'', '''', '''', ''CC xx. DD. (* *)'', '''', ''E.''], [0, 2], g:coqlang#DOT) == [3, 6]')
 
   PAssert coqlang#next_sentence(["hi."], [0, 0]) == [0, 3]
   PAssert coqlang#next_sentence(["ya.", "", "hi. x", "wo."], [0, 3]) == [2, 3]

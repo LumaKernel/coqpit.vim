@@ -3,7 +3,7 @@
 https://coq.inria.fr/refman/proof-engine/proof-handling.html?highlight=local%20variables
 *)
 
-Goal True. trivial. Qed.
+Goal True. -trivial. Qed.
 
 Goal True. trivial. Defined.
 
@@ -189,14 +189,16 @@ Section sec2.
   Qed.
   
   (* Bullets *)
-  Goal ((P 1 /\ P 2) /\ P 3) /\ P 4.
+  Goal ((P 1 /\ P 2) /\ P 3) /\ (P 4 /\ P 5).
     split.
     - split.
       + split.
         ++ trivial.
         ++ trivial.
       + trivial.
-    - trivial.
+    - split.
+      * trivial.
+      * trivial.
   Qed.
   
   Set Bullet Behavior "None".
