@@ -8,17 +8,14 @@ a
 
 ## TODO
 
-- [x] bug: coq-next at end
-- [x] bug: Notation "'""'" ...
-- [x] Swap warning and admit colors in cterm
-
-- [x] option `update_status_always`
-  - This fixes [Coq issues #9680](https://github.com/coq/coq/issues/9680)
-
-- [ ] When job terminated, restart job
+- [x] When job terminated, restart job
 - [ ] Stop job command
 - [x] Move to Top
 - [x] Coq to Last
+- [ ] Coq Re-run command
+- [ ] Coq Re-launch command
+- [ ] Coq Refresh command
+- [ ] Coq Stop command
 - [ ] Query command
 
 - [ ] Goals syntax
@@ -28,7 +25,6 @@ a
 - [ ] Multiple buffer support
   - [ ] one buffer attaches one goal-window and one info-window
   - [ ] bug: switching buffers with highligh
-- [ ] Re-Launch command
 - [ ] More flexible settings
   - [ ] Reset window
   - [x] CoqToCursor with ceiling (now, flooring)
@@ -58,6 +54,14 @@ a
   - [x] Coq 3.9 works
 
 - [ ] other OS
+
+
+- [x] bug: coq-next at end
+- [x] bug: Notation "'""'" ...
+- [x] Swap warning and admit colors in cterm
+
+- [x] option `update_status_always`
+  - This fixes [Coq issues #9680](https://github.com/coq/coq/issues/9680)
 
 - [x] specifying Coq binary
   - [x] `g:coquille_coq_executable`

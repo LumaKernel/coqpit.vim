@@ -11,14 +11,22 @@ let s:assert = s:PowerAssert.assert
 
 let s:CoqTopHandler = {}
 
-function! s:CoqTopHandler.new(args = [], init_callback = {...->0}) abort
-  call self.restart(a:args, a:init_callback)
+function! s:CoqTopHandler.new(args = []) abort
+  call self.restart(a:args)
+
+  let self.info = {...->0}
+  let self.add_axiom = {...->0}
+  let self.after_callback_fns = []
+  let self.after_unexpected_exit = {...->0}
+  let self.after_start = {...->0}
+
   return self
 endfunction
 
 " restart {{{
-function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
-  if exists('self.job')
+function! s:CoqTopHandler.restart(args = []) abort
+  if self.running()
+    let self.expected_running = 0
     call job_stop(self.job, 'term')
   endif
 
@@ -28,14 +36,10 @@ function! s:CoqTopHandler.restart(args = [], init_callback = {...->0}) abort
   let self.waiting = 0
   let self.abandon = 0
 
-  let self.info = {...->0}
-  let self.add_axiom = {...->0}
-  let self.after_callback_fns = []
-
-  call coquille#coqtop#get_executable(self._make_restart_next(a:args, a:init_callback))
+  call coquille#coqtop#get_executable(self._make_restart_next(a:args))
 endfunction
 
-function! s:CoqTopHandler._make_restart_next(args, init_callback) abort
+function! s:CoqTopHandler._make_restart_next(args) abort
   function! s:CoqTopHandler.restart_next(cmd, version) abort closure
     if a:cmd is v:null
       throw '[CoqTop Handler] Not found executable CoqTop.'
@@ -51,6 +55,7 @@ function! s:CoqTopHandler._make_restart_next(args, init_callback) abort
 
     let job_options.out_cb = self._out_cb
     let job_options.err_cb = self._err_cb
+    let job_options.exit_cb = self._exit_cb
 
     let self.job = job_start(a:cmd, job_options)
 
@@ -61,7 +66,8 @@ function! s:CoqTopHandler._make_restart_next(args, init_callback) abort
         \ .. ' , but failed.'
     endif
 
-    call self._init(a:init_callback)
+    let self.expected_running = 1
+    call self.after_start()
   endfunction
 
   return function(self.restart_next, self)
@@ -69,9 +75,9 @@ endfunction
 " }}}
 
 
-
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
+  if a:channel isnot job_getchannel(self.job) | return | endif
   " TODO : FOR DEBUG
   let g:mymes += ["got!!"]
   let g:mymes += [a:msg]
@@ -124,13 +130,26 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
     endif
   endfor
 endfunction
+" }}}
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
+  if a:channel isnot job_getchannel(self.job) | return | endif
   " TODO
   echoerr "[CoqTop Handler] Internal error. Please report issue in " .. g:coquille#repository_url .. " ."
   echoerr a:msg
 endfunction
-" }}}
+
+function! s:CoqTopHandler._exit_cb(channel, status) abort
+  " if a:channel isnot job_getchannel(self.job) | return | endif
+  if self.expected_running
+    let self.expected_running = 0
+    echoerr '[CoqTop Handler] Unfortunately, CoqTop was exited with status '
+          \ .. a:status
+          \ .. '. Handler will try to restart.'
+    call self.restart()
+    call self.after_unexpected_exit()
+  endif
+endfunction
 
 " -- process information {{{
 
@@ -203,6 +222,20 @@ endfunction
 " add after_callback {{{
 function! s:CoqTopHandler.add_after_callback(callback = {...->0})
   call add(self.after_callback_fns, s:bind_itself(a:callback))
+endfunction
+" }}}
+
+" callback : () -> any
+" set_unexpected_exit_callback {{{
+function! s:CoqTopHandler.set_unexpected_exit_callback(callback = {...->0})
+  let self.after_unexpected_exit = s:bind_itself(a:callback)
+endfunction
+" }}}
+
+" callback : () -> any
+" set_start_callback( {{{
+function! s:CoqTopHandler.set_start_callback(callback = {...->0})
+  let self.after_start = s:bind_itself(a:callback)
 endfunction
 " }}}
 

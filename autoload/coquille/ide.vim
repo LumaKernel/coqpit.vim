@@ -25,6 +25,22 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.GoalBuffers = []
   let self.InfoBuffers = []
 
+  let self.coqtop_handler = coquille#CoqTopHandler#new(a:args)
+
+  call self.coqtop_handler.set_info_callback(self._info)
+  call self.coqtop_handler.set_add_axiom_callback(self._add_axiom)
+  call self.coqtop_handler.set_unexpected_exit_callback(self.restart)
+  call self.coqtop_handler.set_start_callback(self.after_start)
+  call self.coqtop_handler.add_after_callback(self._check_queue)
+
+  call self.restart()
+
+  return self
+endfunction
+
+function! s:IDE.restart() abort
+  call self.reset_colors()
+
   " checked by coq
   let self.sentence_end_pos_list = []
 
@@ -44,6 +60,11 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.last_goal_check = -1
   let self.last_status_check = -1
 
+  call self.refreshGoal()
+  call self.refreshInfo()
+endfunction
+
+function! s:IDE.after_start() abort
   function! self.after_init(state_id) abort closure
     exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
     call add(self.sentence_end_pos_list, [0, 0])
@@ -52,12 +73,7 @@ function! s:IDE.new(bufnr, args = []) abort
     call self._process_queue()
   endfunction
 
-  let self.coqtop_handler = coquille#CoqTopHandler#new(a:args, function(self.after_init, self))
-  call self.coqtop_handler.set_info_callback(self._info)
-  call self.coqtop_handler.set_add_axiom_callback(self._add_axiom)
-  call self.coqtop_handler.add_after_callback(self._check_queue)
-
-  return self
+  call self.coqtop_handler._init(self.after_init)
 endfunction
 
 
@@ -323,7 +339,10 @@ endfunction
 
 " _check_queue {{{
 function! s:IDE._check_queue() abort
-  while len(self.queue) && s:pos_le(self.queue[-1][0], get(self.sentence_end_pos_list, -1, [0, 0]))
+  if len(self.sentence_end_pos_list) == 0 | return | endif
+  exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
+
+  while len(self.queue) && s:pos_le(self.queue[-1][0], self.sentence_end_pos_list[-1])
     call remove(self.queue, 0)
   endwhile
 
@@ -411,13 +430,16 @@ endfunction
 
 
 " recolor {{{
-function! s:IDE.recolor() abort
-  call self._cache_buffer()
-
+function! s:IDE.reset_colors() abort
+  if !exists('self.colored') | return | endif
   for id in self.colored
     silent! call matchdelete(id)
   endfor
   let self.colored = []
+endfunction
+function! s:IDE.recolor() abort
+  call self._cache_buffer()
+  call self.reset_colors()
 
   exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
   if len(self.state_id_list)
@@ -455,7 +477,10 @@ endfunction
 
 " process queue {{{
 function! s:IDE._process_queue()
-  if !self.coqtop_handler.running() || self.coqtop_handler.waiting || len(self.queue) == 0
+  if !self.coqtop_handler.running()
+        \ || self.coqtop_handler.waiting
+        \ || len(self.queue) == 0
+        \ || len(self.sentence_end_pos_list) == 0
     return
   endif
 
