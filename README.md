@@ -9,10 +9,9 @@ a
 ## TODO
 
 - [x] When job terminated, restart job
-- [ ] Stop job command
 - [x] Move to Top
 - [x] Coq to Last
-- [ ] Coq Re-run command
+- [x] Coq Re-run command
 - [ ] Coq Re-launch command
 - [ ] Coq Refresh command
 - [ ] Coq Stop command

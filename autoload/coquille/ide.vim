@@ -76,6 +76,32 @@ function! s:IDE.after_start() abort
   call self.coqtop_handler._init(self.after_init)
 endfunction
 
+function! s:IDE.rerun() abort
+  call self.reset_colors()
+
+  let last = self.get_apparently_last()
+
+  let self.colored = []
+  let self.hls = []
+
+  let self.goal_message = []
+  let self.info_message = []
+  let self.last_goal_check = -1
+  let self.last_status_check = -1
+
+  function! self.after_edit_at2(...) abort closure
+    call call(self._after_edit_at, a:000, self)
+    call self.coq_expand_to_pos(last, 0)
+  endfunction
+
+  call self.coqtop_handler.interrupt()
+  call self.coqtop_handler.editAt(self.state_id_list[0], self.after_edit_at2)
+
+  call self.refreshGoal()
+  call self.refreshInfo()
+endfunction
+
+
 
 " -- private
 
@@ -673,9 +699,12 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
     endif
   else
     exe s:assert('index(self.state_id_list, a:state_id) >= 0')
+    if index(self.state_id_list, a:state_id) == -1 | return | endif
     while self.state_id_list[-1] != a:state_id
-      call remove(self.state_id_list[-1])
+      call remove(self.state_id_list, -1)
+      call remove(self.sentence_end_pos_list, -1)
     endwhile
+    exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
   endif
 endfunction
 " }}}
@@ -727,14 +756,14 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
 
   while s:pos_lt(last, a:pos)
     let last_internal = [last[0], last[1] + 1]
-    let old_last = last
     let last = coqlang#next_sentence(content, last)
 
     if last is v:null
-      if coquille#annotate#is_ending(content, old_last)
+      exe s:assert('len(self.queue) > 0')
+      if coquille#annotate#is_ending(content, self.queue[-1][1])
         let last = [len(content) - 1, len(content[-1])]
       else
-        if !a:ceil && s:pos_lt(a:pos, old_last)
+        if !a:ceil && s:pos_lt(a:pos, self.queue[-1][0])
           call remove(self.queue, -1)
         endif
 
