@@ -77,7 +77,7 @@ endfunction
 
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
-  if a:channel isnot job_getchannel(self.job) | return | endif
+  if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
   " TODO : FOR DEBUG
   let g:mymes += ["got!!"]
   let g:mymes += [a:msg]
@@ -114,10 +114,6 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
       let msg = coquille#xml#2str(content.find('richpp'))
       let err_loc = v:null
 
-      if level == 'error'
-        let error_found = 1
-      endif
-
       let loc = content.find("loc")
       if !empty(loc)
         let err_loc = [str2nr(loc.attr.start), str2nr(loc.attr.stop)]
@@ -133,7 +129,7 @@ endfunction
 " }}}
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
-  if a:channel isnot job_getchannel(self.job) | return | endif
+  if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
   " TODO
   echoerr "[CoqTop Handler] Internal error. Please report issue in " .. g:coquille#repository_url .. " ."
   echoerr a:msg
@@ -166,7 +162,8 @@ endfunction
 
 function! s:CoqTopHandler.kill() abort
   if self.running()
-    call job_stop(self.job, "term")
+    let expected_running = 0
+    call job_stop(self.job, 'term')
     unlet self.job
   endif
 endfunction

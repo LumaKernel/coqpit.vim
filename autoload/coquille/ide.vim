@@ -65,14 +65,6 @@ function! s:IDE.restart() abort
 endfunction
 
 function! s:IDE.after_start() abort
-  function! self.after_init(state_id) abort closure
-    exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
-    call add(self.sentence_end_pos_list, [0, 0])
-    call add(self.state_id_list, a:state_id)
-    let self.last_goal_check = a:state_id
-    call self._process_queue()
-  endfunction
-
   call self.coqtop_handler._init(self.after_init)
 endfunction
 
@@ -95,10 +87,29 @@ function! s:IDE.rerun() abort
   endfunction
 
   call self.coqtop_handler.interrupt()
-  call self.coqtop_handler.editAt(self.state_id_list[0], self.after_edit_at2)
+
+  if len(self.state_id_list) > 0
+    call self.coqtop_handler.editAt(self.state_id_list[0], self.after_edit_at2)
+  else
+    call self.coqtop_handler._init(self.after_init)
+  endif
 
   call self.refreshGoal()
   call self.refreshInfo()
+endfunction
+
+
+function! s:IDE.kill() abort
+  call self.coqtop_handler.kill()
+endfunction
+
+
+function! s:IDE.after_init(state_id) abort
+  exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
+  call add(self.sentence_end_pos_list, [0, 0])
+  call add(self.state_id_list, a:state_id)
+  let self.last_goal_check = a:state_id
+  call self._process_queue()
 endfunction
 
 
@@ -118,10 +129,10 @@ endfunction
 
 function! s:IDE._after_shrink() abort
   if len(self.queue) == 0
-    if self.coqtop_handler.waiting
+    if len(self.state_id_list) > 0
       call self.coqtop_handler.interrupt()
+      call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
     endif
-    call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
   endif
 endfunction
 
@@ -468,33 +479,31 @@ function! s:IDE.recolor() abort
   call self.reset_colors()
 
   exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
-  if len(self.state_id_list)
-    let last_checked = self.sentence_end_pos_list[-1]
-    let last_queued = self.get_apparently_last()
+  let last_checked = get(self.sentence_end_pos_list, -1, [0, 0])
+  let last_queued = self.get_apparently_last()
 
-    exe s:assert('s:pos_le(last_checked, last_queued)')
+  exe s:assert('s:pos_le(last_checked, last_queued)')
 
-    let maxlen = self.maxlen()
+  let maxlen = self.maxlen()
 
-    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked])
-    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued])
+  let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked])
+  let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued])
 
-    for [level, range] in self.hls
-      " sweep error and warnings appearing after the top in advance
-      let is_in_checked = s:pos_le(range[1], last_checked)
-      if level == 'error'
-        let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
-        let priority = 30
-      elseif level == 'warning'
-        let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
-        let priority = 20
-      elseif level == 'axiom'
-        let group = 'CoqCheckedAxiom'
-        let priority = 20
-      endif
-      let self.colored += s:matchaddrange(maxlen, group, range, priority)
-    endfor
-  endif
+  for [level, range] in self.hls
+    " sweep error and warnings appearing after the top in advance
+    let is_in_checked = s:pos_le(range[1], last_checked)
+    if level == 'error'
+      let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
+      let priority = 30
+    elseif level == 'warning'
+      let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
+      let priority = 20
+    elseif level == 'axiom'
+      let group = 'CoqCheckedAxiom'
+      let priority = 20
+    endif
+    let self.colored += s:matchaddrange(maxlen, group, range, priority)
+  endfor
 endfunction
 " }}}
 

@@ -12,8 +12,10 @@ a
 - [x] Move to Top
 - [x] Coq to Last
 - [x] Coq Re-run command
-- [ ] Coq Re-launch command
+- [x] Coq Re-launch command
+  - `:CoqLaunch` is re-launch when running
 - [ ] Coq Refresh command
+  - refresh Goals and Infos
 - [ ] Coq Stop command
 - [ ] Query command
 
@@ -23,7 +25,7 @@ a
   - [ ] For now, minimum.
 - [ ] Multiple buffer support
   - [ ] one buffer attaches one goal-window and one info-window
-  - [ ] bug: switching buffers with highligh
+  - [ ] bug: switching buffers with highlight
 - [ ] More flexible settings
   - [ ] Reset window
   - [x] CoqToCursor with ceiling (now, flooring)
