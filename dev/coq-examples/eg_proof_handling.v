@@ -79,6 +79,7 @@ Section sec1.
     Goal x = 1. Proof using All using -(x). trivial. Qed.
     Goal x = 1. Proof using All using All. trivial. Qed.
   *)
+
   
   (* Proof using Type* *)
   Goal x = 1. Proof using x*. trivial. Qed.
@@ -189,14 +190,16 @@ Section sec2.
   Qed.
   
   (* Bullets *)
-  Goal ((P 1 /\ P 2) /\ P 3) /\ P 4.
+  Goal ((P 1 /\ P 2) /\ P 3) /\ (P 4 /\ P 5).
     split.
     - split.
       + split.
         ++ trivial.
         ++ trivial.
       + trivial.
-    - trivial.
+    - split.
+      * trivial.
+      * trivial.
   Qed.
   
   Set Bullet Behavior "None".
