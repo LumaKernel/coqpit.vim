@@ -98,6 +98,7 @@ function! coquille#launch(...)
   command! -buffer CoqToLast call b:coquilleIDE.coq_to_last()
   command! -buffer CoqRearrange call coquille#reset_panels()
   command! -buffer CoqKill call coquille#killSession()
+  command! -buffer MoveToTop call b:coquilleIDE.move_to_top()
 
   " command! -buffer -nargs=* Coq call coquille#rawQuery(<f-args>)
 

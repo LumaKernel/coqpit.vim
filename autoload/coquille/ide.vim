@@ -495,7 +495,9 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
       if a:err_loc isnot v:null
         let [start, end] = a:err_loc
         let content = self.getContent()
+        ECHO [a:spos, start, end]
         let mes_range = [s:steps(content, a:spos, start, 1), s:steps(content, a:spos, end, 1)]
+        ECHO [mes_range]
         call add(self.hls, ["error", mes_range])
       endif
 
@@ -775,8 +777,12 @@ endfunction
 function! s:IDE.move(pos) abort
   if self.focusing()
     let [line, col] = a:pos
-    call cursor(line + 1, col)
+    call cursor(line + 1, col + 1)
   endif
+endfunction
+
+function! s:IDE.move_to_top() abort
+  call self.move(self.get_apparently_last())
 endfunction
 
 
@@ -839,23 +845,26 @@ function! s:pos_le(pos1, pos2, eq=1) abort
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] <= a:pos2[1]
 endfunction
 
-function! s:steps(content, pos, num, newline_as_one = 0) abort
+function! s:steps(content, pos, num, newline_as_one) abort
   let now = 0
   let [line, col] = a:pos
   let linenum = len(a:content)
 
   while line < linenum
+    exe s:assert('a:num >= now')
     let newcol = col + a:num - now
     if newcol < len(a:content[line]) + a:newline_as_one
       return [line, newcol]
     else
-      let now += max([len(a:content[line]) + a:newline_as_one - col, 0])
+      let now += max([len(a:content[line]) - col, 0]) + a:newline_as_one
 
       let line += 1
       let col = 0
     endif
   endwhile
-  return v:null
+
+  " NOTE : it can happen in some situation; see dev/coq-examples/nasty_notations.v
+  return [len(a:content) - 1, len(a:content[-1])]
 endfunction
 
 

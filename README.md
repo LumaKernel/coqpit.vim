@@ -17,7 +17,7 @@ a
 
 - [ ] When job terminated, restart job
 - [ ] Stop job command
-- [ ] Move to Top
+- [x] Move to Top
 - [x] Coq to Last
 - [ ] Query command
 

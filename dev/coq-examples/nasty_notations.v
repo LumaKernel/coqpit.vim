@@ -48,5 +48,15 @@ Section sec4.
     Admitted.
 End sec4.
 
+Section sec5.
+  Notation "{ a" := (f a) (at level 1).
+  Notation "{ a ) ." := (f a) (at level 2).
+  (* Notation "a ) ." := (f a) (at level 2). *) (* it leads error; that error points end of file *)
+
+  Goal A.
+    refine ( { _  ). ).
+    Admitted.
+End sec5.
+
   (* Notation "'""' a" := (f a) (at level 20). *) (* error *)
 

@@ -114,7 +114,7 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
 
       let loc = content.find("loc")
       if !empty(loc)
-        let err_loc = [loc.attr.start, loc.attr.stop]
+        let err_loc = [str2nr(loc.attr.start), str2nr(loc.attr.stop)]
       endif
 
       call self.info(state_id, level, msg, err_loc)
@@ -261,7 +261,7 @@ function! s:CoqTopHandler._makeAddCallback(callback) abort
 
       let attr = a:value.attr
       if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
-        let err_loc = [attr['loc_s'], attr['loc_e']]
+        let err_loc = [str2nr(attr['loc_s']), str2nr(attr['loc_e'])]
       endif
 
       if !empty(a:value.find('richpp'))
@@ -303,7 +303,7 @@ function! s:CoqTopHandler._makeGoalCallback(callback) abort
 
       let attr = a:value.attr
       if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
-        let err_loc = [attr['loc_s'], attr['loc_e']]
+        let err_loc = [str2nr(attr['loc_s']), str2nr(attr['loc_e'])]
       endif
 
       if !empty(a:value.find('richpp'))
@@ -399,7 +399,7 @@ function! s:CoqTopHandler._make_after_get_next_end(content, from_pos, callback) 
       let err_loc = v:null
 
       if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
-        let err_loc = [attr['loc_s'], attr['loc_e']]
+        let err_loc = [str2nr(attr['loc_s']), str2nr(attr['loc_e'])]
       endif
 
       call a:callback(1, err_mes, err_loc, v:null)
