@@ -13,10 +13,6 @@ let s:assert = s:PowerAssert.assert
 let s:IDE = {}
 let s:bufnr_to_IDE = {}
 
-let s:auto_move = coquille#config_name('auto_move', 0)
-let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 1)
-let s:show_goal_always = coquille#config_name('show_goal_always', 0)
-
 function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
 endfunction
@@ -46,6 +42,7 @@ function! s:IDE.new(bufnr, args = []) abort
   let self.goal_message = []
   let self.info_message = []
   let self.last_goal_check = -1
+  let self.last_status_check = -1
 
   function! self.after_init(state_id) abort closure
     exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
@@ -116,7 +113,7 @@ endfunction
 
 " -- -- callbacks to CoqTopHandler operations {{{
 
-" info {{{
+" _info {{{
 function! s:IDE._info(state_id, level, msg, loc) abort
   let range = self._state_id_to_range(a:state_id)
   if range is v:null
@@ -153,7 +150,7 @@ function! s:IDE._info(state_id, level, msg, loc) abort
 endfunction
 " }}}
 
-" goal {{{
+" _goal {{{
 function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
   let content = self.getContent()
 
@@ -185,12 +182,20 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
       " a:msg is xml
       let self.goal_message = coquille#goals#xml2strs(a:msg)
     endif
+
+    let self.last_goal_check = self.state_id_list[-1]
   endif
 
   call self.recolor()
   call self.refreshGoal()
   call self.refreshInfo()
   call self._check_queue()
+endfunction
+" }}}
+
+" _status {{{
+function! s:IDE._status(...) abort
+  let self.last_status_check = self.state_id_list[-1]
 endfunction
 " }}}
 
@@ -322,13 +327,24 @@ function! s:IDE._check_queue() abort
     call remove(self.queue, 0)
   endwhile
 
-  if self.coqtop_handler.waiting == 0
-      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:show_goal_always, 0))
+  if self.coqtop_handler.waiting == 0 && (
+        \   len(self.queue) == 0
+        \   || g:coquille#options#show_goal_always.get()
+        \ )
     if self.last_goal_check != self.state_id_list[-1]
       exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
       let self.goal_message = []
-      let self.last_goal_check = self.state_id_list[-1]
       call self.coqtop_handler.refreshGoalInfo(self._goal)
+      return
+    endif
+  endif
+
+  if self.coqtop_handler.waiting == 0 && g:coquille#options#update_status_always.get()
+    if self.last_status_check != self.state_id_list[-1]
+      exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
+
+      call self.coqtop_handler.status(v:none, self._status)
+      return
     endif
   endif
 
@@ -578,7 +594,7 @@ function! s:IDE.coq_next() abort
   call self.recolor()
   call self.refreshInfo()
 
-  if coquille#get_buffer_config(s:auto_move, 0)
+  if g:coquille#options#auto_move.get()
     call self.move(expected_sentence_end_pos)
   endif
 endfunction
@@ -610,7 +626,7 @@ function! s:IDE.coq_back() abort
   call self.refreshInfo()
   call self._check_queue()
 
-  if coquille#get_buffer_config(s:auto_move, 0)
+  if g:coquille#options#auto_move.get()
     call self.move(self.get_apparently_last())
   endif
 endfunction
@@ -751,7 +767,7 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
   if a:ceil isnot v:null
     ceil = a:ceil
   else
-    let ceil = coquille#get_buffer_config(s:cursor_ceiling, 1)
+    let ceil = g:coquille#options#cursor_ceiling.get()
   endif
 
   call self.coq_to_pos(pos, ceil)

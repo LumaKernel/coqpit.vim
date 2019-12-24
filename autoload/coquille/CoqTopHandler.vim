@@ -357,6 +357,22 @@ function! s:CoqTopHandler._make_after_annotate(callback) abort
 endfunction
 " }}}
 
+" callback : (status_xml) -> any
+" send Status < status > {{{
+function! s:CoqTopHandler.status(force = 0, callback = {...->0}) abort
+  call self._call(
+    \ '<call val="Status"><bool val="' .. (a:force ? 'true' : 'false') .. '"></bool></call>'
+    \ , self._make_after_status(a:callback))
+endfunction
+function! s:CoqTopHandler._make_after_status(callback) abort
+  function! self.after_status(value) abort closure
+    call a:callback(a:value)
+  endfunction
+
+  return function(self.after_status, self)
+endfunction
+" }}}
+
 " }}}
 
 

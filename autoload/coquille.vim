@@ -5,24 +5,6 @@
 
 let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
 
-function! coquille#config_name(name, default) abort
-  if !exists('g:coquille_' .. a:name)
-    let g:['coquille_' .. a:name] = a:default
-  endif
-  return a:name
-endfunction
-
-function! coquille#get_buffer_config(name, default) abort
-  if exists('b:coquille_' .. a:name)
-    return b:['coquille_' .. a:name]
-  endif
-  if exists('g:coquille_' .. a:name)
-    return g:['coquille_' .. a:name]
-  endif
-  return a:default
-endfunction
-
-
 
 let s:current_dir=expand('<sfile>:p:h')
 
