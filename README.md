@@ -9,8 +9,10 @@ a
 ## TODO
 
 - [x] bug: coq-next at end
-- [ ] bug: Notation "'""'" ...
-- [ ] Swap warning and admit colors in cterm
+- [x] bug: Notation "'""'" ...
+- [x] Swap warning and admit colors in cterm
+
+- [ ] option `update_status_always`
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
@@ -162,6 +164,10 @@ You can set the following variable to modify Coquille's behavior:
 Because pictures are always the best sellers :
 
 ![Coquille at use](http://the-lambda-church.github.io/coquille/coquille.png)
+
+## Known Issues
+
+- [Coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
 
 [1]: https://github.com/tpope/vim-pathogen
 [2]: https://github.com/def-lkb/vimbufsync

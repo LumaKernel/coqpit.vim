@@ -9,10 +9,10 @@ function! coquille#color#defineColorScheme() abort
   " let coq_checked_warn_bg       = s:toString(s:col_mult(bg_tup, [3, 2, 1]))
 
   exe 'hi default CoqChecked      ctermbg=20  guibg=' .. coq_checked_bg
-  exe 'hi default CoqCheckedAxiom ctermbg=184 guibg=' .. coq_checked_axiom_bg
+  exe 'hi default CoqCheckedAxiom ctermbg=172 guibg=' .. coq_checked_axiom_bg
   exe 'hi default CoqQueued       ctermbg=40  guibg=' .. coq_queued_bg
   exe 'hi default CoqMarkedWarn   ctermbg=172 gui=undercurl guisp=Yellow'
-  exe 'hi default CoqCheckedWarn  ctermbg=172 gui=undercurl guisp=Yellow guibg=' .. coq_checked_bg
+  exe 'hi default CoqCheckedWarn  ctermbg=184 gui=undercurl guisp=Yellow guibg=' .. coq_checked_bg
   exe 'hi default CoqMarkedError  ctermbg=160 gui=undercurl guisp=Red'
   exe 'hi default CoqCheckedError ctermbg=160 gui=undercurl guisp=Red guibg=' .. coq_checked_bg
 endfunction

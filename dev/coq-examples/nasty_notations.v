@@ -46,8 +46,7 @@ Section sec4.
     [a]:refine ( Admitted . _ ).
     1:{refine ( Admitted . _ ).
     Admitted.
-End sec4. 
+End sec4.
 
-
-  (* Notation "'""' a" := (f a) (at level 20). *)
+  (* Notation "'""' a" := (f a) (at level 20). *) (* error *)
 
