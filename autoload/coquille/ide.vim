@@ -213,7 +213,9 @@ endfunction
 " }}}
 
 " Make the situation that
-" queue and sentence checked ends `pos` or before
+"   queue and sentence checked ends 
+" floor : `pos` or right before
+" ceil  : `pos` or right after
 "
 "
 " pos : Pos | null
@@ -550,11 +552,16 @@ endfunction
 function! s:IDE.coq_next() abort
   let content = self.getContent()
   let last = self.get_apparently_last()
+
+  if !coquille#annotate#is_ending(content, last)
+    return
+  endif
+
   let expected_sentence_end_pos = coqlang#next_sentence(content, last)
 
   if expected_sentence_end_pos is v:null
     let expected_sentence_end_pos = [len(content) - 1, len(content[-1])]
-    " NOTE : making return here is another good choice. But a compiler is more
+    " note : making return here is another good choice. but a compiler is more
     " correct.
   endif
 
@@ -681,29 +688,31 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
     let self.info_message = []
   endif
 
-  let last_inclusive = [last[0], last[1] - 1]
+  " let last_inclusive = [last[0], last[1] - 1]
 
-  if s:pos_le(a:pos, last_inclusive)
+  if s:pos_le(a:pos, last)
     return
   endif
 
-  while s:pos_lt(last_inclusive, a:pos)
+  while s:pos_lt(last, a:pos)
     let last_internal = [last[0], last[1] + 1]
+    let old_last = last
     let last = coqlang#next_sentence(content, last)
 
     if last is v:null
-      break
-    endif
+      if coquille#annotate#is_ending(content, old_last)
+        let last = [len(content) - 1, len(content[-1])]
+      else
+        if !a:ceil && s:pos_lt(a:pos, old_last)
+          call remove(self.queue, -1)
+        endif
 
-    exe s:assert('last[1] >= 1')
-    let last_inclusive = [last[0], last[1] - 1]
+        break
+      endif
+    endif
 
     call add(self.queue, [last_internal, last])
   endwhile
-
-  if !a:ceil && a:pos != last_inclusive
-    call remove(self.queue, -1)
-  endif
 
   call self.recolor()
   call self.refreshInfo()
@@ -734,7 +743,8 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
   endif
 
   let curpos = getcurpos()[1:2]
-  let pos = [curpos[0] - 1, curpos[1] - 1]
+  let pos = [curpos[0] - 1, curpos[1]]
+
 
   let ceil = 0
 

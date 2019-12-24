@@ -52,6 +52,10 @@ function! coquille#annotate#associate(xml, content, from_pos) abort
   return now_pos
 endfunction
 
+function! coquille#annotate#is_ending(content, pos)
+  let now_pos = coqlang#next_pattern(a:content, a:pos, s:possibles)
+  return now_pos isnot v:null
+endfunction
 
 
 function! coquille#annotate#Test()

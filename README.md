@@ -8,7 +8,7 @@ a
 
 ## TODO
 
-- [ ] bug: coq-next at end
+- [x] bug: coq-next at end
 - [ ] bug: Notation "'""'" ...
 - [ ] Swap warning and admit colors in cterm
 
