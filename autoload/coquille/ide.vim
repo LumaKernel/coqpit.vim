@@ -14,8 +14,8 @@ let s:IDE = {}
 let s:bufnr_to_IDE = {}
 
 let s:auto_move = coquille#config_name('auto_move', 0)
-let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 0)
-let s:strict_check = coquille#config_name('strict_check', 1)
+let s:cursor_ceiling = coquille#config_name('cursor_ceiling', 1)
+let s:show_goal_always = coquille#config_name('show_goal_always', 0)
 
 function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
@@ -231,7 +231,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   let updated = 0
 
   while len(self.queue) > 0
-        \ && s:pos_lt(a:pos, self.queue[-1][0])
+        \ && s:pos_lt(a:pos, self.queue[-1][1])
     let last = [0, remove(self.queue, -1)]
     let updated += 1
   endwhile
@@ -321,7 +321,7 @@ function! s:IDE._check_queue() abort
   endwhile
 
   if self.coqtop_handler.waiting == 0
-      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:strict_check, 0))
+      \ && (len(self.queue) == 0 || coquille#get_buffer_config(s:show_goal_always, 0))
     if self.last_goal_check != self.state_id_list[-1]
       exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
       let self.goal_message = []
@@ -475,6 +475,7 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
 
       if a:err_loc isnot v:null
         let [start, end] = a:err_loc
+        let content = self.getContent()
         let mes_range = [s:steps(content, a:spos, start, 1), s:steps(content, a:spos, end, 1)]
         call add(self.hls, ["error", mes_range])
       endif
@@ -557,7 +558,7 @@ function! s:IDE.coq_next() abort
     " correct.
   endif
 
-  call self._shrink_to(last)
+  call self._shrink_to(last)  " for erasing errors
 
   if len(self.queue) == 0
     let self.info_message = []

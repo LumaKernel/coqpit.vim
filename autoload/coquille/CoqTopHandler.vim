@@ -158,6 +158,7 @@ endfunction
 
 function! s:CoqTopHandler._call(msg, cb) abort
   if self.waiting
+    exe s:assert('0')
     return
   endif
 

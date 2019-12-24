@@ -3,7 +3,7 @@
 https://coq.inria.fr/refman/proof-engine/proof-handling.html?highlight=local%20variables
 *)
 
-Goal True. -trivial. Qed.
+Goal True. trivial. Qed.
 
 Goal True. trivial. Defined.
 
@@ -79,6 +79,7 @@ Section sec1.
     Goal x = 1. Proof using All using -(x). trivial. Qed.
     Goal x = 1. Proof using All using All. trivial. Qed.
   *)
+
   
   (* Proof using Type* *)
   Goal x = 1. Proof using x*. trivial. Qed.
