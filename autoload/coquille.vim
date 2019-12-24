@@ -95,6 +95,7 @@ function! coquille#launch(...)
   command! -buffer CoqNext call b:coquilleIDE.coq_next()
   command! -buffer CoqBack call b:coquilleIDE.coq_back()
   command! -buffer CoqToCursor call b:coquilleIDE.coq_to_cursor()
+  command! -buffer CoqToLast call b:coquilleIDE.coq_to_last()
   command! -buffer CoqRearrange call coquille#reset_panels()
   command! -buffer CoqKill call coquille#killSession()
 

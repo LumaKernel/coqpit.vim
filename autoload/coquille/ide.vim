@@ -259,7 +259,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
   endif
 
   for i in reverse(range(len(self.hls)))
-    if s:pos_le(self.sentence_end_pos_list[-1], self.hls[i][1][0])
+    if s:pos_le(get(self.sentence_end_pos_list, -1, [0, 0]), self.hls[i][1][0])
       if a:shrink_errors || self.hls[i][0] == 'axiom'
         call remove(self.hls, i)
       endif
@@ -323,7 +323,7 @@ endfunction
 
 " _check_queue {{{
 function! s:IDE._check_queue() abort
-  while len(self.queue) && s:pos_le(self.queue[-1][0], self.sentence_end_pos_list[-1])
+  while len(self.queue) && s:pos_le(self.queue[-1][0], get(self.sentence_end_pos_list, -1, [0, 0]))
     call remove(self.queue, 0)
   endwhile
 
@@ -419,6 +419,7 @@ function! s:IDE.recolor() abort
   endfor
   let self.colored = []
 
+  exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
   if len(self.state_id_list)
     let last_checked = self.sentence_end_pos_list[-1]
     let last_queued = self.get_apparently_last()
@@ -602,10 +603,6 @@ endfunction
 
 " coq_back {{{
 function! s:IDE.coq_back() abort
-  if !self.is_initiated()
-    return
-  endif
-
   if len(self.queue) > 0
     call remove(self.queue, -1)
     call self._after_shrink()
@@ -617,7 +614,6 @@ function! s:IDE.coq_back() abort
 
     call self._after_shrink()
   else
-    exe s:assert('len(self.sentence_end_pos_list) == 1')
     return
   endif
 
@@ -659,10 +655,6 @@ endfunction
 
 " coq_shrink_to_pos {{{
 function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
-  if !self.is_initiated()
-    return
-  endif
-
   if s:pos_le(self.get_apparently_last(), a:pos)
     return
   endif
@@ -685,10 +677,6 @@ endfunction
 
 " coq_expand_to_pos {{{
 function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
-  if !self.is_initiated()
-    return
-  endif
-
   let content = self.getContent()
   let last = self.get_apparently_last()
 
@@ -738,10 +726,6 @@ endfunction
 
 " coq_to_pos {{{
 function! s:IDE.coq_to_pos(pos, ceil=0) abort
-  if !self.is_initiated()
-    return
-  endif
-
   let last = self.get_apparently_last()
 
   if s:pos_lt(a:pos, last)
@@ -774,6 +758,13 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
 endfunction
 " }}}
 
+" coq_to_last {{{
+function! s:IDE.coq_to_last(ceil=v:null) abort
+  let content = self.getContent()
+
+  call self.coq_to_pos([len(content), 0], 1)
+endfunction
+" }}}
 
 " -- -- move (vim editor's cursor move)
 

@@ -12,7 +12,14 @@ a
 - [x] bug: Notation "'""'" ...
 - [x] Swap warning and admit colors in cterm
 
-- [ ] option `update_status_always`
+- [x] option `update_status_always`
+  - This fixes [Coq issues #9680](https://github.com/coq/coq/issues/9680)
+
+- [ ] When job terminated, restart job
+- [ ] Stop job command
+- [ ] Move to Top
+- [x] Coq to Last
+- [ ] Query command
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
@@ -21,7 +28,6 @@ a
 - [ ] Multiple buffer support
   - [ ] one buffer attaches one goal-window and one info-window
   - [ ] bug: switching buffers with highligh
-- [ ] Query command
 - [ ] Re-Launch command
 - [ ] More flexible settings
   - [ ] Reset window
@@ -30,8 +36,6 @@ a
   - [ ] `auto open window`
   - [ ] `rearrange after focus`
   - [ ] `rerun after focus`
-- [ ] Jump to Last
-- [ ] Coq to Last
 - [ ] document about custimize window
 
 - [ ] Screenshots
@@ -167,7 +171,8 @@ Because pictures are always the best sellers :
 
 ## Known Issues
 
-- [Coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
+- Without `g:coquille_update_status_always = 0` [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
+  - I recommend you not changing this options.
 
 [1]: https://github.com/tpope/vim-pathogen
 [2]: https://github.com/def-lkb/vimbufsync
