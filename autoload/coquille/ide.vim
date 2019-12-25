@@ -522,21 +522,22 @@ function! s:IDE.recolor() abort
 
   for winnr in win_findbuf(self.handling_bufnr)
     let match_opt = {'window' : winnr}
-    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], v:none, v:none, match_opt)
-    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], v:none, v:none, match_opt)
+    let priority = -30
+    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], priority, v:none, match_opt)
+    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], priority, v:none, match_opt)
 
     for [level, range] in self.hls
       " sweep error and warnings appearing after the top in advance
       let is_in_checked = s:pos_le(range[1], last_checked)
       if level == 'error'
         let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
-        let priority = 30
+        let priority = -10
       elseif level == 'warning'
         let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
-        let priority = 20
+        let priority = -20
       elseif level == 'axiom'
         let group = 'CoqCheckedAxiom'
-        let priority = 20
+        let priority = -20
       endif
       let self.colored += s:matchaddrange(maxlen, group, range, priority, v:none, match_opt)
     endfor

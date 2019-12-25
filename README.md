@@ -20,7 +20,7 @@ a
 
 - [ ] check multiple tabs
 
-- [ ] weaken highlight priority less than 0
+- [x] weaken highlight priority less than 0
   - for search hightlight
 
 - [x] ~bug: cursor moves on Goals/Infos window~
