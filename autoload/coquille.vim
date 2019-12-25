@@ -5,119 +5,234 @@
 
 let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
 
+" For strong reset, stop all, endure dynamic option changing
+let s:window_bufnrs = []
+let s:IDE_instances = []
 
-let s:current_dir=expand('<sfile>:p:h')
+" reset_pannels {{{
+function! coquille#reset_panels(force = 0) abort
+  if !exists('b:coquilleIDE') | return | endif
+  if g:coquille#options#one_window.get()
+    call coquille#init_tablocal_windows(a:force)
+    
+    call b:coquilleIDE.addGoalBuffer(t:goal_buf)
+    call b:coquilleIDE.addInfoBuffer(t:info_buf)
+    call b:coquilleIDE.refresh()
+  else
+    if !exists('b:coquilleIDE') | return | endif
+    call coquille#init_buflocal_windows(1)
 
-function! coquille#reset_panels() abort
-  if exists('b:goal_buf') && buffer_name(b:goal_buf) ==# 'Goals'
-    silent! execute 'bdelete' .. b:goal_buf
+    call b:coquilleIDE.addGoalBuffer(b:goal_buf)
+    call b:coquilleIDE.addInfoBuffer(b:info_buf)
+    call b:coquilleIDE.refresh()
+  endif
+endfunction
+" }}}
+
+" ini_tablocal_windows {{{
+function! coquille#init_tablocal_windows(force) abort
+  if !exists('b:coquilleIDE') | return | endif
+
+  if exists('t:goal_buf') && !bufexists(t:goal_buf) | silent! unlet t:goal_buf | endif
+  if exists('t:info_buf') && !bufexists(t:info_buf) | silent! unlet t:info_buf | endif
+
+  if !exists('t:goal_buf') || !exists('t:info_buf') || a:force
+    if exists('t:goal_buf') | silent! execute 'bdelete' .. t:goal_buf | endif
+    if exists('t:info_buf') | silent! execute 'bdelete' .. t:info_buf | endif
+    silent! unlet t:goal_buf
+    silent! unlet t:info_buf
   endif
 
-  if exists('b:info_buf') && buffer_name(b:info_buf) ==# 'Infos'
-    silent! execute 'bdelete' .. b:info_buf
+  if exists('t:goal_buf') || exists('t:info_buf')
+    return
   endif
 
   let l:winnr = winnr()
-  rightbelow vnew Goals
+  botright vnew
     setlocal buftype=nofile
     setlocal filetype=coq-goals
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let l:goal_buf = bufnr('%')
-  rightbelow new Infos
+    let t:goal_buf = bufnr('%')
+    call add(s:window_bufnrs, t:goal_buf)
+  rightbelow new
     setlocal buftype=nofile
     setlocal filetype=coq-infos
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let l:info_buf = bufnr('%')
+    let t:info_buf = bufnr('%')
+    call add(s:window_bufnrs, t:info_buf)
   execute l:winnr .. 'winc w'
+endfunction
+" }}}
+
+" init_buflocal_windows {{{
+function! coquille#init_buflocal_windows(force) abort
+  if !exists('b:coquilleIDE') | return | endif
+
+  if exists('b:goal_buf') && !bufexists(b:goal_buf) | silent! unlet b:goal_buf | endif
+  if exists('b:info_buf') && !bufexists(b:info_buf) | silent! unlet b:info_buf | endif
+
+  if !exists('b:goal_buf') || !exists('b:info_buf') || a:force
+    if exists('b:goal_buf') | silent! execute 'bdelete' .. b:goal_buf | endif
+    if exists('b:info_buf') | silent! execute 'bdelete' .. b:info_buf | endif
+    silent! unlet b:goal_buf
+    silent! unlet b:info_buf
+  endif
+
+  if exists('b:goal_buf') || exists('b:info_buf')
+    return
+  endif
+
+  let l:coquilleIDE = b:coquilleIDE
+
+  let l:winnr = winnr()
+  let l:name = expand('%:t:r')
+
+  rightbelow vnew
+    setlocal buftype=nofile
+    setlocal filetype=coq-goals
+    setlocal noswapfile
+    setlocal nocursorline
+    setlocal nocursorcolumn
+    let b:coquilleIDE = l:coquilleIDE
+    call coquille#define_buffer_commands()
+    let l:goal_buf = bufnr('%')
+    call add(s:window_bufnrs, l:goal_buf)
+  rightbelow new
+    setlocal buftype=nofile
+    setlocal filetype=coq-infos
+    setlocal noswapfile
+    setlocal nocursorline
+    setlocal nocursorcolumn
+    let b:coquilleIDE = l:coquilleIDE
+    call coquille#define_buffer_commands()
+    let l:info_buf = bufnr('%')
+    call add(s:window_bufnrs, l:info_buf)
+  execute l:winnr .. 'winc w'
+
+  " if !g:coquille#options#no_open_windows.get()
+  " endif
   
   let b:goal_buf = l:goal_buf
   let b:info_buf = l:info_buf
   call b:coquilleIDE.addGoalBuffer(b:goal_buf)
   call b:coquilleIDE.addInfoBuffer(b:info_buf)
+  call b:coquilleIDE.refresh()
 endfunction
+" }}}
 
-function! coquille#killSession()
-    execute 'bdelete' .. b:goal_buf
-    execute 'bdelete' .. b:info_buf
-    " py3 coquille.kill_coqtop()
+" stop {{{
+function! coquille#stop()
+  if !exists('b:coquilleIDE') | return | endif
 
-    setlocal eventignore=InsertEnter
+  if !g:coquille#options#one_window.get()
+    if exists('b:goal_buf') | silent! execute 'bdelete' .. b:goal_buf | endif
+    if exists('b:info_buf') | silent! execute 'bdelete' .. b:info_buf | endif
+  endif
+
+  if exists('b:coquilleIDE')
+    call b:coquilleIDE.kill()
+  endif
 endfunction
+" }}}
+
+" stop_all {{{
+function! coquille#stop_all()
+  for IDE in s:IDE_instances
+    silent! call IDE.kill()
+  endfor
+
+  for bufnr in s:window_bufnrs
+    if bufexists(bufnr)
+      silent! execute 'bdelete' .. bufnr
+    endif
+  endfor
+
+  let s:window_bufnrs = []
+  let s:IDE_instances = []
+endfunction
+" }}}
 
 function! coquille#rawQuery(...)
   " TODO
-  " py3 coquille.coq_raw_query(*vim.eval("a:000"))
 endfunction
 
-function! coquille#FNMapping()
-    "" --- Function keys bindings
-    "" Works under all tested config.
-    map <buffer> <silent> <F2> :coqBack<CR>
-    map <buffer> <silent> <F3> :CoqNext<CR>
-    map <buffer> <silent> <F4> :CoqToCursor<CR>
-
-    imap <buffer> <silent> <F2> <C-\><C-o>:coqBack<CR>
-    imap <buffer> <silent> <F3> <C-\><C-o>:CoqNext<CR>
-    imap <buffer> <silent> <F4> <C-\><C-o>:CoqToCursor<CR>
+" define commands {{{
+function! coquille#define_buffer_commands(force = 0)
+  if !a:force && g:coquille#options#no_define_commands.get()
+    return
+  endif
+  command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
+  command! -buffer CoqNext call coquille#check_running() | call b:coquilleIDE.coq_next()
+  command! -buffer CoqBack call coquille#check_running() | call b:coquilleIDE.coq_back()
+  command! -buffer CoqToCursor call coquille#check_running() | call b:coquilleIDE.coq_to_cursor()
+  command! -buffer CoqToLast call coquille#check_running() | call b:coquilleIDE.coq_to_last()
+  command! -buffer CoqRerun call coquille#check_running() | call b:coquilleIDE.rerun()
+  command! -buffer CoqRefresh call coquille#check_running() | call b:coquilleIDE.refresh()
+  command! -buffer CoqStop call coquille#check_running() | call coquille#stop()
+  command! -buffer MoveToTop call coquille#check_running() | call b:coquilleIDE.move_to_top()
+  " command! -buffer -nargs=* Coq call coquille#rawQuery(<f-args>)
 endfunction
 
-function! coquille#CoqideMapping()
-    "" ---  CoqIde key bindings
-    "" Unreliable: doesn't work with all terminals, doesn't work through tmux,
-    ""  etc.
-    map <buffer> <silent> <C-A-Up>    :coqBack<CR>
-    map <buffer> <silent> <C-A-Left>  :CoqToCursor<CR>
-    map <buffer> <silent> <C-A-Down>  :CoqNext<CR>
-    map <buffer> <silent> <C-A-Right> :CoqToCursor<CR>
-
-    imap <buffer> <silent> <C-A-Up>    <C-\><C-o>:coqBack<CR>
-    imap <buffer> <silent> <C-A-Left>  <C-\><C-o>:CoqToCursor<CR>
-    imap <buffer> <silent> <C-A-Down>  <C-\><C-o>:CoqNext<CR>
-    imap <buffer> <silent> <C-A-Right> <C-\><C-o>:CoqToCursor<CR>
+function! coquille#define_global_commands(force = 0)
+  if !a:force && g:coquille#options#no_define_commands.get()
+    return
+  endif
+  command! CoqStopAll call coquille#stop_all()
+  command! CoqRearrange call coquille#reset_panels(1)
 endfunction
 
+" }}}
+
+function! coquille#check_running() abort
+  try
+    if !exists('b:coquilleIDE') || !b:coquilleIDE.running()
+      throw ''
+    endif
+  catch /.*/
+    throw 'CoquilleIDE is not running. Please try to run :CoqLaunch or :call coquille#launch() to start.'
+  endtry
+endfunction
+
+" delete_commands {{{
+function! coquille#delete_commands()
+  silent! delc CoqNext
+  silent! delc CoqBack
+  silent! delc CoqToCursor
+  silent! delc CoqToLast
+  silent! delc CoqRerun
+  silent! delc CoqRearrange
+  silent! delc CoqRefresh
+  silent! delc CoqStop
+  silent! delc MoveToTop
+endfunction!
+" }}}
 
 " restart coquille IDE
 function! coquille#launch(...)
-  if exists('b:coquille#IDE')
+  if exists('b:coquilleIDE')
     silent! call b:coquilleIDE.kill()
   endif
 
   let b:coquilleIDE = coquille#IDE#new(bufnr('%'), a:000)
-  let b:coquille_running = 1
+  call add(s:IDE_instances, b:coquilleIDE)
 
-  " make the different commands accessible
-  " command! -buffer GotoDot py3 coquille.goto_last_sent_dot()
-  command! -buffer CoqNext call b:coquilleIDE.coq_next()
-  command! -buffer CoqBack call b:coquilleIDE.coq_back()
-  command! -buffer CoqToCursor call b:coquilleIDE.coq_to_cursor()
-  command! -buffer CoqToLast call b:coquilleIDE.coq_to_last()
-  command! -buffer CoqRerun call b:coquilleIDE.rerun()
-  command! -buffer CoqRearrange call coquille#reset_panels()
-  command! -buffer CoqKill call coquille#killSession()
-  command! -buffer MoveToTop call b:coquilleIDE.move_to_top()
-
-  " command! -buffer -nargs=* Coq call coquille#rawQuery(<f-args>)
+  call coquille#define_global_commands()
+  call coquille#define_buffer_commands()
 
   call coquille#reset_panels()
-
-  " au InsertEnter <buffer> py3 coquille.sync()
 endfunction
 
-
 " recognize this buffer as coq
+" NOTE : the buffer's filetype can be not coq
 function! coquille#register()
   " TODO : add auto-launch optoin
 
-  augroup cs
-    autocmd!
-    autocmd ColorScheme * :call coquille#color#defineColorScheme()
-  augroup END
-
-  command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
+  if !g:coquille#options#no_define_commands.get()
+    command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
+  endif
 endfunction
 

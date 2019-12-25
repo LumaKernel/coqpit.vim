@@ -12,22 +12,33 @@ a
 - [x] Move to Top
 - [x] Coq to Last
 - [x] Coq Re-run command
+  - [x] works well
 - [x] Coq Re-launch command
   - `:CoqLaunch` is re-launch when running
-- [ ] Coq Refresh command
+  - [x] works well
+- [x] Coq Refresh command
   - refresh Goals and Infos
-- [ ] Coq Stop command
-- [ ] Query command
+  - [x] works well
+- [x] Coq Stop command
+  - [ ] works well
+- [x] Coq StopAll command
+  - [ ] works well
+- [ ] no open window option
+- [ ] options that not changing Infos/Goals after TextChanged
+- [ ] name Goals/Infos uniquely
+
+- [ ] check one-window
+
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
 - [ ] Infos syntax
   - [ ] For now, minimum.
 - [ ] Multiple buffer support
-  - [ ] one buffer attaches one goal-window and one info-window
-  - [ ] bug: switching buffers with highlight
+  - [x] one buffer attaches one goal-window and one info-window
+    - [x] optional : use one window to all buffers in one tab
+  - [x] bug: switching buffers with highlight
 - [ ] More flexible settings
-  - [ ] Reset window
   - [x] CoqToCursor with ceiling (now, flooring)
   - [ ] `auto launch`
   - [ ] `auto open window`
@@ -84,11 +95,14 @@ Not easy ones.
 - [ ] Vim friendly Search Interface
 - [ ] Compile Coq in Vim
   - [ ] `rerun after compile`
-- [ ] Queue all command
 - [ ] Jump to Axiom
   - Sounds good for rewriting `admit.`
 - [ ] Setting by Global Variables
   - Hm, it's nasty... make just a function to configure.
+- [ ] Query command
+  - simply, one command ?
+  - prompt buffer ?
+  - or using other plugin ?
 
 ## Goal
 
@@ -168,6 +182,15 @@ You can set the following variable to modify Coquille's behavior:
         (default = 0)               move your cursor to the end of the lock zone
                                     after calls to CoqNext or coqBack
 
+## TODO : TITLE
+
+When you want to reset all __Infos__ and __Goals__ windows,
+
+1. Run `:CoqCloseAll` [or `:call coquille#stop_all()`]
+2. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
+  - on each window attached by coq file if you open multiple buffers and configure `one_window` is '0'
+  - on each tab if you open multiple tabs
+
 ## Screenshoots
 
 Because pictures are always the best sellers :
@@ -176,8 +199,14 @@ Because pictures are always the best sellers :
 
 ## Known Issues
 
-- Without `g:coquille_update_status_always = 0` [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
-  - I recommend you not changing this options.
+- With configure `g:coquille_update_status_always` to `0`, [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
+  - I recommend you not changing this options. By default, working fine.
+- Somehow, vim which `has('win32unix')` works faster than one which `has('win32')`
+  - Not so critical.
+
+## Thanks
+
+TODO : write
 
 [1]: https://github.com/tpope/vim-pathogen
 [2]: https://github.com/def-lkb/vimbufsync

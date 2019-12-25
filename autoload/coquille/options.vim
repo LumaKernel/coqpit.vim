@@ -18,11 +18,17 @@ function! s:config(name, default) abort
     return a:default
   endfunction
 
-  return l:getter
+  let g:['coquille#options#' .. a:name] = l:getter
 endfunction
 
-let coquille#options#auto_move = s:config('auto_move', 0)
-let coquille#options#cursor_ceiling = s:config('cursor_ceiling', 1)
-let coquille#options#show_goal_always = s:config('show_goal_always', 0)
-let coquille#options#update_status_always = s:config('update_status_always', 1)
+call s:config('auto_move', 0)
+call s:config('cursor_ceiling', 1)
+call s:config('show_goal_always', 0)
+call s:config('update_status_always', 1)
+
+call s:config('no_define_commands', 0)
+call s:config('auto_refresh', 1)
+call s:config('one_window', 0)
+
+call s:config('no_open_windows', 0)
 

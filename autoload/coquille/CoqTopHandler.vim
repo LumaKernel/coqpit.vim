@@ -12,15 +12,16 @@ let s:assert = s:PowerAssert.assert
 let s:CoqTopHandler = {}
 
 function! s:CoqTopHandler.new(args = []) abort
-  call self.restart(a:args)
+  let new = deepcopy(self)
+  call new.restart(a:args)
 
-  let self.info = {...->0}
-  let self.add_axiom = {...->0}
-  let self.after_callback_fns = []
-  let self.after_unexpected_exit = {...->0}
-  let self.after_start = {...->0}
+  let new.info = {...->0}
+  let new.add_axiom = {...->0}
+  let new.after_callback_fns = []
+  let new.after_unexpected_exit = {...->0}
+  let new.after_start = {...->0}
 
-  return self
+  return new
 endfunction
 
 " restart {{{
@@ -40,7 +41,7 @@ function! s:CoqTopHandler.restart(args = []) abort
 endfunction
 
 function! s:CoqTopHandler._make_restart_next(args) abort
-  function! s:CoqTopHandler.restart_next(cmd, version) abort closure
+  function! self.restart_next(cmd, version) abort closure
     if a:cmd is v:null
       throw '[CoqTop Handler] Not found executable CoqTop.'
     endif
@@ -162,7 +163,7 @@ endfunction
 
 function! s:CoqTopHandler.kill() abort
   if self.running()
-    let expected_running = 0
+    let self.expected_running = 0
     call job_stop(self.job, 'term')
     unlet self.job
   endif

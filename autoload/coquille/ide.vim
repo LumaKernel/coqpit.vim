@@ -2,11 +2,6 @@
 " Coquille IDE
 " ============
 
-" TODO : オプションで，編集で Infos/Goals は変わらないように
-" TODO : 最悪 re-launch できますよ，は大事だよね
-" TODO : Infos
-" TODO : ハイライトをウィンドウ変項などに耐えるようにする
-
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
@@ -17,27 +12,31 @@ function! s:getIDE_by_bufnr(bufnr) abort
   return s:bufnr_to_IDE[a:bufnr]
 endfunction
 
+" IDE.new {{{
 function! s:IDE.new(bufnr, args = []) abort
-  " TODO : Use argss
+  let new = deepcopy(self)
+  " TODO : Use args
 
-  call self._register_buffer(a:bufnr)
+  call new._register_buffer(a:bufnr)
 
-  let self.GoalBuffers = []
-  let self.InfoBuffers = []
+  let new.GoalBuffers = []
+  let new.InfoBuffers = []
 
-  let self.coqtop_handler = coquille#CoqTopHandler#new(a:args)
+  let new.coqtop_handler = coquille#CoqTopHandler#new(a:args)
 
-  call self.coqtop_handler.set_info_callback(self._info)
-  call self.coqtop_handler.set_add_axiom_callback(self._add_axiom)
-  call self.coqtop_handler.set_unexpected_exit_callback(self.restart)
-  call self.coqtop_handler.set_start_callback(self.after_start)
-  call self.coqtop_handler.add_after_callback(self._check_queue)
+  call new.coqtop_handler.set_info_callback(new._info)
+  call new.coqtop_handler.set_add_axiom_callback(new._add_axiom)
+  call new.coqtop_handler.set_unexpected_exit_callback(new.restart)
+  call new.coqtop_handler.set_start_callback(new.after_start)
+  call new.coqtop_handler.add_after_callback(new._check_queue)
 
-  call self.restart()
+  call new.restart()
 
-  return self
+  return new
 endfunction
+" }}}
 
+" IDE.restart {{{
 function! s:IDE.restart() abort
   call self.reset_colors()
 
@@ -67,7 +66,9 @@ endfunction
 function! s:IDE.after_start() abort
   call self.coqtop_handler._init(self.after_init)
 endfunction
+" }}}
 
+" IDE.rerun {{{
 function! s:IDE.rerun() abort
   call self.reset_colors()
 
@@ -97,12 +98,20 @@ function! s:IDE.rerun() abort
   call self.refreshGoal()
   call self.refreshInfo()
 endfunction
+" }}}
 
-
-function! s:IDE.kill() abort
-  call self.coqtop_handler.kill()
+function! s:IDE.running() abort
+  return self.coqtop_handler.running()
 endfunction
 
+function! s:IDE.kill()
+  call self.reset_colors()
+
+  let self.GoalBuffers = []
+  let self.InfoBuffers = []
+
+  call self.coqtop_handler.kill()
+endfunction
 
 function! s:IDE.after_init(state_id) abort
   exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
@@ -110,6 +119,12 @@ function! s:IDE.after_init(state_id) abort
   call add(self.state_id_list, a:state_id)
   let self.last_goal_check = a:state_id
   call self._process_queue()
+endfunction
+
+function! s:IDE.refresh() abort
+  call self.recolor()
+  call self.refreshGoal()
+  call self.refreshInfo()
 endfunction
 
 
@@ -333,17 +348,32 @@ endfunction
 function! s:IDE._register_buffer(bufnr) abort
   let s:bufnr_to_IDE[a:bufnr] = self
   let self.handling_bufnr = a:bufnr
-  augroup coquille_buffer_change
+  exe 'augroup coquille_buffer_events_' .. a:bufnr
     au!
-    exe 'au TextChanged  <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
-    exe 'au TextChangedI <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
-    exe 'au TextChangedP <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(bufnr("%"))._after_textchange()'
+    exe 'au TextChanged  <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
+    exe 'au TextChangedI <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
+    exe 'au TextChangedP <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
+
+    exe 'au BufEnter     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au BufLeave     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+
+    exe 'au BufNew       <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au BufDelete    <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au BufHidden    <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au WinEnter     <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au WinLeave     <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    exe 'au WinNew       <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
   augroup END
 endfunction
 
 function! s:IDE._cache_buffer() abort
   let self.cached_buffer = self.getContent()
 endfunction
+
+function! s:IDE._after_bufenter() abort
+  call self.recolor()
+endfunction
+
 " }}}
 
 " make it as possible as lightweight
@@ -423,6 +453,7 @@ function! s:IDE.addInfoBuffer(bufnr) abort
 endfunction
 
 function! s:IDE.refreshGoal() abort
+  if !self.running() | return | endif
   for bufnr in self.GoalBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.goal_message)
@@ -430,6 +461,7 @@ function! s:IDE.refreshGoal() abort
 endfunction
 
 function! s:IDE.refreshInfo() abort
+  if !self.running() | return | endif
   for bufnr in self.InfoBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.info_message)
@@ -470,7 +502,9 @@ endfunction
 function! s:IDE.reset_colors() abort
   if !exists('self.colored') | return | endif
   for id in self.colored
-    silent! call matchdelete(id)
+    for winnr in range(winnr('$'))
+      silent! call matchdelete(id, winnr)
+    endfor
   endfor
   let self.colored = []
 endfunction
@@ -486,23 +520,26 @@ function! s:IDE.recolor() abort
 
   let maxlen = self.maxlen()
 
-  let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked])
-  let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued])
+  for winnr in win_findbuf(self.handling_bufnr)
+    let match_opt = {'window' : winnr}
+    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], v:none, v:none, match_opt)
+    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], v:none, v:none, match_opt)
 
-  for [level, range] in self.hls
-    " sweep error and warnings appearing after the top in advance
-    let is_in_checked = s:pos_le(range[1], last_checked)
-    if level == 'error'
-      let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
-      let priority = 30
-    elseif level == 'warning'
-      let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
-      let priority = 20
-    elseif level == 'axiom'
-      let group = 'CoqCheckedAxiom'
-      let priority = 20
-    endif
-    let self.colored += s:matchaddrange(maxlen, group, range, priority)
+    for [level, range] in self.hls
+      " sweep error and warnings appearing after the top in advance
+      let is_in_checked = s:pos_le(range[1], last_checked)
+      if level == 'error'
+        let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
+        let priority = 30
+      elseif level == 'warning'
+        let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
+        let priority = 20
+      elseif level == 'axiom'
+        let group = 'CoqCheckedAxiom'
+        let priority = 20
+      endif
+      let self.colored += s:matchaddrange(maxlen, group, range, priority, v:none, match_opt)
+    endfor
   endfor
 endfunction
 " }}}
@@ -929,7 +966,6 @@ function! s:steps(content, pos, num, newline_as_one) abort
   " NOTE : it can happen in some situation; see dev/coq-examples/nasty_notations.v
   return [len(a:content) - 1, len(a:content[-1])]
 endfunction
-
 
 " }}}
 

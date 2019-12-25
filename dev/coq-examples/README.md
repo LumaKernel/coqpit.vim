@@ -1,12 +1,10 @@
-Coq Examles
------------
+# Coq Examles
 
 Coq files ( `.v` ) based on [Coq Official Document](https://coq.inria.fr/refman/index.html).
 Use them to check syntax highlighting, covering as many syntaxes as possible manually, studying coq language, and some more.
 
 
-Contribution
-============
+## Contribution
 
 There is no strict rule. Welcome adding and re-constructing contents freely.
 
