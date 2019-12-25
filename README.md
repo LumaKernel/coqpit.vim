@@ -8,17 +8,6 @@ a
 
 ## TODO
 
-- [x] When job terminated, restart job
-- [x] Move to Top
-- [x] Coq to Last
-- [x] Coq Re-run command
-  - [x] works well
-- [x] Coq Re-launch command
-  - `:CoqLaunch` is re-launch when running
-  - [x] works well
-- [x] Coq Refresh command
-  - refresh Goals and Infos
-  - [x] works well
 - [x] Coq Stop command
   - [ ] works well
 - [x] Coq StopAll command
@@ -29,6 +18,12 @@ a
 
 - [ ] check one-window
 
+- [ ] check multiple tabs
+
+- [ ] weaken highlight priority less than 0
+  - for search hightlight
+
+- [ ] bug: cursor moves on Goals/Infos window
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
@@ -40,9 +35,11 @@ a
   - [x] bug: switching buffers with highlight
 - [ ] More flexible settings
   - [x] CoqToCursor with ceiling (now, flooring)
-  - [ ] `auto launch`
+  - [x] `auto launch`
   - [ ] `auto open window`
-  - [ ] `rearrange after focus`
+  - [x] ~`rearrange after focus`~
+    - good?
+  - [ ] `refresh after focus`
   - [ ] `rerun after focus`
 - [ ] document about custimize window
 
@@ -60,10 +57,6 @@ a
   - [x] Coq 3.10 works
   - [x] Coq 3.11beta works
   - [x] `coqtopide.opt.exe`  works
-
-- windows cui checking ( `win32unix` )
-  - [x] Coq 3.7 works
-  - [x] Coq 3.9 works
 
 - [ ] other OS
 
@@ -89,6 +82,23 @@ a
 
 - [x] ~~Jump to Error line~~
   - Maybe not needed.
+
+- [x] When job terminated, restart job
+- [x] Move to Top
+- [x] Coq to Last
+- [x] Coq Re-run command
+  - [x] works well
+- [x] Coq Re-launch command
+  - `:CoqLaunch` is re-launch when running
+  - [x] works well
+- [x] Coq Refresh command
+  - refresh Goals and Infos
+  - [x] works well
+
+- windows cui checking ( `win32unix` )
+  - [x] Coq 3.7 works
+  - [x] Coq 3.9 works
+  - [x] Coq 3.10 works
 
 Not easy ones.
 
@@ -161,6 +171,9 @@ or
 to your `.vimrc`.
 
 Alternatively you can, of course, define your owns.
+
+## Mapping Examples
+
 
 ## Running query commands
 

@@ -27,8 +27,14 @@ call s:config('show_goal_always', 0)
 call s:config('update_status_always', 1)
 
 call s:config('no_define_commands', 0)
-call s:config('auto_refresh', 1)
 call s:config('one_window', 0)
+call s:config('auto_launch', 1)
+call s:config('auto_launch_args', [])
 
 call s:config('no_open_windows', 0)
+
+
+" g:coquille#options#{config name}.get()
+" g:coquille#options#{config name}.get(default value)
+
 

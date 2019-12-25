@@ -229,7 +229,10 @@ endfunction
 " recognize this buffer as coq
 " NOTE : the buffer's filetype can be not coq
 function! coquille#register()
-  " TODO : add auto-launch optoin
+  if g:coquille#options#auto_launch.get() isnot 0
+    let args = g:coquille#options#auto_launch_args.get()
+    call coquille#launch(args)
+  endif
 
   if !g:coquille#options#no_define_commands.get()
     command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
