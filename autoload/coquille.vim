@@ -189,7 +189,7 @@ endfunction
 
 function! coquille#check_running() abort
   try
-    if !exists('b:coquilleIDE') || !b:coquilleIDE.running()
+    if !exists('b:coquilleIDE') || b:coquilleIDE.dead()
       throw ''
     endif
   catch /.*/

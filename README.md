@@ -20,7 +20,10 @@ a
 
 - [ ] check multiple tabs
 
-- [ ] bug: coq-next very fast
+- [x] bug: coq-next very fast
+
+- [ ] fire edit-at for wrong tip
+- [ ] bug: coq-to-cursor and many fast coq-next
 
 - [x] weaken highlight priority less than 0
   - for search hightlight
@@ -36,7 +39,7 @@ a
   - [x] one buffer attaches one goal-window and one info-window
     - [x] optional : use one window to all buffers in one tab
   - [x] bug: switching buffers with highlight
-- [ ] More flexible settings
+- [x] More flexible settings
   - [x] CoqToCursor with ceiling (now, flooring)
   - [x] `auto launch`
   - [x] ~~`auto open window`~~

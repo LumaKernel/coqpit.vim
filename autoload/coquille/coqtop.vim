@@ -21,20 +21,15 @@ let s:to_check_default = [
 " if that is string, automatically select options
 function! coquille#coqtop#get_executable(callback) abort
   let to_check = deepcopy(s:to_check_default)
+  
+  let opt = g:coquille#options#coq_executable.get(v:null)
 
-  for scope in ['b', 'g']
-    if exists(scope .. ':coquille_coq_executable')
-      let val = eval(scope .. ':coquille_coq_executable')
-      if type(val) == v:t_list
-        call a:callback(val)
-        return
-      elseif type(val) == v:t_string
-        let to_check[0][0] = val
-        let to_check[1][0] = val
-        break
-      endif
-    endif
-  endfor
+  if type(opt) == v:t_list
+    let to_check = [opt]
+  elseif type(opt) == v:t_string
+    let to_check[0][0] = opt
+    let to_check[1][0] = opt
+  endif
 
   let checker = {}
   let checker.done = {}

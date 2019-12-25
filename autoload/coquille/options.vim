@@ -1,18 +1,21 @@
 
-function! s:config(name, default) abort
-  if !exists('g:coquille_' .. a:name)
-    let g:['coquille_' .. a:name] = a:default
+function! s:config(name, default = v:null, no_define_default = 0) abort
+  if !a:no_define_default
+    if !exists('g:coquille_' .. a:name)
+      let g:['coquille_' .. a:name] = a:default
+    endif
   endif
+
   let l:getter = {}
 
-  function! l:getter.get(default2 = v:none) abort closure
+  function! l:getter.get(default2 = v:null) abort closure
     if exists('b:coquille_' .. a:name)
       return b:['coquille_' .. a:name]
     endif
     if exists('g:coquille_' .. a:name)
       return g:['coquille_' .. a:name]
     endif
-    if default2 isnot v:none
+    if default2 isnot v:null
       return a:default2
     endif
     return a:default
@@ -20,6 +23,8 @@ function! s:config(name, default) abort
 
   let g:['coquille#options#' .. a:name] = l:getter
 endfunction
+
+call s:config('coq_executable', v:none, 1)
 
 call s:config('auto_move', 0)
 call s:config('cursor_ceiling', 1)

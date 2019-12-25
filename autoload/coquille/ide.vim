@@ -100,8 +100,8 @@ function! s:IDE.rerun() abort
 endfunction
 " }}}
 
-function! s:IDE.running() abort
-  return self.coqtop_handler.running()
+function! s:IDE.dead() abort
+  return self.coqtop_handler.dead()
 endfunction
 
 function! s:IDE.kill()
@@ -226,7 +226,7 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
     let range = self._state_id_to_range(a:state_id)
 
     if range is v:null
-      echoerr '[Coquille IDE] Internal error.'
+      exe s:assert('0')
       call _process_queue()
       return
     endif
@@ -473,7 +473,7 @@ function! s:IDE.addInfoBuffer(bufnr) abort
 endfunction
 
 function! s:IDE.refreshGoal() abort
-  if !self.running() | return | endif
+  if self.dead() | return | endif
   for bufnr in self.GoalBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.goal_message)
@@ -481,7 +481,7 @@ function! s:IDE.refreshGoal() abort
 endfunction
 
 function! s:IDE.refreshInfo() abort
-  if !self.running() | return | endif
+  if self.dead() | return | endif
   for bufnr in self.InfoBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.info_message)
@@ -754,8 +754,8 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
     let range = self._state_id_to_range(a:state_id)
 
     if range is v:null
-      " TODO: restart
-      throw "[Coquille IDE] internal error."
+      exe s:assert('0')
+      return
     endif
 
     let epos = range[1]

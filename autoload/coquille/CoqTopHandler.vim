@@ -15,6 +15,8 @@ function! s:CoqTopHandler.new(args = []) abort
   let new = deepcopy(self)
   call new.restart(a:args)
 
+  let new.expected_running = 0
+
   let new.info = {...->0}
   let new.add_axiom = {...->0}
   let new.after_callback_fns = []
@@ -28,6 +30,7 @@ endfunction
 function! s:CoqTopHandler.restart(args = []) abort
   if self.running()
     let self.expected_running = 0
+    call job_setoptions(self.job, {'exit_cb': {...->0}})
     call job_stop(self.job, 'term')
   endif
 
@@ -161,6 +164,10 @@ function! s:CoqTopHandler.running() abort
     \ exists("self.job")
     \ && type(self.job) == v:t_job
     \ && job_status(self.job) == "run"
+endfunction
+
+function! s:CoqTopHandler.dead() abort
+  return self.expected_running && !self.running()
 endfunction
 
 function! s:CoqTopHandler.kill() abort
