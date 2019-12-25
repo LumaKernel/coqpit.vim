@@ -360,13 +360,13 @@ endfunction
 
 " callback : (is_err, state_id) -> any
 " send EditAt < move tip > {{{
-function! s:CoqTopHandler.editAt(new_state_id, callback = {...->0}) abort
+function! s:CoqTopHandler.edit_at(new_state_id, callback = {...->0}) abort
   call self._call(
     \ '<call val="Edit_at"><state_id val="' .. a:new_state_id .. '" /></call>'
-    \ , self._makeEditAtCallback(a:new_state_id, a:callback))
+    \ , self._make_edit_at_callback(a:new_state_id, a:callback))
 endfunction
-function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
-  function! self.editAtCallback(value) abort closure
+function! s:CoqTopHandler._make_edit_at_callback(new_state_id, callback) abort
+  function! self.after_edit_at(value) abort closure
     if a:value.attr.val != 'good'
       let forced_state_id = str2nr(a:value.find('state_id').attr.val)
       let self.tip = forced_state_id
@@ -377,7 +377,7 @@ function! s:CoqTopHandler._makeEditAtCallback(new_state_id, callback) abort
     endif
   endfunction
 
-  return function(self.editAtCallback, self)
+  return function(self.after_edit_at, self)
 endfunction
 " }}}
 

@@ -22,8 +22,8 @@ a
 
 - [x] bug: coq-next very fast
 
-- [ ] fire edit-at for wrong tip
-- [ ] bug: coq-to-cursor and many fast coq-next
+- [x] fire edit-at for wrong tip
+- [x] bug: coq-to-cursor and many fast coq-next
 
 - [x] weaken highlight priority less than 0
   - for search hightlight

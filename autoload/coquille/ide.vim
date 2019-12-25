@@ -90,7 +90,7 @@ function! s:IDE.rerun() abort
   call self.coqtop_handler.interrupt()
 
   if len(self.state_id_list) > 0
-    call self.coqtop_handler.editAt(self.state_id_list[0], self.after_edit_at2)
+    call self.coqtop_handler.edit_at(self.state_id_list[0], self.after_edit_at2)
   else
     call self.coqtop_handler._init(self.after_init)
   endif
@@ -144,10 +144,14 @@ endfunction
 
 function! s:IDE._after_shrink() abort
   if len(self.queue) == 0
-    if len(self.state_id_list) > 0
-      call self.coqtop_handler.interrupt()
-      call self.coqtop_handler.editAt(self.state_id_list[-1], self._after_edit_at)
-    endif
+    call self._interrupt_and_edit_at_top()
+  endif
+endfunction
+
+function! s:IDE._interrupt_and_edit_at_top() abort
+  if len(self.state_id_list) > 0
+    call self.coqtop_handler.interrupt()
+    call self.coqtop_handler.edit_at(self.state_id_list[-1], self._after_edit_at)
   endif
 endfunction
 
@@ -536,7 +540,8 @@ function! s:IDE.recolor() abort
   let last_checked = get(self.sentence_end_pos_list, -1, [0, 0])
   let last_queued = self.get_apparently_last()
 
-  exe s:assert('s:pos_le(last_checked, last_queued)')
+  " This can happen.
+  " exe s:assert('s:pos_le(last_checked, last_queued)')
 
   let maxlen = self.maxlen()
 
@@ -592,6 +597,13 @@ function! s:IDE._process_queue()
 
   let state_id = self.state_id_list[-1]
 
+
+  exe s:assert('state_id == self.coqtop_handler.tip')
+  if state_id != self.coqtop_handler.tip
+    call self._interrupt_and_edit_at_top()
+    return
+  endif
+
   call self.coqtop_handler.next_sentence_end(state_id, self.getContent(), last_checked, self._make_after_get_sentence_end(state_id, last_checked))
 endfunction
 " }}}
@@ -613,9 +625,7 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
       if a:err_loc isnot v:null
         let [start, end] = a:err_loc
         let content = self.getContent()
-        ECHO [a:spos, start, end]
         let mes_range = [s:steps(content, a:spos, start, 1), s:steps(content, a:spos, end, 1)]
-        ECHO [mes_range]
         call add(self.hls, ["error", mes_range])
       endif
 
@@ -628,6 +638,12 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
       endif
       let sentence_range = [a:spos, a:epos]
       let sentence = join(self.getContent(sentence_range), "\n")
+
+      exe s:assert('a:state_id == self.coqtop_handler.tip')
+      if a:state_id != self.coqtop_handler.tip
+        call self._interrupt_and_edit_at_top()
+        return
+      endif
 
       call self.coqtop_handler.send_sentence(a:state_id, sentence, self._make_after_result(a:state_id, sentence_range))
     endif
