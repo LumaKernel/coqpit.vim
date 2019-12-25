@@ -46,7 +46,9 @@ function! s:CoqTopHandler._make_restart_next(args) abort
       throw '[CoqTop Handler] Not found executable CoqTop.'
     endif
 
-    ECHO a:version
+    if !g:coquille#options#silent.get()
+      echo '[CoqTop Handler] CoqTop version ' .. a:version .. ' started running.'
+    endif
 
     let job_options = {}
 

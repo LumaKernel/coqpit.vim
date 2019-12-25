@@ -33,6 +33,8 @@ call s:config('auto_launch_args', [])
 
 call s:config('no_open_windows', 0)
 
+call s:config('silent', 0)
+
 
 " g:coquille#options#{config name}.get()
 " g:coquille#options#{config name}.get(default value)

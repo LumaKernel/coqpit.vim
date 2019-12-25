@@ -47,7 +47,8 @@ a
 - [ ] Screenshots
 
 - [x] version chekcking
-- [ ] version echo
+- [x] version echo
+  - and option `silent`
 
 - windows gui checking
   - [x] Coq 3.5pl3 works
