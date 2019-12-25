@@ -23,7 +23,8 @@ a
 - [ ] weaken highlight priority less than 0
   - for search hightlight
 
-- [ ] bug: cursor moves on Goals/Infos window
+- [x] ~bug: cursor moves on Goals/Infos window~
+  - Not bug. Updating buffer leads cursor moves to top.
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
