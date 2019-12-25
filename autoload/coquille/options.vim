@@ -31,6 +31,9 @@ call s:config('one_window', 0)
 call s:config('auto_launch', 1)
 call s:config('auto_launch_args', [])
 
+call s:config('refresh_after_focus', 1)
+call s:config('rerun_after_focus', 0)
+
 call s:config('no_open_windows', 0)
 
 call s:config('silent', 0)

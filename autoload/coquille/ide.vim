@@ -348,6 +348,8 @@ endfunction
 function! s:IDE._register_buffer(bufnr) abort
   let s:bufnr_to_IDE[a:bufnr] = self
   let self.handling_bufnr = a:bufnr
+  let self.unfocused = !self.focusing()
+
   exe 'augroup coquille_buffer_events_' .. a:bufnr
     au!
     exe 'au TextChanged  <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
@@ -372,6 +374,24 @@ endfunction
 
 function! s:IDE._after_bufenter() abort
   call self.recolor()
+  if self.focusing()
+    if self.unfocused
+      " after focus
+
+      if g:coquille#options#refresh_after_focus.get()
+        call self.refreshGoal()
+        call self.refreshInfo()
+      endif
+
+      if g:coquille#options#rerun_after_focus.get()
+        call self.rerun()
+      endif
+    endif
+
+    let self.unfocused = 0
+  else
+    let self.unfocused = 1
+  endif
 endfunction
 
 " }}}

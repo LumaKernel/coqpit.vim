@@ -20,6 +20,8 @@ a
 
 - [ ] check multiple tabs
 
+- [ ] bug: coq-next very fast
+
 - [x] weaken highlight priority less than 0
   - for search hightlight
 
@@ -37,11 +39,15 @@ a
 - [ ] More flexible settings
   - [x] CoqToCursor with ceiling (now, flooring)
   - [x] `auto launch`
-  - [ ] `auto open window`
+  - [x] ~~`auto open window`~~
+    - what ? I forgot.
+    - maybe resolve by `no open window` option
   - [x] ~`rearrange after focus`~
     - good?
-  - [ ] `refresh after focus`
-  - [ ] `rerun after focus`
+  - [x] `refresh after focus`
+    - [x] works well
+  - [x] `rerun after focus`
+    - [x] works well
 - [ ] document about custimize window
 
 - [ ] Screenshots
