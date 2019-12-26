@@ -13,6 +13,7 @@ a
 - [ ] write help@ja
 - [ ] setup editorconfig
 - [ ] move TODO
+- [ ] document about custimize window
 
 ## TODO
 
@@ -20,7 +21,7 @@ a
   - not needed because it is impossible to open buffer without
     opening window
 - [x] options that not changing Infos/Goals after TextChanged
-- [ ] name Goals/Infos uniquely
+- [x] name Goals/Infos uniquely
 - [x] show errors when booting CoqTop
 - [ ] use vital
   - XML
@@ -35,7 +36,6 @@ a
   - [ ] For now, minimum.
 - [ ] Infos syntax
   - [ ] For now, minimum.
-- [ ] document about custimize window
 
 - [ ] Screenshots
 
@@ -226,13 +226,19 @@ You can set the following variable to modify Coquille's behavior:
         (default = 0)               move your cursor to the end of the lock zone
                                     after calls to CoqNext or coqBack
 
-## TODO : TITLE
+## Reset messed up Infos and Goals windows
 
 When you want to reset all __Infos__ and __Goals__ windows,
 
-1. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
+1. `:bdelete` all not needed `[Goals]` and `[Infos]` buffers by yourself.
+  - or use `:CoqStopAll` command [or `:call coquille#stop_all()`]
+2. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
   - on each window attached by coq file if you open multiple buffers and configure `one_window` is '0'
   - on each tab if you open multiple tabs
+
+## Customize window locations
+
+TODO : write
 
 ## Screenshoots
 

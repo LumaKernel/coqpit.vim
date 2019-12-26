@@ -9,6 +9,20 @@ let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
 let s:window_bufnrs = []
 let s:IDE_instances = []
 
+let s:num = 0
+
+function! s:name_buffer_unique(name) abort
+  if !bufexists('[' .. a:name .. ']')
+    silent exe 'file [' .. a:name .. ']'
+    return
+  endif
+
+  while bufexists('[' .. a:name .. '_' .. s:num .. ']')
+    let s:num += 1
+  endwhile
+  silent exe 'file [' .. a:name .. '_' .. s:num .. ']'
+endfunction
+
 " reset_pannels {{{
 function! coquille#reset_panels(force = 0) abort
   if g:coquille#options#one_window.get()
@@ -37,8 +51,8 @@ function! coquille#init_tablocal_windows(force) abort
   if exists('t:info_buf') && !bufexists(t:info_buf) | silent! unlet t:info_buf | endif
 
   if !exists('t:goal_buf') || !exists('t:info_buf') || a:force
-    if exists('t:goal_buf') | silent! execute 'bdelete' .. t:goal_buf | endif
-    if exists('t:info_buf') | silent! execute 'bdelete' .. t:info_buf | endif
+    if exists('t:goal_buf') | silent! execute 'bwipeout' .. t:goal_buf | endif
+    if exists('t:info_buf') | silent! execute 'bwipeout' .. t:info_buf | endif
     silent! unlet t:goal_buf
     silent! unlet t:info_buf
   endif
@@ -50,6 +64,7 @@ function! coquille#init_tablocal_windows(force) abort
   let l:winnr = winnr()
   botright vnew
     setlocal buftype=nofile
+    call s:name_buffer_unique('Goals-shared')
     setlocal filetype=coq-goals
     setlocal noswapfile
     setlocal nocursorline
@@ -58,6 +73,7 @@ function! coquille#init_tablocal_windows(force) abort
     call add(s:window_bufnrs, t:goal_buf)
   rightbelow new
     setlocal buftype=nofile
+    call s:name_buffer_unique('Infos-shared')
     setlocal filetype=coq-infos
     setlocal noswapfile
     setlocal nocursorline
@@ -76,8 +92,8 @@ function! coquille#init_buflocal_windows(force) abort
   if exists('b:info_buf') && !bufexists(b:info_buf) | silent! unlet b:info_buf | endif
 
   if !exists('b:goal_buf') || !exists('b:info_buf') || a:force
-    if exists('b:goal_buf') | silent! execute 'bdelete' .. b:goal_buf | endif
-    if exists('b:info_buf') | silent! execute 'bdelete' .. b:info_buf | endif
+    if exists('b:goal_buf') | silent! execute 'bwipeout' .. b:goal_buf | endif
+    if exists('b:info_buf') | silent! execute 'bwipeout' .. b:info_buf | endif
     silent! unlet b:goal_buf
     silent! unlet b:info_buf
   endif
@@ -88,11 +104,13 @@ function! coquille#init_buflocal_windows(force) abort
 
   let l:coquilleIDE = b:coquilleIDE
 
+  let fname = expand('%:t:r')
   let l:winnr = winnr()
-  let l:name = expand('%:t:r')
 
   rightbelow vnew
     setlocal buftype=nofile
+    call s:name_buffer_unique('Goals:' .. fname)
+    setlocal filetype=coq-goals
     setlocal filetype=coq-goals
     setlocal noswapfile
     setlocal nocursorline
@@ -103,6 +121,7 @@ function! coquille#init_buflocal_windows(force) abort
     call add(s:window_bufnrs, l:goal_buf)
   rightbelow new
     setlocal buftype=nofile
+    call s:name_buffer_unique('Infos:' .. fname)
     setlocal filetype=coq-infos
     setlocal noswapfile
     setlocal nocursorline
@@ -123,8 +142,8 @@ function! coquille#stop()
   if !exists('b:coquilleIDE') | return | endif
 
   if !g:coquille#options#one_window.get()
-    if exists('b:goal_buf') | silent! execute 'bdelete' .. b:goal_buf | endif
-    if exists('b:info_buf') | silent! execute 'bdelete' .. b:info_buf | endif
+    if exists('b:goal_buf') | silent! execute 'bwipeout' .. b:goal_buf | endif
+    if exists('b:info_buf') | silent! execute 'bwipeout' .. b:info_buf | endif
   endif
 
   if exists('b:coquilleIDE')
@@ -141,7 +160,7 @@ function! coquille#stop_all()
 
   for bufnr in s:window_bufnrs
     if bufexists(bufnr)
-      silent! execute 'bdelete' .. bufnr
+      silent! execute 'bwipeout' .. bufnr
     endif
   endfor
 
