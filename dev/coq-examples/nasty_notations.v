@@ -36,6 +36,7 @@ Section sec3.
     Admitted.
 End sec3.
 
+
 Section sec4.
   Notation "'Admitted' . a" := (f a) (at level 20).
   Notation "'_' a" := (f a) (at level 20).

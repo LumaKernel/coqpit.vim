@@ -38,6 +38,8 @@ endfunction
 
 " IDE.restart {{{
 function! s:IDE.restart() abort
+  let self.keep_goal_info = 0
+
   call self.reset_colors()
 
   " checked by coq
@@ -70,6 +72,8 @@ endfunction
 
 " IDE.rerun {{{
 function! s:IDE.rerun() abort
+  let self.keep_goal_info = 0
+
   call self.reset_colors()
 
   let last = self.get_apparently_last()
@@ -122,6 +126,7 @@ function! s:IDE.after_init(state_id) abort
 endfunction
 
 function! s:IDE.refresh() abort
+  let self.keep_goal_info = 0
   call self.recolor()
   call self.refreshGoal()
   call self.refreshInfo()
@@ -216,6 +221,7 @@ function! s:IDE._info(state_id, level, msg, loc) abort
 
   call self.recolor()
   call self.refreshInfo()
+
   call self._check_queue()
 endfunction
 " }}}
@@ -346,7 +352,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
 endfunction
 " }}}
 
-" buffer caching {{{
+" _register_buffer {{{
 function! s:IDE._register_buffer(bufnr) abort
   let s:bufnr_to_IDE[a:bufnr] = self
   let self.handling_bufnr = a:bufnr
@@ -368,11 +374,15 @@ function! s:IDE._register_buffer(bufnr) abort
     exe 'au WinEnter     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
   augroup END
 endfunction
+" }}}
 
+" _cache_buffer {{{
 function! s:IDE._cache_buffer() abort
   let self.cached_buffer = self.getContent()
 endfunction
+" }}}
 
+" _after_bufenter {{{
 function! s:IDE._after_bufenter() abort
   call self.recolor()
   if self.focusing()
@@ -418,9 +428,13 @@ function! s:IDE._after_textchange() abort
     let pos[1] = max([0, pos[1]-1])
   endif
 
-  call self._shrink_to(pos)
+  if g:coquille#options#keep_after_textchange.get()
+    let self.keep_goal_info = 1
+  endif
 
+  call self._shrink_to(pos)
   call self.recolor()
+
   call self._check_queue()
 endfunction
 " }}}
@@ -475,6 +489,7 @@ endfunction
 
 function! s:IDE.refreshGoal() abort
   if self.dead() | return | endif
+  if self.keep_goal_info | return | endif
   for bufnr in self.GoalBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.goal_message)
@@ -483,6 +498,7 @@ endfunction
 
 function! s:IDE.refreshInfo() abort
   if self.dead() | return | endif
+  if self.keep_goal_info | return | endif
   for bufnr in self.InfoBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.info_message)
@@ -699,6 +715,8 @@ endfunction
 
 " coq_next {{{
 function! s:IDE.coq_next() abort
+  let self.keep_goal_info = 0
+
   let content = self.getContent()
   let last = self.get_apparently_last()
 
@@ -735,6 +753,8 @@ endfunction
 
 " coq_back {{{
 function! s:IDE.coq_back() abort
+  let self.keep_goal_info = 0
+
   if len(self.queue) > 0
     call remove(self.queue, -1)
     call self._after_shrink()
@@ -790,6 +810,8 @@ endfunction
 
 " coq_shrink_to_pos {{{
 function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
+  let self.keep_goal_info = 0
+
   if s:pos_le(self.get_apparently_last(), a:pos)
     return
   endif
@@ -812,6 +834,8 @@ endfunction
 
 " coq_expand_to_pos {{{
 function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
+  let self.keep_goal_info = 0
+
   let content = self.getContent()
   let last = self.get_apparently_last()
 

@@ -19,7 +19,7 @@ a
 - [x] ~~no open window option~~
   - not needed because it is impossible to open buffer without
     opening window
-- [ ] options that not changing Infos/Goals after TextChanged
+- [x] options that not changing Infos/Goals after TextChanged
 - [ ] name Goals/Infos uniquely
 - [ ] show errors when booting CoqTop
 - [ ] use vital

@@ -115,9 +115,6 @@ function! coquille#init_buflocal_windows(force) abort
   
   let b:goal_buf = l:goal_buf
   let b:info_buf = l:info_buf
-  call b:coquilleIDE.addGoalBuffer(b:goal_buf)
-  call b:coquilleIDE.addInfoBuffer(b:info_buf)
-  call b:coquilleIDE.refresh()
 endfunction
 " }}}
 

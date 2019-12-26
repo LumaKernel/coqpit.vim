@@ -35,6 +35,8 @@ call s:config('one_window', 0, v:none, ['t', 'g'])
 call s:config('auto_launch', 1)
 call s:config('auto_launch_args', [])
 
+call s:config('keep_after_textchange', 1)
+
 call s:config('refresh_after_focus', 1)
 call s:config('rerun_after_focus', 0)
 
