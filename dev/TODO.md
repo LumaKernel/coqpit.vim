@@ -7,19 +7,18 @@
 - [ ] setup editorconfig
 - [x] move TODO
 - [ ] document about custimize window
+- [ ] Screenshots
 
 ## TODO
 
-- [ ] Goals syntax
-  - [ ] For now, minimum.
-- [ ] Infos syntax
-  - [ ] For now, minimum.
+- [ ] Query command for now
 
-- [ ] Screenshots
-
-- [ ] other OS
+- [ ] check in other OS
 
 Not easy ones.
+
+- [ ] Goals syntax
+- [ ] Infos syntax
 
 - [ ] Vim friendly Search Interface
 - [ ] Compile Coq in Vim
