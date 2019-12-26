@@ -15,7 +15,7 @@ function! s:CoqTopHandler.new(args = []) abort
   let new = deepcopy(self)
   call new.restart(a:args)
 
-  let new.expected_running = 0
+  let new.trying_to_run = 0
 
   let new.info = {...->0}
   let new.add_axiom = {...->0}
@@ -40,17 +40,20 @@ function! s:CoqTopHandler.restart(args = []) abort
   let self.waiting = 0
   let self.abandon = 0
 
+  let self.trying_to_run = 1
+
   call coquille#coqtop#get_executable(self._make_restart_next(a:args))
 endfunction
 
 function! s:CoqTopHandler._make_restart_next(args) abort
   function! self.restart_next(cmd, version) abort closure
     if a:cmd is v:null
-      throw '[CoqTop Handler] Not found executable CoqTop.'
+      echoerr '[coquille.vim / CoqTop Handler] Not found executable CoqTop.'
+      return
     endif
 
     if !g:coquille#options#silent.get()
-      echo '[CoqTop Handler] CoqTop version ' .. a:version .. ' started running.'
+      echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. a:version .. ' started running.'
     endif
 
     let job_options = {}
@@ -65,14 +68,17 @@ function! s:CoqTopHandler._make_restart_next(args) abort
 
     let self.job = job_start(a:cmd, job_options)
 
+    let self.expected_running = 1
+    let self.trying_to_run = 0
+
     if !self.running()
-      throw
-        \ '[CoqTop Handler] Tried to start with '
-        \ .. webapi#json#encode(a:cmd)
+      echoerr
+        \ '[coquille.vim / CoqTop Handler] Tried to start with '
+        \ .. string(a:cmd)
         \ .. ' , but failed.'
+      return
     endif
 
-    let self.expected_running = 1
     call self.after_start()
   endfunction
 
@@ -136,8 +142,7 @@ endfunction
 
 function! s:CoqTopHandler._err_cb(channel, msg) abort
   if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
-  " TODO
-  echoerr "[CoqTop Handler] Internal error. Please report issue in " .. g:coquille#repository_url .. " ."
+  echoerr "[coquille.vim / CoqTop Handler] Internal error with following error message."
   echoerr a:msg
 endfunction
 
@@ -145,7 +150,7 @@ function! s:CoqTopHandler._exit_cb(channel, status) abort
   " if a:channel isnot job_getchannel(self.job) | return | endif
   if self.expected_running
     let self.expected_running = 0
-    echoerr '[CoqTop Handler] Unfortunately, CoqTop was exited with status '
+    echoerr '[coquille.vim / CoqTop Handler] Unfortunately, CoqTop was exited with status '
           \ .. a:status
           \ .. '. Handler will try to restart.'
     call self.restart()
@@ -167,7 +172,7 @@ function! s:CoqTopHandler.running() abort
 endfunction
 
 function! s:CoqTopHandler.dead() abort
-  return self.expected_running && !self.running()
+  return !self.trying_to_run && !self.running()
 endfunction
 
 function! s:CoqTopHandler.kill() abort

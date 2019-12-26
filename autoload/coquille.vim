@@ -11,8 +11,8 @@ let s:IDE_instances = []
 
 " reset_pannels {{{
 function! coquille#reset_panels(force = 0) abort
-  if !exists('b:coquilleIDE') | return | endif
   if g:coquille#options#one_window.get()
+
     call coquille#init_tablocal_windows(a:force)
     
     call b:coquilleIDE.addGoalBuffer(t:goal_buf)
@@ -43,7 +43,7 @@ function! coquille#init_tablocal_windows(force) abort
     silent! unlet t:info_buf
   endif
 
-  if exists('t:goal_buf') || exists('t:info_buf')
+  if exists('t:goal_buf') && exists('t:info_buf')
     return
   endif
 
@@ -82,7 +82,7 @@ function! coquille#init_buflocal_windows(force) abort
     silent! unlet b:info_buf
   endif
 
-  if exists('b:goal_buf') || exists('b:info_buf')
+  if exists('b:goal_buf') && exists('b:info_buf')
     return
   endif
 
@@ -112,9 +112,6 @@ function! coquille#init_buflocal_windows(force) abort
     let l:info_buf = bufnr('%')
     call add(s:window_bufnrs, l:info_buf)
   execute l:winnr .. 'winc w'
-
-  " if !g:coquille#options#no_open_windows.get()
-  " endif
   
   let b:goal_buf = l:goal_buf
   let b:info_buf = l:info_buf
@@ -193,7 +190,7 @@ function! coquille#check_running() abort
       throw ''
     endif
   catch /.*/
-    throw 'CoquilleIDE is not running. Please try to run :CoqLaunch or :call coquille#launch() to start.'
+    echoerr '[coquille.vim] CoquilleIDE is not running. Please try to run :CoqLaunch or :call coquille#launch() to start.'
   endtry
 endfunction
 
@@ -204,7 +201,6 @@ function! coquille#delete_commands()
   silent! delc CoqToCursor
   silent! delc CoqToLast
   silent! delc CoqRerun
-  silent! delc CoqRearrange
   silent! delc CoqRefresh
   silent! delc CoqStop
   silent! delc MoveToTop

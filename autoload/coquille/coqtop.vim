@@ -97,7 +97,7 @@ function! s:is_executable(cmd, callback) abort
     call a:callback(0)
     return
   endif
-  call ch_sendraw(job, '<call val="About"><unit /></call>')
-  call timer_start(5000, {->a:callback(0)})
+  call ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
+  call timer_start(10000, {->a:callback(0)})
 endfunction
 

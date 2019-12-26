@@ -6,58 +6,38 @@
 a
 
 
+## Release TODO
+
+- [ ] write document
+- [ ] write help
+- [ ] write help@ja
+- [ ] setup editorconfig
+
+
 ## TODO
 
-- [x] Coq Stop command
-  - [ ] works well
-- [x] Coq StopAll command
-  - [ ] works well
-- [ ] no open window option
+- [x] ~~no open window option~~
+  - not needed because it is impossible to open buffer without
+    opening window
 - [ ] options that not changing Infos/Goals after TextChanged
 - [ ] name Goals/Infos uniquely
+- [ ] show errors when booting CoqTop
+- [ ] use vital
+  - XML
 
-- [ ] check one-window
+- [x] not to use json
 
-- [ ] check multiple tabs
+- [x] check one-window
 
-- [x] bug: coq-next very fast
-
-- [x] fire edit-at for wrong tip
-- [x] bug: coq-to-cursor and many fast coq-next
-
-- [x] weaken highlight priority less than 0
-  - for search hightlight
-
-- [x] ~bug: cursor moves on Goals/Infos window~
-  - Not bug. Updating buffer leads cursor moves to top.
+- [x] check multiple tabs
 
 - [ ] Goals syntax
   - [ ] For now, minimum.
 - [ ] Infos syntax
   - [ ] For now, minimum.
-- [ ] Multiple buffer support
-  - [x] one buffer attaches one goal-window and one info-window
-    - [x] optional : use one window to all buffers in one tab
-  - [x] bug: switching buffers with highlight
-- [x] More flexible settings
-  - [x] CoqToCursor with ceiling (now, flooring)
-  - [x] `auto launch`
-  - [x] ~~`auto open window`~~
-    - what ? I forgot.
-    - maybe resolve by `no open window` option
-  - [x] ~`rearrange after focus`~
-    - good?
-  - [x] `refresh after focus`
-    - [x] works well
-  - [x] `rerun after focus`
-    - [x] works well
 - [ ] document about custimize window
 
 - [ ] Screenshots
-
-- [x] version chekcking
-- [x] version echo
-  - and option `silent`
 
 - windows gui checking
   - [x] Coq 3.5pl3 works
@@ -71,6 +51,7 @@ a
 
 - [ ] other OS
 
+Finished ones.
 
 - [x] bug: coq-next at end
 - [x] bug: Notation "'""'" ...
@@ -111,6 +92,44 @@ a
   - [x] Coq 3.9 works
   - [x] Coq 3.10 works
 
+
+- [x] bug: coq-next very fast
+
+- [x] fire edit-at for wrong tip
+- [x] bug: coq-to-cursor and many fast coq-next
+
+- [x] weaken highlight priority less than 0
+  - for search hightlight
+
+- [x] ~bug: cursor moves on Goals/Infos window~
+  - Not bug. Updating buffer leads cursor moves to top.
+
+- [x] Multiple buffer support
+  - [x] one buffer attaches one goal-window and one info-window
+    - [x] optional : use one window to all buffers in one tab
+  - [x] bug: switching buffers with highlight
+- [x] More flexible settings
+  - [x] CoqToCursor with ceiling (now, flooring)
+  - [x] `auto launch`
+  - [x] ~~`auto open window`~~
+    - what ? I forgot.
+    - maybe resolve by `no open window` option
+  - [x] ~`rearrange after focus`~
+    - good?
+  - [x] `refresh after focus`
+    - [x] works well
+  - [x] `rerun after focus`
+    - [x] works well
+- [x] Coq Stop command
+  - [x] works well
+- [x] Coq StopAll command
+  - [x] works well
+
+- [x] version chekcking
+- [x] version echo
+  - and option `silent`
+
+
 Not easy ones.
 
 - [ ] Vim friendly Search Interface
@@ -124,6 +143,7 @@ Not easy ones.
   - simply, one command ?
   - prompt buffer ?
   - or using other plugin ?
+
 
 ## Goal
 
@@ -210,8 +230,7 @@ You can set the following variable to modify Coquille's behavior:
 
 When you want to reset all __Infos__ and __Goals__ windows,
 
-1. Run `:CoqCloseAll` [or `:call coquille#stop_all()`]
-2. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
+1. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
   - on each window attached by coq file if you open multiple buffers and configure `one_window` is '0'
   - on each tab if you open multiple tabs
 
@@ -227,6 +246,7 @@ Because pictures are always the best sellers :
   - I recommend you not changing this options. By default, working fine.
 - Somehow, vim which `has('win32unix')` works faster than one which `has('win32')`
   - Not so critical.
+- If you use too many memory, coquille fails with an error message but a clear message.
 
 ## Thanks
 

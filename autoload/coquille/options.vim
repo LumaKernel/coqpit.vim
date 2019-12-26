@@ -1,5 +1,5 @@
 
-function! s:config(name, default = v:null, no_define_default = 0) abort
+function! s:config(name, default = v:null, no_define_default = 0, scopes = ['b', 'g']) abort
   if !a:no_define_default
     if !exists('g:coquille_' .. a:name)
       let g:['coquille_' .. a:name] = a:default
@@ -9,12 +9,11 @@ function! s:config(name, default = v:null, no_define_default = 0) abort
   let l:getter = {}
 
   function! l:getter.get(default2 = v:null) abort closure
-    if exists('b:coquille_' .. a:name)
-      return b:['coquille_' .. a:name]
-    endif
-    if exists('g:coquille_' .. a:name)
-      return g:['coquille_' .. a:name]
-    endif
+    for scope in a:scopes
+      if exists(scope .. ':coquille_' .. a:name)
+        return eval(scope .. ':coquille_' .. a:name)
+      endif
+    endfor
     if default2 isnot v:null
       return a:default2
     endif
@@ -32,14 +31,12 @@ call s:config('show_goal_always', 0)
 call s:config('update_status_always', 1)
 
 call s:config('no_define_commands', 0)
-call s:config('one_window', 0)
+call s:config('one_window', 0, v:none, ['t', 'g'])
 call s:config('auto_launch', 1)
 call s:config('auto_launch_args', [])
 
 call s:config('refresh_after_focus', 1)
 call s:config('rerun_after_focus', 0)
-
-call s:config('no_open_windows', 0)
 
 call s:config('silent', 0)
 

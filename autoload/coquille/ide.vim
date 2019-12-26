@@ -211,8 +211,6 @@ function! s:IDE._info(state_id, level, msg, loc) abort
       call add(self.hls, ["warning", mes_range])
     elseif a:level == "info"
     elseif a:level == ""
-    else
-      throw "Error: Unkown message level"
     endif
   endif
 
@@ -360,15 +358,14 @@ function! s:IDE._register_buffer(bufnr) abort
     exe 'au TextChangedI <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
     exe 'au TextChangedP <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_textchange()'
 
+    " :buffer to <this buffer>
+    exe 'au BufEnter     <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    " :buffer to <another buffer>
     exe 'au BufEnter     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-    exe 'au BufLeave     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-
-    exe 'au BufNew       <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-    exe 'au BufDelete    <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-    exe 'au BufHidden    <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    " :split, :new, :tabnew, :tabp to <this buffer>
     exe 'au WinEnter     <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-    exe 'au WinLeave     <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
-    exe 'au WinNew       <buffer=' .. a:bufnr .. '> call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
+    " :split, :new, :tabnew, :tabp to <another buffer>
+    exe 'au WinEnter     * call <SID>getIDE_by_bufnr(' .. a:bufnr .. ')._after_bufenter()'
   augroup END
 endfunction
 
@@ -525,14 +522,13 @@ endfunction
 " recolor {{{
 function! s:IDE.reset_colors() abort
   if !exists('self.colored') | return | endif
-  for id in self.colored
-    for winnr in range(winnr('$'))
-      silent! call matchdelete(id, winnr)
-    endfor
+  for [id, win_id] in self.colored
+    silent! call matchdelete(id, win_id)
   endfor
   let self.colored = []
 endfunction
 function! s:IDE.recolor() abort
+  if self.dead() | return | endif
   call self._cache_buffer()
   call self.reset_colors()
 
@@ -545,8 +541,8 @@ function! s:IDE.recolor() abort
 
   let maxlen = self.maxlen()
 
-  for winnr in win_findbuf(self.handling_bufnr)
-    let match_opt = {'window' : winnr}
+  for win_id in win_findbuf(self.handling_bufnr)
+    let match_opt = {'window' : win_id}
     let priority = -30
     let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], priority, v:none, match_opt)
     let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], priority, v:none, match_opt)
@@ -935,21 +931,25 @@ function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abo
     return []
   endif
 
+  let win_id = get(a:dict, 'window', win_getid())
+
   let ids = []
   if sline == eline
-    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], a:priority, a:id, a:dict))
+    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], a:priority, a:id, a:dict), win_id])
   else
-    call add(ids, matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], a:priority, a:id, a:dict))
-    call add(ids, matchaddpos(a:group, [[eline + 1, 1, ecol]], a:priority, a:id, a:dict))
+    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], a:priority, a:id, a:dict), win_id])
+    call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], a:priority, a:id, a:dict), win_id])
     let ids += s:matchaddlines(a:group, range(sline + 1, eline - 1), a:priority, a:id, a:dict)
   endif
   return ids
 endfunction
 
 function! s:matchaddlines(group, lines, priority=10, id=-1, dict={}) abort
+  let win_id = get(a:dict, 'window', win_getid())
+
   let ids = []
   for line in a:lines
-    call add(ids, matchaddpos(a:group, [[line + 1]], a:priority, a:id, a:dict))
+    call add(ids, [matchaddpos(a:group, [[line + 1]], a:priority, a:id, a:dict), win_id])
   endfor
   return ids
 endfunction
