@@ -103,4 +103,5 @@
 
 - [x] check multiple tabs
 
+- [x] Query command for now
 

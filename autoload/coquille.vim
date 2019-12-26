@@ -1,4 +1,4 @@
-" ========
+l ========
 " coquille
 " ========
 
@@ -169,8 +169,10 @@ function! coquille#stop_all()
 endfunction
 " }}}
 
-function! coquille#rawQuery(...)
-  " TODO
+function! coquille#query(query_str)
+  if !exists('b:coquilleIDE') | return | endif
+
+  call (a:query_str)
 endfunction
 
 " define commands {{{
@@ -178,7 +180,7 @@ function! coquille#define_buffer_commands(force = 0)
   if !a:force && g:coquille#options#no_define_commands.get()
     return
   endif
-  command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
+  command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
   command! -buffer CoqNext call coquille#check_running() | call b:coquilleIDE.coq_next()
   command! -buffer CoqBack call coquille#check_running() | call b:coquilleIDE.coq_back()
   command! -buffer CoqToCursor call coquille#check_running() | call b:coquilleIDE.coq_to_cursor()
@@ -187,7 +189,8 @@ function! coquille#define_buffer_commands(force = 0)
   command! -buffer CoqRefresh call coquille#check_running() | call b:coquilleIDE.refresh()
   command! -buffer CoqStop call coquille#check_running() | call coquille#stop()
   command! -buffer MoveToTop call coquille#check_running() | call b:coquilleIDE.move_to_top()
-  " command! -buffer -nargs=* Coq call coquille#rawQuery(<f-args>)
+  command! -buffer -nargs=* CoqQuery call coquille#check_running() | call b:coquilleIDE.query(<q-args>)
+  command! -buffer CoqClear call coquille#check_running() | call b:coquileIDE.clear_info()
 endfunction
 
 function! coquille#define_global_commands(force = 0)
@@ -220,16 +223,17 @@ function! coquille#delete_commands()
   silent! delc CoqRefresh
   silent! delc CoqStop
   silent! delc MoveToTop
+  silent! delc CoqQuery
 endfunction!
 " }}}
 
 " restart coquille IDE
-function! coquille#launch(...)
+function! coquille#launch(args)
   if exists('b:coquilleIDE')
     silent! call b:coquilleIDE.kill()
   endif
 
-  let b:coquilleIDE = coquille#IDE#new(bufnr('%'), a:000)
+  let b:coquilleIDE = coquille#IDE#new(bufnr('%'), a:args)
   call add(s:IDE_instances, b:coquilleIDE)
 
   call coquille#define_global_commands()
@@ -247,7 +251,7 @@ function! coquille#register()
   endif
 
   if !g:coquille#options#no_define_commands.get()
-    command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch(<f-args>)
+    command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
   endif
 endfunction
 

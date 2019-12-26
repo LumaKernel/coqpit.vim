@@ -49,6 +49,8 @@ function! s:IDE.restart() abort
   " List<[Pos, Pos]>
   " first is for internal, second is for apparence
   let self.queue = []
+  let self.queueing = 0
+:w
 
   " resulted by coqtop
   let self.state_id_list = []
@@ -91,6 +93,7 @@ function! s:IDE.rerun() abort
     call self.coq_expand_to_pos(last, 0)
   endfunction
 
+  let self.queueing = 0
   call self.coqtop_handler.interrupt()
 
   if len(self.state_id_list) > 0
@@ -155,6 +158,7 @@ endfunction
 
 function! s:IDE._interrupt_and_edit_at_top() abort
   if len(self.state_id_list) > 0
+    let self.queueing = 0
     call self.coqtop_handler.interrupt()
     call self.coqtop_handler.edit_at(self.state_id_list[-1], self._after_edit_at)
   endif
@@ -164,26 +168,12 @@ endfunction
 function! s:IDE._state_id_to_range(state_id) abort
   exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
 
-
-  " binary serach
-  let ok = 0
-  let ng = len(self.state_id_list)
-  while ng - ok > 1
-    let mid = (ok + ng) / 2
-    if self.state_id_list[mid] <= a:state_id
-      let ok = mid
-    else
-      let ng = mid
-    endif
-  endwhile
-
-  if get(self.state_id_list, ok, -1) != a:state_id
-    return v:null
-  endif
+  let idx = index(self.state_id_list, a:state_id)
+  if idx == -1 | return v:null | endif
 
   return [
-        \ get(self.sentence_end_pos_list, ok - 1, [0, 0]),
-        \ self.sentence_end_pos_list[ok]
+        \ get(self.sentence_end_pos_list, idx - 1, [0, 0]),
+        \ self.sentence_end_pos_list[idx]
         \]
 endfunction
 " }}}
@@ -444,26 +434,22 @@ function! s:IDE._check_queue() abort
   if len(self.sentence_end_pos_list) == 0 | return | endif
   exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
 
+  if self.queueing | return | endif
+
   while len(self.queue) && s:pos_le(self.queue[-1][0], self.sentence_end_pos_list[-1])
     call remove(self.queue, 0)
   endwhile
 
-  if self.coqtop_handler.waiting == 0 && (
-        \   len(self.queue) == 0
-        \   || g:coquille#options#show_goal_always.get()
-        \ )
+  if len(self.queue) == 0 || g:coquille#options#show_goal_always.get()
     if self.last_goal_check != self.state_id_list[-1]
-      exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
       let self.goal_message = []
       call self.coqtop_handler.refreshGoalInfo(self._goal)
       return
     endif
   endif
 
-  if self.coqtop_handler.waiting == 0 && g:coquille#options#update_status_always.get()
+  if g:coquille#options#update_status_always.get()
     if self.last_status_check != self.state_id_list[-1]
-      exe s:assert('self.state_id_list[-1] == self.coqtop_handler.tip')
-
       call self.coqtop_handler.status(v:none, self._status)
       return
     endif
@@ -587,19 +573,20 @@ endfunction
 
 " process queue {{{
 function! s:IDE._process_queue()
+  exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
+
   if !self.coqtop_handler.running()
-        \ || self.coqtop_handler.waiting
         \ || len(self.queue) == 0
         \ || len(self.sentence_end_pos_list) == 0
+        \ || self.state_id_list[-1] != self.coqtop_handler.tip
+        \ || self.queueing
     return
   endif
 
-  exe s:assert('len(self.sentence_end_pos_list) == len(self.state_id_list)')
   exe s:assert('len(self.sentence_end_pos_list) >= 1')
 
   let last_checked = self.sentence_end_pos_list[-1]
   let next_queue = self.queue[0][0]
-
 
   if s:pos_le(next_queue, last_checked)
     call remove(self.queue, 0)
@@ -607,14 +594,9 @@ function! s:IDE._process_queue()
     return
   endif
 
+  let self.queueing = 1
+
   let state_id = self.state_id_list[-1]
-
-
-  exe s:assert('state_id == self.coqtop_handler.tip')
-  if state_id != self.coqtop_handler.tip
-    call self._interrupt_and_edit_at_top()
-    return
-  endif
 
   call self.coqtop_handler.next_sentence_end(state_id, self.getContent(), last_checked, self._make_after_get_sentence_end(state_id, last_checked))
 endfunction
@@ -626,11 +608,13 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
     if self.sentence_end_pos_list[-1] != a:spos
           \ || len(self.queue) == 0
           \ || a:state_id != self.state_id_list[-1]
+      let self.queueing = 0
       call self._process_queue()
       return
     endif
 
     if a:is_err
+      let self.queueing = 0
       call self._shrink_to(a:spos, v:none, 0)
       let self.queue = []
 
@@ -657,7 +641,7 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
         return
       endif
 
-      call self.coqtop_handler.send_sentence(a:state_id, sentence, self._make_after_result(a:state_id, sentence_range))
+      call self.coqtop_handler.send_sentence(sentence, self._make_after_result(a:state_id, sentence_range))
     endif
 
     call self.recolor()
@@ -676,6 +660,7 @@ function! s:IDE._make_after_result(old_state_id, range) abort
     if self.sentence_end_pos_list[-1] != spos
           \ || len(self.queue) == 0
           \ || a:old_state_id != self.state_id_list[-1]
+      let self.queueing = 0
       return
     endif
 
@@ -683,6 +668,7 @@ function! s:IDE._make_after_result(old_state_id, range) abort
 
     if a:is_err
       " This easily occurs
+      let self.queueing = 0
       call self._shrink_to(spos, v:none, 0)
       let self.queue = []
 
@@ -698,6 +684,7 @@ function! s:IDE._make_after_result(old_state_id, range) abort
     else
       call add(self.sentence_end_pos_list, epos)
       call add(self.state_id_list, a:state_id)
+      let self.queueing = 0
     endif
 
     call self.recolor()
@@ -756,6 +743,11 @@ function! s:IDE.coq_back() abort
   let self.keep_goal_info = 0
 
   if len(self.queue) > 0
+    if len(self.queue) == 1 && self.queueing
+      let self.queueing = 0
+      call self.coqtop_handler.interrupt()
+    endif
+
     call remove(self.queue, -1)
     call self._after_shrink()
   elseif len(self.sentence_end_pos_list) > 1
@@ -924,6 +916,43 @@ function! s:IDE.coq_to_last(ceil=v:null) abort
   call self.coq_to_pos([len(content), 0], 1)
 endfunction
 " }}}
+
+" query {{{
+function! s:IDE.query(query_str) abort
+  call self.coqtop_handler.query(a:query_str, self._make_after_query(a:query_str))
+endfunction
+function! s:IDE._make_after_query(query_str) abort
+  function! self.after_query(is_err, err_msg, state_id, err_loc, msg) abort closure
+    if a:is_err
+      let range = self._state_id_to_range(a:state_id)
+      if range isnot v:null && a:err_loc isnot v:null
+        let [spos, epos] = range
+        let content = self.getContent()
+        let [start, end] = a:err_loc
+        let mes_range = [s:steps(content, epos, start, 1), s:steps(content, epos, end, 1)]
+        call add(self.hls, ['error', mes_range])
+      endif
+      if a:err_msg != ''
+        let self.info_message += [a:err_msg]
+      endif
+    else
+      let self.info_message += [a:msg]
+    endif
+
+    call self.recolor()
+    call self.refreshInfo()
+  endfunction
+
+  return function(self.after_query, self)
+endfunction
+" }}}
+
+function! s:IDE.clear_info() abort
+  let self.keep_goal_info = 0
+  let self.info_message = []
+  call self.refreshInfo()
+endfunction
+
 
 " -- -- move (vim editor's cursor move)
 

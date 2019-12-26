@@ -11,8 +11,6 @@
 
 ## TODO
 
-- [ ] Query command for now
-
 - [ ] check in other OS
 
 Not easy ones.
@@ -31,5 +29,13 @@ Not easy ones.
   - simply, one command ?
   - prompt buffer ?
   - or using other plugin ?
+
+- [ ] Write with Promise for future developers.
+
+
+## Not clear about CoqTop
+
+- Arguments `editId` and `verbose` for `Add` command.
+- Arguments `routeID` for `Query` command.
 
 

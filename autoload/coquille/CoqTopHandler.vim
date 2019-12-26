@@ -20,7 +20,7 @@ function! s:CoqTopHandler.new(args = []) abort
 
   let new.info = {...->0}
   let new.add_axiom = {...->0}
-  let new.after_callback_fns = []
+  let new.after_callback_list = []
   let new.after_unexpected_exit = {...->0}
   let new.after_start = {...->0}
 
@@ -35,11 +35,14 @@ function! s:CoqTopHandler.restart(args = []) abort
     call job_stop(self.job, 'term')
   endif
 
+  let self.call_queue = []
+
   silent! unlet self.state_id
   silent! unlet self.job
 
-  let self.waiting = 0
+  let self.waiting = v:null
   let self.abandon = 0
+  let self.tip = -1
 
   let self.trying_to_run = 1
 
@@ -99,12 +102,13 @@ endfunction
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(channel, msg) abort
   if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
+
+  let xml = s:xml.parse('<root>' . a:msg . '</root>')
+
   " TODO : FOR DEBUG
   let g:mymes += ["got!!"]
   let g:mymes += [a:msg]
-  
-  let xml = s:xml.parse('<root>' . a:msg . '</root>')
-  let g:gxml = xml  " TODO : FOR DEUBG
+  let g:gxml = xml
 
   for value in xml.findAll('value')
     exe s:assert('self.abandon >= 0')
@@ -113,14 +117,15 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
       continue
     endif
 
-    exe s:assert('self.waiting == 1')
+    exe s:assert('self.waiting isnot v:null')
 
-    let self.waiting = 0
+    let l:Callback = self.waiting
+    let self.waiting = v:null
 
-    call self.cb(value)
+    call l:Callback(value)
 
-    for Fn in self.after_callback_fns
-      call Fn()
+    for l:Callback in self.after_callback_list
+      call l:Callback()
     endfor
 
     let option = xml.find("value").find("option")
@@ -146,6 +151,8 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
       call self.add_axiom(state_id)
     endif
   endfor
+
+  call self._check_call_queue()
 endfunction
 " }}}
 
@@ -196,28 +203,37 @@ endfunction
 
 " -- core functions {{{
 
-function! s:CoqTopHandler._call(msg, cb) abort
-  if self.waiting
-    exe s:assert('0')
-    return
-  endif
+function! s:CoqTopHandler._call(msg_func, cb) abort
+  if !self.running() | return | endif
+
+  call add(self.call_queue, [a:msg_func, a:cb])
+
+  call self._check_call_queue()
+endfunction
+function! s:CoqTopHandler._check_call_queue() abort
+  if !self.running() | return | endif
+  if self.waiting isnot v:null | return | endif
+  if len(self.call_queue) == 0 | return | endif
+
+  let [l:Msg_func, l:Callback] = remove(self.call_queue, 0)
+  let msg = l:Msg_func(self.tip)
+
 
   " TODO : FOR DEBUG
   let g:mymes += ["send!!"]
-  let g:mymes += [a:msg]
+  let g:mymes += [msg]
 
-  if self.running()
-    let self.waiting = 1
-    let self.cb = s:bind_itself(a:cb)
-    call ch_sendraw(self.job, a:msg . "\n")
-  endif
+
+  let self.waiting = l:Callback
+  call ch_sendraw(self.job, msg .. "\n")
 endfunction
 
 function! s:CoqTopHandler.interrupt() abort
-  if self.waiting
-    let self.abandon += 1
+  if self.waiting isnot v:null
+    let self.abandon = 1
     let self.tip = -1
-    let self.waiting = 0
+    let self.waiting = v:null
+    let self.call_queue = []
   endif
 endfunction!
 
@@ -242,7 +258,7 @@ endfunction
 " callback : () -> any
 " add after_callback {{{
 function! s:CoqTopHandler.add_after_callback(callback = {...->0})
-  call add(self.after_callback_fns, s:bind_itself(a:callback))
+  call add(self.after_callback_list, s:bind_itself(a:callback))
 endfunction
 " }}}
 
@@ -260,16 +276,16 @@ function! s:CoqTopHandler.set_start_callback(callback = {...->0})
 endfunction
 " }}}
 
-" interacting with CoqTop {{{
+" interacting with CoqTop using XML {{{
 
 
 " ._init(callback)
 " callback : (state_id) -> any
 "  send Init < init > {{{
 function! s:CoqTopHandler._init(callback = {...->0}) abort
-  call self._call(
+  call self._call({->
     \ '<call val="Init"><option val="none"/></call>'
-    \ , self._makeInitCallback(a:callback))
+    \ }, self._makeInitCallback(a:callback))
 endfunction
 function! s:CoqTopHandler._makeInitCallback(callback) abort
   function! self.initCallback(xml) abort closure
@@ -283,12 +299,12 @@ endfunction
 " }}}
 
 " .send_sentence(sentence, callback)
-" callback : (state_id, is_err, msg, err_loc) -> any
+" callback : (is_err, msg, err_loc) -> any
 " send Add < send sentence > {{{
-function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0}) abort
-  exe s:assert('a:state_id == self.tip')
+function! s:CoqTopHandler.send_sentence(sentence, callback = {...->0}) abort
+  " TODO : what is `editID` and `verbose` ?
 
-  call self._call('
+  call self._call({state_id-> '
     \<call val="Add">
       \<pair>
         \<pair>
@@ -296,12 +312,12 @@ function! s:CoqTopHandler.send_sentence(state_id, sentence, callback = {...->0})
           \<int>-1</int>
         \</pair>
         \<pair>
-          \<state_id val="' .. a:state_id .. '" />
+          \<state_id val="' .. state_id .. '" />
           \<bool val="false" />
         \</pair>
       \</pair>
     \</call>
-  \', self._makeAddCallback(a:callback))
+  \'}, self._makeAddCallback(a:callback))
 endfunction
 function! s:CoqTopHandler._makeAddCallback(callback) abort
   function! self.addCallback(value) abort closure
@@ -331,12 +347,12 @@ endfunction
 " }}}
 
 " .refreshGoalInfo(callback) -> any
-" callback : (state_id, is_err, goals_xml | err_mes, err_loc)
+" callback : (is_err, goals_xml | err_mes, err_loc)
 " send Goal < update Goals > {{{
 function! s:CoqTopHandler.refreshGoalInfo(callback = {...->0}) abort
-  call self._call(
+  call self._call({->
     \ '<call val="Goal"><unit /></call>'
-    \ , self._makeGoalCallback(a:callback)
+    \ }, self._makeGoalCallback(a:callback)
     \ )
 endfunction
 function! s:CoqTopHandler._makeGoalCallback(callback) abort
@@ -375,9 +391,9 @@ endfunction
 " callback : (is_err, state_id) -> any
 " send EditAt < move tip > {{{
 function! s:CoqTopHandler.edit_at(new_state_id, callback = {...->0}) abort
-  call self._call(
+  call self._call({->
     \ '<call val="Edit_at"><state_id val="' .. a:new_state_id .. '" /></call>'
-    \ , self._make_edit_at_callback(a:new_state_id, a:callback))
+    \ }, self._make_edit_at_callback(a:new_state_id, a:callback))
 endfunction
 function! s:CoqTopHandler._make_edit_at_callback(new_state_id, callback) abort
   function! self.after_edit_at(value) abort closure
@@ -398,9 +414,9 @@ endfunction
 " callback : (xml) -> any
 " send Annotate < get structured code as XML > {{{
 function! s:CoqTopHandler.annotate(code, callback = {...->0}) abort
-  call self._call(
+  call self._call({->
     \ '<call val="Annotate"><string>' .. coquille#xml#escape(a:code) .. '</string></call>'
-    \ , self._make_after_annotate(a:callback))
+    \ }, self._make_after_annotate(a:callback))
 endfunction
 function! s:CoqTopHandler._make_after_annotate(callback) abort
   function! self.after_annotate(value) abort closure
@@ -414,9 +430,9 @@ endfunction
 " callback : (status_xml) -> any
 " send Status < status > {{{
 function! s:CoqTopHandler.status(force = 0, callback = {...->0}) abort
-  call self._call(
+  call self._call({->
     \ '<call val="Status"><bool val="' .. (a:force ? 'true' : 'false') .. '"></bool></call>'
-    \ , self._make_after_status(a:callback))
+    \ }, self._make_after_status(a:callback))
 endfunction
 function! s:CoqTopHandler._make_after_status(callback) abort
   function! self.after_status(value) abort closure
@@ -424,6 +440,51 @@ function! s:CoqTopHandler._make_after_status(callback) abort
   endfunction
 
   return function(self.after_status, self)
+endfunction
+" }}}
+
+" callback : (is_err, err_msg, err_loc, msg) -> any
+" send Query < query > {{{
+function! s:CoqTopHandler.query(query_str, callback = {...->0}) abort
+  " what is the `route_id`
+  let route_id = 0
+
+  call self._call({state_id -> '
+    \<call val="Query">
+      \<pair>
+        \<route_id val="' .. route_id .. '" />
+        \<pair>
+          \<string>' .. coquille#xml#escape(a:query_str) .. '</string>
+          \<state_id val="' .. state_id .. '" />
+        \</pair>
+      \</pair>
+    \</call>
+  \'}, self._make_after_query(a:callback))
+endfunction
+function! s:CoqTopHandler._make_after_query(callback) abort
+  function! self.after_query(value) abort closure
+    let state_id = a:value.find('state_id')->get('attr', {})->get('val', -1)
+    if a:value.attr.val ==# 'good'
+      call a:callback(0, '', state_id, v:null,
+        \   a:value.find('string')
+        \   ->get('child', {})
+        \   ->get(0, '')
+        \ )
+    else
+      let attr = a:value.attr
+
+      let err_mes = coquille#xml#2str(a:value.find('richpp'))
+      let err_loc = v:null
+
+      if has_key(attr, 'loc_s') && has_key(attr, 'loc_e')
+        let err_loc = [str2nr(attr['loc_s']), str2nr(attr['loc_e'])]
+      endif
+
+      call a:callback(1, err_mes, state_id, err_loc, '')
+    endif
+  endfunction
+
+  return function(self.after_query, self)
 endfunction
 " }}}
 

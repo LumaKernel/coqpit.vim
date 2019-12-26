@@ -1,6 +1,5 @@
 
 function! coquille#color#defineColorScheme() abort
-  ECHO "colo"
   let bg_tup = s:toTuple(synIDattr(hlID('Normal'), 'bg#'))
 
   let coq_checked_bg = s:toString(s:col_mult(bg_tup, [1, 1, 2.2]))
