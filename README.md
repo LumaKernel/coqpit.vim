@@ -3,23 +3,35 @@
 Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
 favorite editor.
 
-
 ## Dependencies
+
+Only Vim and [Coq](https://github.com/coq/coq/releases).
 
 - Vim 8.1 or above ( `has('patch-8.1.1310')`, `+job`, `+lambda`, etc; recommend you `+huge` )
 - Coq 8.6 or above. Checked versions below.
   - Coq8.5pl3
   - Coq8.6
   - Coq8.7
-  - Coq8.9
-  - Coq8.10
+  - [Coq8.9](https://github.com/coq/coq/releases/tag/V8.9.1)
+  - [Coq8.10](https://github.com/coq/coq/releases/tag/V8.10.2)
   - Coq8.11 (beta)
   - Recomended to use newer and more stable version.
 
-
 ## Installation
 
-TODO : write
+### [Shougo/dein.vim](https://github.com/Shougo/dein.vim)
+
+```vim
+call dein.add("LumaKernel/coquille")
+```
+
+```toml
+[[plugins]]
+repo = "LumaKernel/coquille"
+on_ft = "coq"
+```
+
+### [dein.vim](https://github.com/Shougo/dein.vim)
 
 ## Getting started
 
