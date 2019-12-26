@@ -46,14 +46,22 @@ function! s:CoqTopHandler.restart(args = []) abort
 endfunction
 
 function! s:CoqTopHandler._make_restart_next(args) abort
-  function! self.restart_next(cmd, version) abort closure
+  function! self.restart_next(cmd, data) abort closure
     if a:cmd is v:null
-      echoerr '[coquille.vim / CoqTop Handler] Not found executable CoqTop.'
+      echoerr '[coquille.vim / CoqTop Handler] Not found executable CoqTop with following error messages.'
+      for i in range(len(a:data[0]))
+        echoerr '[' .. (i + 1) .. ': Command tried ] ' .. string(a:data[0][i])
+        if has_key(a:data[1], i)
+          echoerr '[' .. (i + 1) .. ': Error message ] ' .. a:data[1][i]
+        endif
+      endfor
       return
     endif
 
+    let coq_version = a:data
+
     if !g:coquille#options#silent.get()
-      echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. a:version .. ' started running.'
+      echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. coq_version .. ' started running.'
     endif
 
     let job_options = {}

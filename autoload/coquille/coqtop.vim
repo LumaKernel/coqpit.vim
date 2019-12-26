@@ -33,9 +33,10 @@ function! coquille#coqtop#get_executable(callback) abort
 
   let checker = {}
   let checker.done = {}
+  let checker.res = {}
 
   function! checker.make_cb(i) abort closure
-    function! self.cb(ok) abort closure
+    function! self.cb(ok, err_mes = '') abort closure
       if get(self.done, a:i, 0)
         return
       endif
@@ -43,6 +44,9 @@ function! coquille#coqtop#get_executable(callback) abort
       if a:ok
         call a:callback(to_check[a:i], a:ok)
       else
+        if a:err_mes != ''
+          let self.res[a:i] = a:err_mes
+        endif
         call self.check(a:i + 1)
       endif
     endfunction
@@ -52,7 +56,7 @@ function! coquille#coqtop#get_executable(callback) abort
 
   function! checker.check(i) abort closure
     if a:i >= len(to_check)
-      call a:callback(v:null, '')
+      call a:callback(v:null, [to_check, self.res])
       return
     endif
     call s:is_executable(to_check[a:i], self.make_cb(a:i))
@@ -70,19 +74,25 @@ function! s:is_executable(cmd, callback) abort
   function! job_options.out_cb(ch, msg) abort closure
     let xml = webapi#xml#parse(a:msg)
     if xml.name !=# 'value' | return | endif
-    if get(xml.attr, 'val') !=# 'good' | return a:callback(0) | endif
+    if get(xml.attr, 'val') !=# 'good'
+      return a:callback(0, 'Not recoginizable XML : ' .. a:msg)
+    endif
     let coq_info = xml.find('coq_info')
-    if empty(coq_info) | return a:callback(0) | endif
-    if !len(coq_info.child) | return a:callback(0) | endif
+    if empty(coq_info)
+      return a:callback(0, 'Not recoginizable XML : ' .. a:msg)
+    endif
+    if !len(coq_info.child)
+      return a:callback(0, 'Not recoginizable XML : ' .. a:mas)
+    endif
     call a:callback(coquille#xml#2str(coq_info.child[0]))
   endfunction
 
   function! job_options.err_cb(ch, msg) abort closure
-    call a:callback(0)
+    call a:callback(0, 'Unexpected error : ' .. a:msg)
   endfunction
 
   function! job_options.exit_cb(ch, exit_status) abort closure
-    call a:callback(0)
+    call a:callback(0, 'Unexpected exit')
   endfunction
 
   let job_options.in_mode = 'raw'
@@ -98,6 +108,6 @@ function! s:is_executable(cmd, callback) abort
     return
   endif
   call ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
-  call timer_start(10000, {->a:callback(0)})
+  call timer_start(10000, {->a:callback(0, 'Timeout')})
 endfunction
 

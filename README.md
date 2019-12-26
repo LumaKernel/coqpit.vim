@@ -12,7 +12,7 @@ a
 - [ ] write help
 - [ ] write help@ja
 - [ ] setup editorconfig
-
+- [ ] move TODO
 
 ## TODO
 
@@ -21,7 +21,7 @@ a
     opening window
 - [x] options that not changing Infos/Goals after TextChanged
 - [ ] name Goals/Infos uniquely
-- [ ] show errors when booting CoqTop
+- [x] show errors when booting CoqTop
 - [ ] use vital
   - XML
 
@@ -246,7 +246,7 @@ Because pictures are always the best sellers :
   - I recommend you not changing this options. By default, working fine.
 - Somehow, vim which `has('win32unix')` works faster than one which `has('win32')`
   - Not so critical.
-- If you use too many memory, coquille fails with an error message but a clear message.
+- If you use too many memory, coquille fails with like an error message `Error: Out of memory.`.
 
 ## Thanks
 
