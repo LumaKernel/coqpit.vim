@@ -4,6 +4,7 @@
 
 " + support for Coq 8.7
 
+let s:xml = vital#vital#import('Web.XML')
 
 let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
@@ -102,7 +103,7 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
   let g:mymes += ["got!!"]
   let g:mymes += [a:msg]
   
-  let xml = webapi#xml#parse('<root>' . a:msg . '</root>')
+  let xml = s:xml.parse('<root>' . a:msg . '</root>')
   let g:gxml = xml  " TODO : FOR DEUBG
 
   for value in xml.findAll('value')
@@ -468,7 +469,7 @@ endfunction
 " internal functions
 
 function! s:createElement(name, attr, ...) abort
-  let element = webapi#xml#createElement(a:name)
+  let element = s:xml.createElement(a:name)
   let element.attr = a:attr
   if a:0
     call element.value(a:000[0])

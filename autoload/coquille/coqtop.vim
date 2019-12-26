@@ -1,3 +1,6 @@
+
+let s:xml = vital#vital#import('Web.XML')
+
 let s:to_check_default = [
     \ [
       \ 'coqidetop',
@@ -72,7 +75,7 @@ function! s:is_executable(cmd, callback) abort
   let err = 0
 
   function! job_options.out_cb(ch, msg) abort closure
-    let xml = webapi#xml#parse(a:msg)
+    let xml = s:xml.parse(a:msg)
     if xml.name !=# 'value' | return | endif
     if get(xml.attr, 'val') !=# 'good'
       return a:callback(0, 'Not recoginizable XML : ' .. a:msg)

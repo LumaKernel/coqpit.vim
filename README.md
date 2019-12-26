@@ -1,30 +1,20 @@
 # Coquille
 
-## Goal
-
-What this script can read is what the compiler can.
-
----
-
 Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
 favorite editor.
 
 
 ## Dependencies
 
-- Vim 8.1 or above ( `+job`, `+lambda`, etc; recommend you `+huge` )
-- Vim `has('patch-8.1.1310')` ( default argument )
-- [mattn/webapi-vim](https://github.com/mattn/webapi-vim)
-  - (WIP) how about built-in
-- Coq 8.5 or above. Checked versions below.
+- Vim 8.1 or above ( `has('patch-8.1.1310')`, `+job`, `+lambda`, etc; recommend you `+huge` )
+- Coq 8.6 or above. Checked versions below.
   - Coq8.5pl3
+  - Coq8.6
   - Coq8.7
   - Coq8.9
   - Coq8.10
   - Coq8.11 (beta)
-
-
----
+  - Recomended to use newer and more stable version.
 
 
 ## Installation

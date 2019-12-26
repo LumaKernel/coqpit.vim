@@ -1,4 +1,8 @@
 
+- [x] What this script can read is what the compiler can.
+  - Maybe done. Thinking so is better.
+
+
 - [x] bug: coq-next at end
 - [x] bug: Notation "'""'" ...
 - [x] Swap warning and admit colors in cterm
@@ -74,3 +78,29 @@
 - [x] version chekcking
 - [x] version echo
   - and option `silent`
+
+- [x] ~~no open window option~~
+  - not needed because it is impossible to open buffer without
+    opening window
+- [x] options that not changing Infos/Goals after TextChanged
+- [x] name Goals/Infos uniquely
+- [x] show errors when booting CoqTop
+- [x] use vital
+  - XML
+
+- [x] windows gui checking
+  - [x] Coq 8.5pl3 works
+  - [x] Coq 8.6 works
+  - [x] Coq 8.7 works
+  - [x] Coq 8.9 works
+  - [x] Coq 8.10 works
+  - [x] Coq 8.11beta works
+  - [x] `coqtopide.opt.exe`  works
+
+- [x] not to use json
+
+- [x] check one-window
+
+- [x] check multiple tabs
+
+
