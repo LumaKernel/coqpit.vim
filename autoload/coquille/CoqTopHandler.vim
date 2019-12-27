@@ -4,9 +4,9 @@
 
 " + support for Coq 8.7
 
-let s:xml = vital#vital#import('Web.XML')
+let s:xml = vital#coquille#import('Web.XML')
 
-let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
+let s:PowerAssert = vital#coquille#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
 

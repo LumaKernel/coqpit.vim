@@ -1,6 +1,6 @@
 
 
-let s:PowerAssert = vital#vital#import('Vim.PowerAssert')
+let s:PowerAssert = vital#coquille#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
 

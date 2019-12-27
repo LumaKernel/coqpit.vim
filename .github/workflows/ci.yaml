@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+      branches:
+      - master
+      - release
+      - develop
+
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: vim version
+      run: vim --version
+
+    - name: vim test
+      timeout-minutes: 6
+      run: |
+        vim -u ./test/test.vimrc
+
+
+  # - wget 'http://homes.cs.washington.edu/~jrw12/coq-8.5-build-local.tgz'
+  # - tar xf coq-8.5-build-local.tgz
+  # - export PATH=$PWD/coq-8.5/bin:$PATH

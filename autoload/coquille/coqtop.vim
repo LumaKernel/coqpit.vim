@@ -1,5 +1,5 @@
 
-let s:xml = vital#vital#import('Web.XML')
+let s:xml = vital#coquille#import('Web.XML')
 
 let s:to_check_default = [
     \ [

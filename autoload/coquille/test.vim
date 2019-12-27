@@ -1,8 +1,14 @@
 
+let s:Promise = vital#vital#import('Async.Promise')
+
 function! coquille#test#runTest()
-  call coqlang#Test()
-  call coquille#color#Test()
-  call coquille#IDE#Test()
-  call coquille#annotate#Test()
+  return s:Promise({resolve->
+        \ [
+        \   coqlang#Test(),
+        \   coquille#color#Test(),
+        \   coquille#IDE#Test(),
+        \   coquille#annotate#Test(),
+        \   resolve()
+        \ ]})
 endfunction
 
