@@ -1,0 +1,386 @@
+*coquille.txt*		For Vim version 8.1	Last change: 2019 Dec 27
+
+Version: 2.0
+License: ISC License
+
+==============================================================================
+CONTENTS				*coquille-contents*
+
+INTRODUCTION			|coquille-introduction|
+USAGE				|coquille-usage|
+COMMANDS			|coquille-commands|
+  MAPPING EXAMPLE		  |coquille-mapping-example|
+CONFIGURE HIGHLIGHT		|coquille-configure-highlight|
+  HIGHLIGHT GROUPS	  	  |coquille-highlight-groups|
+  CUSTMIZE HIGHLIGHT EXAMPLE	  |coquille-configure-highlight-example|
+OPTIONS				|coquille-options|
+CUSTMIZE WINDOW			|coquille-customize-window|
+  CUSTMIZE WINDOW EXAMPLE	  |coquille-customize-window-example|
+
+
+==============================================================================
+INTRODUCTION				*coquille-introduction*
+
+Coquille is a Coq interactive IDE for Vimmers.
+
+Use with Vim 8.1 or above and Coq executable installed.
+You can get Coq from https://github.com/coq/coq/releases.
+
+Coquille is using Coq through the "coqidetop" or "coqtop"
+for old versions. In many cases, you don't need to specify
+the excutable location. If Coquille does'nt recognize the
+executable, pass the location like,
+
+>
+  let g:coquille_coq_executable = '/c/Coq8.10/bin/coqtopide'
+<
+
+in your .vimrc . |coquille-options-coq_executable|
+
+
+==============================================================================
+USAGE					*coquille-usage*
+
+1. Open coq file that typically ends with .v
+2. Run |:CoqLaunch|
+   ( or set |coquille-options-auto_launch| to 1 in your .vimrc )
+3. Opening Infos/Goals buffers automatically.
+4. You can use commands |coquille-commands| that controls the proofs.
+
+
+==============================================================================
+COMMANDS				*coquille-commands*
+
+
+					*:CoqLaunch*
+:CoqLaunch [args]	or `:call coquille#launch([args])`
+		Launch the coquille. Set up Infos/Goals buffers.
+		Re-Launch the coquille if already running.
+		When you are in trouble, run this command.
+		args will be passed to CoqTop executable. It is not needed.
+
+
+					*:CoqNext*
+:CoqNext	or `:call b:coquilleIDE.coq_next()`
+		Forward one command.
+
+
+					*:CoqBack*
+:CoqBack	or `:call b:coquilleIDE.coq_back()`
+		Drop last command.
+
+
+					*:CoqToCursor*
+:CoqToCursor	or `:call b:coquilleIDE.coq_to_cursor()`
+		Forward to cursor.
+
+
+					*:CoqToLast*
+:CoqToLast	or `:call b:coquilleIDE.coq_to_last()`
+		Forward to end of file.
+
+
+					*:CoqRerun*
+:CoqRerun	or `:call b:coquilleIDE.rerun()`
+		Run all commands from the first of file.
+
+
+					*:CoqRefresh*
+:CoqRefresh	or `:call b:coquilleIDE.refresh()`
+		Refresh coloring and Infos/Goals window.
+		In the situation that you edit Infos buffer by yourself,
+		you can revert them by this command.
+
+
+					*:CoqStop*
+:CoqStop	or `:call coquille#stop()`
+		Stop running process behind which is parsing and running commands.
+		Close no longer needed Infos/Goals buffers.
+
+
+					*:MoveToTop*
+:MoveToTop	or `:call b:coquilleIDE.move_to_top()`
+		Move cursor to top of the colored.
+
+
+					*:CoqQuery*
+:CoqQuery [command]	or `:call b:coquilleIDE.query(command)`
+		Query commands like Compute. Answers will be shown in Infos buffer.
+		If not checked all commands yet, this will done after all of that.
+
+
+					*:CoqClear*
+:CoqClear	or `:call b:coquileIDE.clear_info()`
+		Clear the Infos buffer.
+
+
+					*:CoqStopAll*
+:CoqStopAll	or `:call coquille#stop_all()`
+		Like running |:CoqStop| to all running coquille instances.
+		When you are in trouble, run this command in combination with `:CoqLaunch`
+
+
+					*:CoqRearrange*
+:CoqRearrange	or `:call coquille#reset_panels(1)`
+  + Rearrange the Infos/Goals buffer windows.
+
+
+------------------------------------------------------------------------------
+MAPPING EXAMPLE		  		*coquille-mapping-example*
+
+Recommended to define non-buffer local
+because these commands can be also used
+from Infos/Goals buffers too.
+( If not setting |coquille-options-one_window| to 1. )
+>
+  function! MyCoqMaps()
+    nnoremap <silent> <C-C>        :CoqLaunch<CR>
+    nnoremap <silent> <Leader>j    :CoqNext<CR>
+    nnoremap <silent> <Leader>k    :CoqBack<CR>
+    nnoremap <silent> <Leader>l    :CoqToCursor<CR>
+    nnoremap <silent> <Leader>G    :CoqToLast<CR>
+    nnoremap <silent> <Leader>g    :CoqRerun<CR>
+    nnoremap <silent> <Leader>t    :MoveToTop<CR>
+    nnoremap <silent> <Leader><F5> :CoqRefresh<CR>
+
+    nnoremap <Leader>compute :CoqQuery Compute .<Left>
+    nnoremap <Leader>print :CoqQuery Print .<Left>
+    nnoremap <Leader>check :CoqQuery Check .<Left>
+    nnoremap <Leader>se :CoqQuery Search ().<Left><Left>
+  endfunction
+
+  augroup my_coq
+    au!
+    au FileType coq :call MyCoqMaps()
+  augroup END
+<
+
+
+==============================================================================
+CONFIGURE HIGHLIGH			*coquille-configure-highlight*
+
+Coquille will set the highligh colors automatically
+from backgrond color of your color scheme if you are
+using gui Vim.
+
+In cterm environment, colors are hard coded.
+
+
+------------------------------------------------------------------------------
+HIGHLIGHT GROUPS 			*coquille-highlight-groups*
+
+
+CoqChecked 				*CoqCheck*
+
+	Used for sentences that CoqTop responsed.
+
+
+CoqCheckedAxiom				*CoqCheckedAxiom*
+
+	Used for sentences that CoqTop responsed as an axiom.
+
+
+CoqQueued				*CoqQueued*
+
+	Used for sentences that Coquille queued for preparing
+	to send to CoqTop.
+
+
+CoqMarkedWarn				*CoqMarkedWarn*
+
+	Used for sentences that CoqTop say warning.
+	This is beyond the Coquille queue.
+
+
+CoqCheckedWarn				*CoqCheckedWarn*
+
+	Used for sentences that CoqTop say warning.
+	This is under the Coquille queue.
+
+
+CoqMarkedError				*CoqMarkedError*
+
+	Used for sentences that CoqTop say error.
+	This is beyond the Coquille queue.
+
+
+CoqCheckedError				*CoqCheckedError*
+
+	Used for sentences that CoqTop say error.
+	This is under the Coquille queue.
+
+------------------------------------------------------------------------------
+CUSTMIZE HIGHLIGH EXAMPLE		*coquille-configure-highlight-example*
+
+This is example assuming for cterm with hybrid color scheme.
+
+>
+hi CoqChecked      ctermbg=17
+hi CoqCheckedAxiom ctermbg=58
+hi CoqQueued       ctermbg=22
+hi CoqMarkedWarn   ctermbg=64
+hi CoqCheckedWarn  ctermbg=64
+hi CoqMarkedError  ctermbg=160
+hi CoqCheckedError ctermbg=160
+<
+
+==============================================================================
+OPTIONS					*coquille-options*
+
+Variable scopes are checked left to right as follows.
+
+
+					*coquille-options-coq_executable*
+[b,g]:coquille_coq_executable		: string | list string
+		Specifying the command to run. Use "coqidetop"
+		executable for new versions of Coq or "coqtop"
+		list, coquille use them to |job_start()| as it is.
+
+
+					*coquille-options-auto_move*
+[b,g]:coquille_auto_move		= 0 : bool
+		Moves the cursor after |:CoqNext| and |:CoqBack|
+		command like CoqIDE if set this to 1.
+
+
+					*coquille-options-cursor_ceiling*
+[b,g]:coquille_cursor_ceiling	 	= 1 : bool
+		Set behavior about |:CoqToCursor|.
+		If set this to 0, the command will flooring the
+		queue top to sentences. If 1, ceiling.
+
+
+					*coquille-options-show_goal_always*
+[b,g]:coquille_show_goal_always		= 0 : bool
+		If set this to 0, Coquille will update Goals
+		after each commands.
+
+
+
+					*coquille-options-update_status_always*
+[b,g]:coquille_update_status_always	= 1 : bool
+		This sends Update command to CoqTop after each
+		command. Not recommended to change this. See known
+		issues for more information.
+
+
+					*coquille-options-no_define_commands*
+[b,g]:coquille_no_define_commands	= 0 : bool
+		If set this to 1, coquille defines no commands.
+
+
+
+					*coquille-options-one_window*
+[t,g]:coquille_one_window		= 0 : bool
+		If set this to 1, coquille will use one pair of
+		Infos/Goals buffers for each tab.
+
+
+
+					*coquille-options-auto_launch*
+[b,g]:coquille_auto_launch		= 0 : bool
+		If set this to 1, coquille will do |:CoqLaunch|
+		automatically when opening coq file.
+
+
+
+					*coquille-options-auto_launch_args*
+[b,g]:coquille_auto_launch_args		= [] : list string
+		Arguments for the CoqTop launched by
+		|coquille-options-auto_launch|.
+
+
+					*coquille-options-keep_after_textchange*
+[b,g]:coquille_keep_after_textchange	= 0 : bool
+		set this to 1, keep the Goals/Infos messages
+		when changing buffer text before you queued.
+		To refresh them, run |:CoqRefresh|.
+
+
+					*coquille-options-refresh_after_focus*
+[b,g]:coquille_refresh_after_focus	= 0 : bool
+		|:CoqRefresh| after enternig running buffer.
+
+
+
+					*coquille-options-rerun_after_focus*
+[b,g]:coquille_rerun_after_focus	= 0 : bool
+		|:CoqRerun| after enternig running buffer.
+
+
+
+					*coquille-options-silent*
+[b,g]:coquille_silent			= 0 : bool
+		If set this to 1, echoing no infomations but
+		errors.
+
+
+==============================================================================
+CUSTMIZE WINDOW				*coquille-customize-window*
+
+
+1. Make your own Rearrange command.
+2. In that command,
+	- Use `b:coquille_goal_bufnr` and `b:coquille_info_bufnr`
+	  to control Goals/Infos buffers.
+	- If you are with |coquille-options-one_window| set to 1 ,
+	  use tablocal ( prefexed t: ) ones.
+3. Make your own Launch command.
+4. In that command,
+	4-1. Run `:CoqLaunch`
+	4-2. Run your own Rearrange command.
+
+
+Use your command or replace with original ones.
+
+For more information, see |coquille-customize-window-example|.
+
+------------------------------------------------------------------------------
+CUSTMIZE WINDOW EXAMPLE			*coquille-customize-window-example*
+
+Think the situation that is set 'hidden'.
+Using horizontal split.
+Show one window and <Leader>s to switch Goals/Infos.
+
+>
+  function! MyCoqSwitch()
+      let l:old_bufnr = bufnr('%')
+      if exists('b:coquille_goal_bufnr') && l:old_bufnr == b:coquille_goal_bufnr
+          exe b:coquille_info_bufnr .. 'buffer'
+      elseif exists('b:coquille_info_bufnr') && l:old_bufnr == b:coquille_info_bufnr
+          exe b:coquille_goal_bufnr .. 'buffer'
+      endif
+  endfunction
+
+  function! MyCoqRearrange() abort
+      :CoqRearrange
+
+      let gbuf = b:coquille_goal_bufnr
+      let ibuf = b:coquille_info_bufnr
+      let oldwin = winnr()
+
+      for win_id in win_findbuf(gbuf) + win_findbuf(ibuf)
+          let winnr = win_id2win(win_id)
+          if winnr > 0 && winnr('$') > 1
+            exe winnr .. 'winc w'
+            quit
+          endif
+      endfor
+      
+      botright split
+          exe gbuf .. 'buffer'
+      
+      exe oldwin .. 'winc w'
+  endfunction
+
+  function! MyCoqLaunch() abort
+      :CoqLaunch
+      call MyCoqRearrange()
+      augroup MyCoqBufferSwap
+          nnoremap <Leader>s :call MyCoqSwitch()<CR>
+      augroup END
+  endfunction
+<
+
+==============================================================================
+vim:tw=78:fo=tcq2mM:ts=8:ft=help:norl

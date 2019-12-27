@@ -29,15 +29,15 @@ function! coquille#reset_panels(force = 0) abort
 
     call coquille#init_tablocal_windows(a:force)
     
-    call b:coquilleIDE.addGoalBuffer(t:goal_buf)
-    call b:coquilleIDE.addInfoBuffer(t:info_buf)
+    call b:coquilleIDE.addGoalBuffer(t:coquille_goal_bufnr)
+    call b:coquilleIDE.addInfoBuffer(t:coquille_info_bufnr)
     call b:coquilleIDE.refresh()
   else
     if !exists('b:coquilleIDE') | return | endif
     call coquille#init_buflocal_windows(1)
 
-    call b:coquilleIDE.addGoalBuffer(b:goal_buf)
-    call b:coquilleIDE.addInfoBuffer(b:info_buf)
+    call b:coquilleIDE.addGoalBuffer(b:coquille_goal_bufnr)
+    call b:coquilleIDE.addInfoBuffer(b:coquille_info_bufnr)
     call b:coquilleIDE.refresh()
   endif
 endfunction
@@ -47,17 +47,17 @@ endfunction
 function! coquille#init_tablocal_windows(force) abort
   if !exists('b:coquilleIDE') | return | endif
 
-  if exists('t:goal_buf') && !bufexists(t:goal_buf) | silent! unlet t:goal_buf | endif
-  if exists('t:info_buf') && !bufexists(t:info_buf) | silent! unlet t:info_buf | endif
+  if exists('t:coquille_goal_bufnr') && !bufexists(t:coquille_goal_bufnr) | silent! unlet t:coquille_goal_bufnr | endif
+  if exists('t:coquille_info_bufnr') && !bufexists(t:coquille_info_bufnr) | silent! unlet t:coquille_info_bufnr | endif
 
-  if !exists('t:goal_buf') || !exists('t:info_buf') || a:force
-    if exists('t:goal_buf') | silent! execute 'bwipeout' .. t:goal_buf | endif
-    if exists('t:info_buf') | silent! execute 'bwipeout' .. t:info_buf | endif
-    silent! unlet t:goal_buf
-    silent! unlet t:info_buf
+  if !exists('t:coquille_goal_bufnr') || !exists('t:coquille_info_bufnr') || a:force
+    if exists('t:coquille_goal_bufnr') | silent! execute 'bwipeout' .. t:coquille_goal_bufnr | endif
+    if exists('t:coquille_info_bufnr') | silent! execute 'bwipeout' .. t:coquille_info_bufnr | endif
+    silent! unlet t:coquille_goal_bufnr
+    silent! unlet t:coquille_info_bufnr
   endif
 
-  if exists('t:goal_buf') && exists('t:info_buf')
+  if exists('t:coquille_goal_bufnr') && exists('t:coquille_info_bufnr')
     return
   endif
 
@@ -69,8 +69,8 @@ function! coquille#init_tablocal_windows(force) abort
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let t:goal_buf = bufnr('%')
-    call add(s:window_bufnrs, t:goal_buf)
+    let t:coquille_goal_bufnr = bufnr('%')
+    call add(s:window_bufnrs, t:coquille_goal_bufnr)
   rightbelow new
     setlocal buftype=nofile
     call s:name_buffer_unique('Infos-shared')
@@ -78,8 +78,8 @@ function! coquille#init_tablocal_windows(force) abort
     setlocal noswapfile
     setlocal nocursorline
     setlocal nocursorcolumn
-    let t:info_buf = bufnr('%')
-    call add(s:window_bufnrs, t:info_buf)
+    let t:coquille_info_bufnr = bufnr('%')
+    call add(s:window_bufnrs, t:coquille_info_bufnr)
   execute l:winnr .. 'winc w'
 endfunction
 " }}}
@@ -88,17 +88,17 @@ endfunction
 function! coquille#init_buflocal_windows(force) abort
   if !exists('b:coquilleIDE') | return | endif
 
-  if exists('b:goal_buf') && !bufexists(b:goal_buf) | silent! unlet b:goal_buf | endif
-  if exists('b:info_buf') && !bufexists(b:info_buf) | silent! unlet b:info_buf | endif
+  if exists('b:coquille_goal_bufnr') && !bufexists(b:coquille_goal_bufnr) | silent! unlet b:coquille_goal_bufnr | endif
+  if exists('b:coquille_info_bufnr') && !bufexists(b:coquille_info_bufnr) | silent! unlet b:coquille_info_bufnr | endif
 
-  if !exists('b:goal_buf') || !exists('b:info_buf') || a:force
-    if exists('b:goal_buf') | silent! execute 'bwipeout' .. b:goal_buf | endif
-    if exists('b:info_buf') | silent! execute 'bwipeout' .. b:info_buf | endif
-    silent! unlet b:goal_buf
-    silent! unlet b:info_buf
+  if !exists('b:coquille_goal_bufnr') || !exists('b:coquille_info_bufnr') || a:force
+    if exists('b:coquille_goal_bufnr') | silent! execute 'bwipeout' .. b:coquille_goal_bufnr | endif
+    if exists('b:coquille_info_bufnr') | silent! execute 'bwipeout' .. b:coquille_info_bufnr | endif
+    silent! unlet b:coquille_goal_bufnr
+    silent! unlet b:coquille_info_bufnr
   endif
 
-  if exists('b:goal_buf') && exists('b:info_buf')
+  if exists('b:coquille_goal_bufnr') && exists('b:coquille_info_bufnr')
     return
   endif
 
@@ -117,8 +117,8 @@ function! coquille#init_buflocal_windows(force) abort
     setlocal nocursorcolumn
     let b:coquilleIDE = l:coquilleIDE
     call coquille#define_buffer_commands()
-    let l:goal_buf = bufnr('%')
-    call add(s:window_bufnrs, l:goal_buf)
+    let l:coquille_goal_bufnr = bufnr('%')
+    call add(s:window_bufnrs, l:coquille_goal_bufnr)
   rightbelow new
     setlocal buftype=nofile
     call s:name_buffer_unique('Infos:' .. fname)
@@ -128,12 +128,16 @@ function! coquille#init_buflocal_windows(force) abort
     setlocal nocursorcolumn
     let b:coquilleIDE = l:coquilleIDE
     call coquille#define_buffer_commands()
-    let l:info_buf = bufnr('%')
-    call add(s:window_bufnrs, l:info_buf)
+    let l:coquille_info_bufnr = bufnr('%')
+    call add(s:window_bufnrs, l:coquille_info_bufnr)
   execute l:winnr .. 'winc w'
   
-  let b:goal_buf = l:goal_buf
-  let b:info_buf = l:info_buf
+  for bufnr in [l:coquille_goal_bufnr, l:coquille_info_bufnr]
+    call setbufvar(bufnr, 'coquille_goal_bufnr', l:coquille_goal_bufnr)
+    call setbufvar(bufnr, 'coquille_info_bufnr', l:coquille_info_bufnr)
+  endfor
+  let b:coquille_goal_bufnr = l:coquille_goal_bufnr
+  let b:coquille_info_bufnr = l:coquille_info_bufnr
 endfunction
 " }}}
 
@@ -142,8 +146,8 @@ function! coquille#stop()
   if !exists('b:coquilleIDE') | return | endif
 
   if !g:coquille#options#one_window.get()
-    if exists('b:goal_buf') | silent! execute 'bwipeout' .. b:goal_buf | endif
-    if exists('b:info_buf') | silent! execute 'bwipeout' .. b:info_buf | endif
+    if exists('b:coquille_goal_bufnr') | silent! execute 'bwipeout' .. b:coquille_goal_bufnr | endif
+    if exists('b:coquille_info_bufnr') | silent! execute 'bwipeout' .. b:coquille_info_bufnr | endif
   endif
 
   if exists('b:coquilleIDE')
@@ -187,7 +191,7 @@ function! coquille#define_buffer_commands(force = 0)
   command! -buffer CoqToLast call coquille#check_running() | call b:coquilleIDE.coq_to_last()
   command! -buffer CoqRerun call coquille#check_running() | call b:coquilleIDE.rerun()
   command! -buffer CoqRefresh call coquille#check_running() | call b:coquilleIDE.refresh()
-  command! -buffer CoqStop call coquille#check_running() | call coquille#stop()
+  command! -buffer CoqStop call coquille#stop()
   command! -buffer MoveToTop call coquille#check_running() | call b:coquilleIDE.move_to_top()
   command! -buffer -nargs=* CoqQuery call coquille#check_running() | call b:coquilleIDE.query(<q-args>)
   command! -buffer CoqClear call coquille#check_running() | call b:coquileIDE.clear_info()

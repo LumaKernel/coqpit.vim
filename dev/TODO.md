@@ -1,16 +1,8 @@
 
-## Release TODO
-
-- [ ] write document
-- [ ] write help
-- [ ] write help@ja
-- [ ] setup editorconfig
-- [x] move TODO
-- [ ] document about custimize window
-- [ ] Screenshots
-
 ## TODO
 
+- [ ] write help@ja
+- [ ] setup editorconfig
 - [ ] check in other OS
 
 Not easy ones.
@@ -29,6 +21,7 @@ Not easy ones.
   - simply, one command ?
   - prompt buffer ?
   - or using other plugin ?
+- [ ] Vim diff
 
 - [ ] Write with Promise for future developers.
 
@@ -37,5 +30,4 @@ Not easy ones.
 
 - Arguments `editId` and `verbose` for `Add` command.
 - Arguments `routeID` for `Query` command.
-
 
