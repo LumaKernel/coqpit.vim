@@ -1,4 +1,3 @@
-
 " take timeout from outside runner
 
 " version check
@@ -8,37 +7,37 @@ if v:version < 801 || !has('patch-8.1.1310')
   cq!
 endif
 
-
 " settings
 
-let &runtimepath += ',' .. (
-  \   expand('<sfile>:h')
-  \   ->resolve('..')
-  \ )
+source $VIMRUNTIME/defaults.vim
 
-let g:__vital_power_assert_config = {
-\   '__debug__': 1
-\ }
+
+" it is not supported by VimL parser in PowerAssert
+" scriptversion 2
+
+let &runtimepath ..= ',' .. resolve(expand('<sfile>:h') .. '/..')
 
 " prepare
 
-let s:Promise = vital#vital#import('Async.Promise')
-
 function! s:Succeed(...)
-  echo 'All Tests Passed.'
+  silent! !echo All Tests Passed.
   qa!
 endfunction
 
 function! s:Fail(err, ...)
-  echoerr 'Test Failed.'
-  echoerr a:err
+  silent! !echo Test Failed.
+  silent! !echo
+  if type(a:err) == v:t_dict
+    silent! exe '!echo ' .. shellescape('Exception: ' .. string(get(a:err, 'exception', 'none')), 1)
+    silent! exe '!echo ' .. shellescape('Throwpoint: ' .. string(get(a:err, 'throwpoint', 'none')), 1)
+  endif
   cq!
 endfunction
 
 
 " run
 
-call coquille#test#runTest()
-  \   .then(function('s:Succeed'))
-  \   .catch(function('s:Fail'))
+silent! call coquille#test#runTest()
+      \.then(function('s:Succeed'))
+      \.catch(function('s:Fail'))
 

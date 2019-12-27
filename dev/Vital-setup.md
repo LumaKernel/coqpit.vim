@@ -15,11 +15,13 @@ In this file shows how to reset and reinstall the vital plugins.
 - Web.XML (default)
 - [Vim.PowerAssert](https://github.com/haya14busa/vital-power-assert)
 
-```
-:Vitalize . --name=coquille Vim.PowerAssert Web.XML
-```
-
 ### dev-dependencies
 
 - Async.Promise (default)
+
+
+```
+:Vitalize . --name=coquille Vim.PowerAssert Web.XML Async.Promise
+```
+
 

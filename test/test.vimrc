@@ -1,9 +1,9 @@
 " this file is for all vim versions
 try
-	so ./test.vim
+  so <sfile>:h/test.vim
 catch /.*/
-	echoerr 'Unexpected Error happened!'
-	echoerr v:exception
-	echoerr 'from ' . v:throwpoint
-	cq!
+  silent! !echo Unexpected Error happened!
+  silent! exe '!echo ' .. shellescape('Exception: ' .. string(v:exception), 1)
+  silent! exe '!echo ' .. shellescape('Throwpoint: ' .. string(v:throwpoint), 1)
+  cq!
 endtry

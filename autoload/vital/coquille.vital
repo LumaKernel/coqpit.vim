@@ -3,3 +3,6 @@ coquille
 
 Vim.PowerAssert
 Web.XML
+Async.Promise
+Vim.SafeString
+Vim.VimlCompiler
