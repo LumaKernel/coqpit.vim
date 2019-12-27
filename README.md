@@ -50,9 +50,7 @@ Now, these commands can be used.
   + Forward to cursor.
 - `:CoqToLast`
   + Forward to end of file.
-- And other commands. You can see all in section [#Commands](#Commands)
-
-By default, maps no keys to commands.
+- And other commands. See `:help coquille-commands` .
 
 ## Mapping Examples
 
@@ -85,43 +83,6 @@ Recommended to define non-buffer local because these commands can be also used
 from Infos/Goals buffers too. ( If not using `coquille_one_window=1`. )
 
 
-## Commands
-
-- `:CoqLaunch [args]` [or `:call coquille#launch([args])`]
-  + Launch the coquille. Set up Infos/Goals buffers.
-  + Re-Launch the coquille if already running.
-    When you are in trouble, run this command.
-  + `args` will be passed to CoqTop executable. It is not needed.
-- `:CoqNext` [or `:call b:coquilleIDE.coq_next()`]
-  + Forward one command.
-- `:CoqBack` [or `:call b:coquilleIDE.coq_back()`]
-  + Drop last command.
-- `:CoqToCursor` [or `:call b:coquilleIDE.coq_to_cursor()`]
-  + Forward to cursor.
-- `:CoqToLast` [or `:call b:coquilleIDE.coq_to_last()`]
-  + Forward to end of file.
-- `:CoqRerun` [or `:call b:coquilleIDE.rerun()`]
-  + Run all commands from the first of file.
-- `:CoqRefresh` [or `:call b:coquilleIDE.refresh()`]
-  + Refresh coloring and Infos/Goals window.
-  + In the situation that you edit Infos buffer by yourself,
-    you can revert them by this command.
-- `:CoqStop` [or `:call coquille#stop()`]
-  + Stop running process behind which is parsing and running commands.
-  + Close no longer needed Infos/Goals buffers.
-- `:MoveToTop` [or `:call b:coquilleIDE.move_to_top()`]
-  + Move cursor to top of the colored.
-- `:CoqQuery [command]` [or `:call b:coquilleIDE.query(command)`]
-  + Query commands like `Compute`. Answers will be shown in Infos buffer.
-  + If not checked all commands yet, this will done after all of that.
-- `:CoqClear` [or `call b:coquileIDE.clear_info()`]
-  + Clear the Infos buffer.
-- `:CoqStopAll` [or `call coquille#stop_all()`]
-  + Like running `:CoqStop` to all running coquille instances.
-  + When you are in trouble, run this command in combination with `:CoqLaunch`
-- `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
-  + Rearrange the Infos/Goals buffer windows.
-
 ## Configuration Highlight Colors
 
 Coquille will set the highligh colors automatically from backgrond color of your color scheme if you are using gui Vim.
@@ -151,75 +112,19 @@ hi CoqMarkedError  ctermbg=160
 hi CoqCheckedError ctermbg=160
 ```
 
-## Options
+## Specifying coq executable
 
-Variable scopes are checked left to right as follows.
+By default, coq will check the command `coqidetop`
+followed by checking `coqtop`.
 
+However, if you want to use a specific version or executable,
+set variable `g:coquille_coq_executable` in your `.vimrc` .
 
-    [b,g]:coquille_coq_executable         Specifying the command to run. Use `coqidetop`
-        : string | list string            executable for new versions of Coq or `coqtop`
-                                          executable for older versions. If set this to
-                                          list, coquille use them to `job_start` as it is.
-
-
-    [b,g]:coquille_auto_move              Moves the cursor after `:CoqNext` and `:CoqBack`
-        = 0                               command like CoqIDE if set this to `1`.
-        : bool
+Typically, you should specify `{CoqInstallPath}/bin/coqidetop`
+or `{CoqInstallPath}/bin/coqtop` for old versions.
 
 
-    [b,g]:coquille_cursor_ceiling         Set behavior about `:CoqToCursor`.
-        = 1                               If set this to `0`, the command will flooring the
-        : bool                            queue top to sentences. If `1`, ceiling.
-
-
-    [b,g]:coquille_show_goal_always       If set this to `0`, Coquille will update Goals
-        = 0                               after each commands.
-        : bool                            
-
-
-    [b,g]:coquille_update_status_always   This sends `Update` command to CoqTop after each
-        = 1                               command. Not recommended to change this. See known
-        : bool                            issues for more information.
-
-
-    [b,g]:coquille_no_define_commands     If set this to `1`, coquille defines no commands.
-        = 0
-        : bool
-
-
-    [t,g]:coquille_one_window             If set this to `1`, coquille will use one pair of
-        = 0                               Infos/Goals buffers for each tab.
-        : bool
-
-
-    [b,g]:coquille_auto_launch            If set this to `1`, coquille will do `:CoqLaunch`
-        = 0                               automatically when opening `coq` file.
-        : bool
-
-
-    [b,g]:coquille_auto_launch_args       Arguments for the launch of `coquille_auto_launch`
-        = []                              option.
-        : list string
-
-
-    [b,g]:coquille_keep_after_textchange   set this to `1`, keep the Goals/Infos messages
-        = 0                               when changing buffer text before you queued.
-        : bool                            To refresh them, run `:CoqRefresh`.
-
-
-    [b,g]:coquille_refresh_after_focus    `:CoqRefresh` after enternig running buffer.
-        = 0
-        : bool
-
-
-    [b,g]:coquille_rerun_after_focus      `:CoqRerun` after enternig running buffer.
-        = 0
-        : bool                            
-
-
-    [b,g]:coquille_silent                 If set this to `1, echoing no infomations but
-        = 0                               errors.
-        : bool
+To learn more flexible options, see `:help coquille-options` .
 
 
 ## Customize window locations
@@ -237,55 +142,7 @@ Variable scopes are checked left to right as follows.
 
 Use your command or replace with original ones.
 
-
-### Example for custimizing window
-
-
-This script is works in `set hidden`.
-Using horizontal split.
-Show one window and `<Leader>s` to switch Goals/Infos.
-
-```vim
-function! MyCoqSwitch()
-  let l:old_bufnr = bufnr('%')
-  if exists('b:coquille_goal_bufnr') && l:old_bufnr == b:coquille_goal_bufnr
-    exe b:coquille_info_bufnr .. 'buffer'
-  elseif exists('b:coquille_info_bufnr') && l:old_bufnr == b:coquille_info_bufnr
-    exe b:coquille_goal_bufnr .. 'buffer'
-  endif
-endfunction
-
-function! MyCoqRearrange() abort
-  :CoqRearrange
-
-  let gbuf = b:coquille_goal_bufnr
-  let ibuf = b:coquille_info_bufnr
-  let oldwin = winnr()
-
-  for win_id in win_findbuf(gbuf) + win_findbuf(ibuf)
-    let winnr = win_id2win(win_id)
-    if winnr > 0 && winnr('$') > 1
-      exe winnr .. 'winc w'
-        quit
-    endif
-  endfor
-  
-  botright split
-    exe gbuf .. 'buffer'
-  
-  exe oldwin .. 'winc w'
-endfunction
-
-function! MyCoqLaunch() abort
-  :CoqLaunch
-  call MyCoqRearrange()
-  augroup MyCoqBufferSwap
-    nnoremap <Leader>s :call MyCoqSwitch()<CR>
-  augroup END
-endfunction
-```
-
-Make your own useful settings!
+For concrete example, see `:help coquille-customize-window-example` .
 
 
 ## F.A.Q.
@@ -301,6 +158,7 @@ To reset all __Infos__ and __Goals__ windows,
   - on each tab if you open multiple tabs
 
 Or, reboot your Vim.
+
 
 ### I want to pass the path in Windows MSYS2.
 
@@ -337,8 +195,9 @@ Because pictures are always the best sellers :
 ## Thanks
 
 - [the-lambda-church/coquille](https://github.com/the-lambda-church/coquille)
-  - Original repository I forked and use that name.
+  - Original repository I forked and from which I use the name.
 - [coq syntax on vim.org](http://www.vim.org/scripts/script.php?script_id=2063)
 - [coq indent on vim.org](http://www.vim.org/scripts/script.php?script_id=2079)
 - [vital.vim](https://github.com/vim-jp/vital.vim)
+- [vital-power-assert](https://github.com/haya14busa/vital-power-assert)
 
