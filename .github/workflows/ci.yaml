@@ -15,8 +15,9 @@ jobs:
   install-vim-ubuntu:
     runs-on: ubuntu-latest
 
-    matrix:
-      vim-version: [v8.1.2424]
+    strategy:
+      matrix:
+        vim-version: [v8.1.2424]
 
     env:
       vim-version: ${{ matrix.vim-version }}
@@ -46,6 +47,13 @@ jobs:
   # install-coq-ubuntu {{{
   install-coq-ubuntu:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        coq-version-pair: [
+          [V8.6.1, coqtop],
+          [V8.10.2, coqidetop]
+        ]
 
     env:
       coq-version: ${{ matrix.coq-version-pair[0] }}
