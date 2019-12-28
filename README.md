@@ -1,5 +1,8 @@
 # Coquille
 
+![](https://github.com/lumakernel/coquille/workflows/GitHub%20Actions%20CI/badge.svg)
+
+
 Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
 favorite editor.
 
