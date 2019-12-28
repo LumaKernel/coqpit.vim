@@ -1,93 +1,206 @@
-Coquille
-========
+# Coquille
 
-[![Build Status](https://travis-ci.org/the-lambda-church/coquille.svg?branch=pathogen-bundle)](https://travis-ci.org/the-lambda-church/coquille)
+![](https://github.com/lumakernel/coquille/workflows/GitHub%20Actions%20CI/badge.svg)
+
 
 Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
 favorite editor.
 
-Installation
-------------
+## Dependencies
 
-This repository is meant to be used as a [pathogen][1] bundle. If you don't
-already use pathogen, I strongly recommand that you start right now.
+Only Vim and [Coq](https://github.com/coq/coq/releases).
 
-As everybody knows, vim is a wonderful editor which offers no way for a plugin
-to track modifications on a buffer. For that reason Coquille depends on a set of
-heuristicts collected in [vimbufsync][2] to detect modifications in the buffer.
-You will need to make this plugin available in your runtime path (it can be
-installed as a pathogen bundle as well) if you want Coquille to work.
+- Vim 8.1 or above ( `has('patch-8.1.1310')`, `+job`, `+lambda`, etc; recommend you `+huge` )
+- Coq 8.6 or above. Checked versions below.
+  - Coq8.5pl3
+  - Coq8.6
+  - Coq8.7
+  - [Coq8.9](https://github.com/coq/coq/releases/tag/V8.9.1)
+  - [Coq8.10](https://github.com/coq/coq/releases/tag/V8.10.2)
+  - Coq8.11 (beta)
+  - Recomended to use newer and more stable version.
 
-Once that is done, installing Coquille is just as simple as doing :
 
-    cd ~/.vim/bundle
-    git clone https://github.com/trefis/coquille.git
+## Installation
 
-Not that by default, you will be in the `pathogen-bundle` branch, which also
-ships Vincent Aravantinos [syntax][3] and [indent][4] scripts for Coq, as well
-as an ftdetect script.
-If you already have those in your vim config, then just switch to the master
-branch.
+Please clone this repository to your vim `runtimepath` or if you use plugin manager like [dein.vim](https://github.com/Shougo/dein.vim), add `LumaKernel/coquille` repository.
 
-Getting started
----------------
+### Example for [dein.vim](https://github.com/Shougo/dein.vim)
 
-To launch Coquille on your Coq file, run `:CoqLaunch` which will make the
-commands :
+Add following to your toml file.
 
-- CoqNext
-- CoqToCursor
-- CoqUndo
-- CoqKill
+```toml
+[[plugins]]
+repo = "LumaKernel/coquille"
+on_ft = "coq"
+```
 
-available to you.
 
-By default Coquille forces no mapping for these commands, however two sets of
-mapping are already defined and you can activate them by adding :
+## Getting started
 
-    " Maps Coquille commands to CoqIDE default key bindings
-    au FileType coq call coquille#CoqideMapping()
 
-or
+1. Open coq file that typically ends with `.v`
+2. Run `:CoqLaunch` ( or write `let g:coquille_auto_launch=1` in your `.vimrc` )
+3. Opening Infos/Goals buffers automatically.
 
-    " Maps Coquille commands to <F2> (Undo), <F3> (Next), <F4> (ToCursor)
-    au FileType coq call coquille#FNMapping()
+Now, these commands can be used.
 
-to your `.vimrc`.
+- `:CoqNext`
+  + Forward one command.
+- `:CoqBack`
+  + Drop last command.
+- `:CoqToCursor`
+  + Forward to cursor.
+- `:CoqToLast`
+  + Forward to end of file.
+- And other commands. See `:help coquille-commands` .
 
-Alternatively you can, of course, define your owns.
+## Mapping Examples
 
-Running query commands
-----------------------
 
-You can run an arbitrary query command (that is `Check`, `Print`, etc.) by
-calling `:Coq MyCommand foo bar baz.` and the result will be displayed in the
-Infos panel.
+```vim
+function! MyCoqMaps()
+  nnoremap <silent> <C-C>        :CoqLaunch<CR>
+  nnoremap <silent> <Leader>j    :CoqNext<CR>
+  nnoremap <silent> <Leader>k    :CoqBack<CR>
+  nnoremap <silent> <Leader>l    :CoqToCursor<CR>
+  nnoremap <silent> <Leader>G    :CoqToLast<CR>
+  nnoremap <silent> <Leader>g    :CoqRerun<CR>
+  nnoremap <silent> <Leader>t    :MoveToTop<CR>
+  nnoremap <silent> <Leader><F5> :CoqRefresh<CR>
 
-Configuration
--------------
+  nnoremap <Leader>compute :CoqQuery Compute .<Left>
+  nnoremap <Leader>print :CoqQuery Print .<Left>
+  nnoremap <Leader>check :CoqQuery Check .<Left>
+  nnoremap <Leader>se :CoqQuery Search ().<Left><Left>
+endfunction
 
-Note that the color of the "lock zone" is hard coded and might not be pretty in
-your specific setup (depending on your terminal, colorscheme, etc).
-To change it, you can overwrite the `CheckedByCoq` and `SentToCoq` highlight
-groups (`:h hi` and `:h highlight-groups`) to colors that works better for you.
-See [coquille.vim][5] for an example.
+augroup my_coq
+  au!
+  au FileType coq :call MyCoqMaps()
+augroup END
+```
 
-You can set the following variable to modify Coquille's behavior:
 
-    g:coquille_auto_move            Set it to 'true' if you want Coquille to
-        (default = 'false')         move your cursor to the end of the lock zone
-                                    after calls to CoqNext or CoqUndo
+Recommended to define non-buffer local because these commands can be also used
+from Infos/Goals buffers too. ( If not using `coquille_one_window=1`. )
 
-Screenshoots
-------------
+
+## Configuration Highlight Colors
+
+Coquille will set the highligh colors automatically from backgrond color of your color scheme if you are using gui Vim.
+
+- CoqChecked
+- CoqCheckedAxiom
+- CoqQueued
+- CoqMarkedWarn
+- CoqCheckedWarn
+- CoqMarkedError
+- CoqCheckedError
+
+Needless to say, literally. Please check by yourself while using.
+For more information, see `:help coquille-highlight-groups`
+
+### Example for highlight config
+
+This is example assuming for cterm with `hybrid` color scheme.
+
+```vim
+hi CoqChecked      ctermbg=17
+hi CoqCheckedAxiom ctermbg=58
+hi CoqQueued       ctermbg=22
+hi CoqMarkedWarn   ctermbg=64
+hi CoqCheckedWarn  ctermbg=64
+hi CoqMarkedError  ctermbg=160
+hi CoqCheckedError ctermbg=160
+```
+
+## Specifying coq executable
+
+By default, coq will check the command `coqidetop`
+followed by checking `coqtop`.
+
+However, if you want to use a specific version or executable,
+set variable `g:coquille_coq_executable` in your `.vimrc` .
+
+Typically, you should specify `{CoqInstallPath}/bin/coqidetop`
+or `{CoqInstallPath}/bin/coqtop` for old versions.
+
+
+To learn more flexible options, see `:help coquille-options` .
+
+
+## Customize window locations
+
+1. Make your own Rearrange command.
+2. In that command,
+  - Use `b:coquille_goal_bufnr` and `b:coquille_info_bufnr`
+    to control Goals/Infos buffers.
+  - If you are using `coquille_one_window=1` option,
+    use tablocal ( prefexed `t:` ) ones.
+3. Make your own Launch command.
+4. In that command,
+  1. Run `:CoqLaunch`
+  2. Run your own Rearrange command.
+
+Use your command or replace with original ones.
+
+For concrete example, see `:help coquille-customize-window-example` .
+
+
+## F.A.Q.
+
+### Messed up Infos and Goals windows!
+
+To reset all __Infos__ and __Goals__ windows,
+
+1. `:bdelete` all not needed `[Goals]` and `[Infos]` buffers by yourself.
+  - or use `:CoqStopAll` command [or `:call coquille#stop_all()`]
+2. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
+  - on each window attached by coq file if you open multiple buffers and configure `one_window` is '0'
+  - on each tab if you open multiple tabs
+
+Or, reboot your Vim.
+
+
+### I want to pass the path in Windows MSYS2.
+
+Like this.
+
+```vim
+let g:coquille_coq_executable = '/c/Coq8.10/bin/coqidetop'
+```
+
+
+## Screenshoots
 
 Because pictures are always the best sellers :
 
-![Coquille at use](http://the-lambda-church.github.io/coquille/coquille.png)
+![Coquille use at win32unix with multiple buffers](https://user-images.githubusercontent.com/29811106/71498345-59386280-289f-11ea-9018-2babde26ca82.png)
 
-[1]: https://github.com/tpope/vim-pathogen
-[2]: https://github.com/def-lkb/vimbufsync
-[3]: http://www.vim.org/scripts/script.php?script_id=2063 "coq syntax on vim.org"
-[4]: http://www.vim.org/scripts/script.php?script_id=2079 "coq indent on vim.org"
-[5]: https://github.com/the-lambda-church/coquille/blob/master/autoload/coquille.vim#L103
+![Coquile use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
+
+
+## Known Issues
+
+- With configure `g:coquille_update_status_always` to `0`, [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
+  - I recommend you not change this option. By default, working fine.
+- Somehow, vim which `has('win32unix')` works faster than one which `has('win32')`
+  - Not so critical.
+- If you use too many memory, coquille fails with like an error message `Error: Out of memory`.
+
+
+## License
+
+[ISC License](https://www.isc.org/licenses/)
+
+
+## Thanks
+
+- [the-lambda-church/coquille](https://github.com/the-lambda-church/coquille)
+  - Original repository I forked and from which I use the name.
+- [coq syntax on vim.org](http://www.vim.org/scripts/script.php?script_id=2063)
+- [coq indent on vim.org](http://www.vim.org/scripts/script.php?script_id=2079)
+- [vital.vim](https://github.com/vim-jp/vital.vim)
+- [vital-power-assert](https://github.com/haya14busa/vital-power-assert)
+
