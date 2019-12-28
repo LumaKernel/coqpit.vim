@@ -6,8 +6,6 @@ on:
       - master
       - release*
       - develop*
-      tags:
-      - v*
 
 
 jobs:
