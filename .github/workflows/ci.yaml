@@ -1,4 +1,4 @@
-name: CI
+name: GitHub Actions CI
 
 on:
   push:
@@ -11,7 +11,74 @@ on:
 
 
 jobs:
+  # install-vim-ubuntu {{{
+  install-vim-ubuntu:
+    runs-on: ubuntu-latest
+
+    matrix:
+      vim-version: [v8.1.2424]
+
+    env:
+      vim-version: ${{ matrix.vim-version }}
+
+    steps:
+    - uses: actions/cache@v1
+      id: vim-cache
+      with:
+        path: ~/bin/vim/${{ env.vim-version }}
+        key: ${{ runner.os }}-${{ env.vim-version }}
+
+    - name: install vim
+      if: steps.vim-cache.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/vim/vim /tmp/vim
+        mkdir ~/bin
+        cd /tmp/vim
+        git checkout ${{ matrix.vim-version }}
+        sudo apt-get install -y gettext libncurses5-dev libacl1-dev libgpm-dev
+        ./configure --with-features=huge --enable-fail-if-missing --prefix=$HOME/bin/vim/${{ matrix.vim-version }}
+        make && make install
+
+    - name: vim version
+      run: ~/bin/vim/${{ matrix.vim-version }}/bin/vim --version
+  # }}}
+
+  # install-coq-ubuntu {{{
+  install-coq-ubuntu:
+    runs-on: ubuntu-latest
+
+    env:
+      coq-version: ${{ matrix.coq-version-pair[0] }}
+      coqtop-command: ${{ matrix.coq-version-pair[1] }}
+      coqtop-path: $HOME/bin/coq/${{ matrix.coq-version-pair[0] }}/bin/${{ matrix.coq-version-pair[1] }}
+      coq-dir: $HOME/bin/coq/${{ matrix.coq-version-pair[0] }}/bin
+
+    steps:
+    - uses: actions/cache@v1
+      id: coq-cache
+      with:
+        path: ~/bin/coq/${{ env.coq-version }}
+        key: ${{ runner.os }}-${{ env.coq-version }}
+
+    - name: install coq ubuntu
+      if: steps.coq-cache.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get install -y opam
+        opam --version
+        git clone https://github.com/coq/coq /tmp/coq
+        cd /tmp/coq
+        git checkout ${{ env.coq-version }}
+        ./configure -prefix=$HOME/bin/coq/${{ env.coq-version }}
+        make && make install
+
+    - name: coq version
+      run: ${{ env.coqtop-path }} --version
+  # }}}
+
+  # test {{{
   test:
+    needs: [install-vim-ubuntu, install-coq-ubuntu]
+
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -31,6 +98,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+    # prepare vim
     - uses: actions/cache@v1
       if: startsWith(matrix.os, 'ubuntu')
       id: vim-cache
@@ -38,21 +106,7 @@ jobs:
         path: ~/bin/vim/${{ env.vim-version }}
         key: ${{ runner.os }}-${{ env.vim-version }}
 
-    - name: install vim
-      if: |
-        startsWith(matrix.os, 'ubuntu')
-        && steps.vim-cache.outputs.cache-hit != 'true'
-      run: |
-        git clone https://github.com/vim/vim /tmp/vim
-        mkdir ~/bin
-        cd /tmp/vim
-        git checkout ${{ matrix.vim-version }}
-        sudo apt-get install -y gettext libncurses5-dev libacl1-dev libgpm-dev
-        ./configure --with-features=huge --enable-fail-if-missing --prefix=$HOME/bin/vim/${{ matrix.vim-version }}
-        make && make install
-
-
-    - name: vim default
+    - name: vim command
       if: startsWith(matrix.os, 'ubuntu')
       run: |
         sudo update-alternatives --install $(which vim) vim ~/bin/vim/${{ matrix.vim-version }}/bin/vim 50
@@ -61,34 +115,24 @@ jobs:
     - name: vim version
       run: vim --version
 
+    # prepare coq
     - uses: actions/cache@v1
       id: coq-cache
       with:
         path: ~/bin/coq/${{ env.coq-version }}
         key: ${{ runner.os }}-${{ env.coq-version }}
 
-    - name: install coq ubuntu
-      if: |
-        startsWith(matrix.os, 'ubuntu')
-        && steps.coq-cache.outputs.cache-hit != 'true'
-      run: |
-        sudo apt-get install -y opam
-        opam --version
-        git clone https://github.com/coq/coq /tmp/coq
-        cd /tmp/coq
-        git checkout ${{ env.coq-version }}
-        ./configure -prefix=$HOME/bin/coq/${{ env.coq-version }}
-        make && make install
-
     - name: coq version
-      run: |
-        ${{ env.coqtop-path }} --version
+      run: ${{ env.coqtop-path }} --version
 
-    - uses: actions/checkout@v1
+    # checkout
+    - uses: actions/checkout@v2
 
+    # test
     - name: vim test
       timeout-minutes: 6
       run: |
         export PATH="$PATH:${{ env.coq-dir }}"
-        vim -u ./test/test.vimrc
+        vim --not-a-term -u ./test/test.vimrc
+  # }}}
 
