@@ -16,7 +16,7 @@ function! s:CoqTopHandler.new(args = []) abort
   let new = deepcopy(self)
   call new.restart(a:args)
 
-  let new.trying_to_run = 0
+  let new.trying_to_run = 1
 
   let new.info = {...->0}
   let new.add_axiom = {...->0}
@@ -43,8 +43,6 @@ function! s:CoqTopHandler.restart(args = []) abort
   let self.waiting = v:null
   let self.abandon = 0
   let self.tip = -1
-
-  let self.trying_to_run = 1
 
   call coquille#coqtop#get_executable(self._make_restart_next(a:args))
 endfunction
@@ -78,10 +76,10 @@ function! s:CoqTopHandler._make_restart_next(args) abort
     let job_options.err_cb = self._err_cb
     let job_options.exit_cb = self._exit_cb
 
+    let self.trying_to_run = 0
     let self.job = job_start(a:cmd, job_options)
 
     let self.expected_running = 1
-    let self.trying_to_run = 0
 
     if !self.running()
       echoerr
@@ -104,11 +102,6 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
   if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
 
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
-
-  " TODO : FOR DEBUG
-  let g:mymes += ["got!!"]
-  let g:mymes += [a:msg]
-  let g:gxml = xml
 
   for value in xml.findAll('value')
     exe s:assert('self.abandon >= 0')
@@ -217,11 +210,6 @@ function! s:CoqTopHandler._check_call_queue() abort
 
   let [l:Msg_func, l:Callback] = remove(self.call_queue, 0)
   let msg = l:Msg_func(self.tip)
-
-
-  " TODO : FOR DEBUG
-  let g:mymes += ["send!!"]
-  let g:mymes += [msg]
 
 
   let self.waiting = l:Callback

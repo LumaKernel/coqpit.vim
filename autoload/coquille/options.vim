@@ -14,7 +14,7 @@ function! s:config(name, default = v:null, no_define_default = 0, scopes = ['b',
         return eval(scope .. ':coquille_' .. a:name)
       endif
     endfor
-    if default2 isnot v:null
+    if a:default2 isnot v:null
       return a:default2
     endif
     return a:default
