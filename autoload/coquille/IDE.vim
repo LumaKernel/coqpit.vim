@@ -200,7 +200,7 @@ function! s:IDE._info(state_id, level, msg, loc) abort
     exe s:assert('mes_range[1] isnot v:null')
 
     if a:level == "error"
-      call self._shrink_to(spos, v:none, 0)
+      call self._shrink_to(spos, v:null, 0)
       call add(self.hls, ["error", mes_range])
     elseif a:level == "warning"
       call add(self.hls, ["warning", mes_range])
@@ -231,7 +231,7 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
 
     let [spos, epos] = range
 
-    call self._shrink_to(epos, v:none, 0)
+    call self._shrink_to(epos, v:null, 0)
     let self.queue = []
 
     if a:err_loc isnot v:null

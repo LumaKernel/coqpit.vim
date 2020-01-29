@@ -23,7 +23,7 @@ function! s:config(name, default = v:null, no_define_default = 0, scopes = ['b',
   let g:['coquille#options#' .. a:name] = l:getter
 endfunction
 
-call s:config('coq_executable', v:none, 1)
+call s:config('coq_executable', v:null, 1)
 
 call s:config('auto_move', 0)
 call s:config('cursor_ceiling', 1)
@@ -31,7 +31,7 @@ call s:config('show_goal_always', 0)
 call s:config('update_status_always', 1)
 
 call s:config('no_define_commands', 0)
-call s:config('one_window', 0, v:none, ['t', 'g'])
+call s:config('one_window', 0, v:null, ['t', 'g'])
 call s:config('auto_launch', 1)
 call s:config('auto_launch_args', [])
 

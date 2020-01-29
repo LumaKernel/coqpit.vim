@@ -7,4 +7,3 @@ augroup coquille_colorscheme
   autocmd ColorScheme * :call coquille#color#defineColorScheme()
 augroup END
 
-
