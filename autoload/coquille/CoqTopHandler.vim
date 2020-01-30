@@ -515,9 +515,7 @@ function! s:CoqTopHandler._make_after_query(callback) abort
     let state_id = a:value.find('state_id')->get('attr', {})->get('val', -1)
     if a:value.attr.val ==# 'good'
       call a:callback(0, '', state_id, v:null,
-        \   a:value.find('string')
-        \   ->get('child', {})
-        \   ->get(0, '')
+        \   get(get(a:value.find('string'), 'child', {}), 0, '')
         \ )
     else
       let attr = a:value.attr
