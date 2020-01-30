@@ -21,7 +21,7 @@ In this file shows how to reset and reinstall the vital plugins.
 
 
 ```
-:Vitalize . --name=coquille Vim.PowerAssert Web.XML Async.Promise
+:Vitalize . --name=coquille Vim.PowerAssert Web.XML Async.Promise Vital.Random
 ```
 
 
