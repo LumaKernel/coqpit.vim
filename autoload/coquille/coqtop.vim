@@ -95,7 +95,7 @@ function! s:is_executable(cmd, callback) abort
   endfunction
 
   function! job_options.exit_cb(exit_status) abort closure
-    call a:callback(0, 'Unexpected exit : ' .. exit_status)
+    call a:callback(0, 'Unexpected exit : ' .. a:exit_status)
   endfunction
 
   let job_options.out_cb = function(job_options.out_cb, job_options)

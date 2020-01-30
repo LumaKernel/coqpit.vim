@@ -25,7 +25,7 @@ let s:check_values = [
       \   "exists('*nvim_create_namespace')",
       \   "exists('*nvim_buf_add_highlight')",
       \   "--",
-      \   "executable('coqide')",
+      \   "executable('coqtop')",
       \   "executable('coqidetop')",
       \   "--",
       \ ]
