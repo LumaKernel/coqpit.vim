@@ -2,15 +2,16 @@
 
 ![](https://github.com/lumakernel/coquille/workflows/GitHub%20Actions%20CI/badge.svg)
 
+Coquille brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
 
-Coquille is a vim plugin aiming to bring the interactivity of CoqIDE into your
-favorite editor.
+This repository is fork of [the-lambda-church/coquille](https://github.com/the-lambda-church/coquille).
+
 
 ## Dependencies
 
-Only Vim and [Coq](https://github.com/coq/coq/releases).
+Only Vim ( or Neovim ) and [Coq](https://github.com/coq/coq/releases).
 
-- Vim 8.1 or above ( `has('patch-8.1.1310')`, `+job`, `+lambda`, etc; recommend you `+huge` )
+- Vim 8.0 or above or Neovim"TODO version" ( `+job/has('nvim')`, `+lambda`, etc; recommend you `+huge` )
 - Coq 8.6 or above. Checked versions below.
   - Coq8.5pl3
   - Coq8.6
@@ -32,8 +33,21 @@ Add following to your toml file.
 ```toml
 [[plugins]]
 repo = "LumaKernel/coquille"
-on_ft = "coq"
 ```
+
+## Specifying coq executable
+
+By default, coq will check the command `coqidetop`
+followed by checking `coqtop`.
+
+However, if you want to use a specific version or executable,
+set variable `g:coquille_coq_executable` in your `.vimrc` .
+
+Typically, you should specify `{CoqInstallPath}/bin/coqidetop`
+or `{CoqInstallPath}/bin/coqtop` for old versions.
+
+
+To learn more flexible options, see `:help coquille-options` .
 
 
 ## Getting started
@@ -115,21 +129,6 @@ hi CoqMarkedError  ctermbg=160
 hi CoqCheckedError ctermbg=160
 ```
 
-## Specifying coq executable
-
-By default, coq will check the command `coqidetop`
-followed by checking `coqtop`.
-
-However, if you want to use a specific version or executable,
-set variable `g:coquille_coq_executable` in your `.vimrc` .
-
-Typically, you should specify `{CoqInstallPath}/bin/coqidetop`
-or `{CoqInstallPath}/bin/coqtop` for old versions.
-
-
-To learn more flexible options, see `:help coquille-options` .
-
-
 ## Customize window locations
 
 1. Make your own Rearrange command.
@@ -174,8 +173,6 @@ let g:coquille_coq_executable = '/c/Coq8.10/bin/coqidetop'
 
 ## Screenshoots
 
-Because pictures are always the best sellers :
-
 ![Coquille use at win32unix with multiple buffers](https://user-images.githubusercontent.com/29811106/71498345-59386280-289f-11ea-9018-2babde26ca82.png)
 
 ![Coquille use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
@@ -184,10 +181,9 @@ Because pictures are always the best sellers :
 ## Known Issues
 
 - With configure `g:coquille_update_status_always` to `0`, [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
-  - I recommend you not change this option. By default, working fine.
-- Somehow, vim which `has('win32unix')` works faster than one which `has('win32')`
-  - Not so critical.
+  - I recommend you NOT change this option. By default, working fine.
 - If you use too many memory, coquille fails with like an error message `Error: Out of memory`.
+  - Refrain from using in unstable environment.
 
 
 ## License

@@ -1116,7 +1116,7 @@ endfunction
 
 " pos_le(pos1, pos2, eq=1)
 function! s:pos_le(pos1, pos2, ...) abort
-  if !(a:0 && a:1)
+  if a:0 && !a:1
     return s:pos_lt(a:pos1, a:pos2)
   endif
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] <= a:pos2[1]

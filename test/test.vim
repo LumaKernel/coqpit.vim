@@ -2,8 +2,8 @@
 
 " version check
 
-if v:version < 801 || !has('patch-8.1.1310')
-  silent! exe '!echo ' . shellescape('Use vim version 8.1.1310 or above', 1)
+if v:version < 800
+  silent! exe '!echo ' . shellescape('Use Vim version 8.0 or above, or Neovim', 1)
   cq!
 endif
 
