@@ -15,12 +15,13 @@ Not easy ones.
   - [ ] `rerun after compile`
 - [ ] Jump to Axiom
   - Sounds good for rewriting `admit.`
-- [ ] Setting by Global Variables
+- [ ] Coq setting (not coquille) by Global Vim Variables
   - Hm, it's nasty... make just a function to configure.
 - [ ] Query command
   - simply, one command ?
   - prompt buffer ?
   - or using other plugin ?
+  - `prompt()` ?
 - [ ] Vim diff
 
 - [ ] Write with Promise for future developers.
@@ -28,6 +29,7 @@ Not easy ones.
 
 ## Not clear about CoqTop
 
-- Arguments `editId` and `verbose` for `Add` command.
-- Arguments `routeID` for `Query` command.
+- [ ] Arguments `editId` and `verbose` for `Add` command.
+- [ ] Arguments `routeID` for `Query` command.
+- [ ] `-async-proof on` option. It's buggy with Neovim.
 
