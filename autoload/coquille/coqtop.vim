@@ -102,7 +102,12 @@ function! s:is_executable(cmd, callback) abort
   let job_options.err_cb = function(job_options.err_cb, job_options)
   let job_options.exit_cb = function(job_options.exit_cb, job_options)
 
-  let job = s:job_start(a:cmd, job_options)
+  try
+    let job = s:job_start(a:cmd, job_options)
+  catch /.*/
+    call a:callback(0, 'Fail to start job : ' .. v:exception)
+    return
+  endtry
   if s:job_status(job) ==# 'fail'
     call a:callback(0, '')
     return
