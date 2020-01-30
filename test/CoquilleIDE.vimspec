@@ -60,7 +60,7 @@ Describe CoquilleIDE
           Assert Equals(last_position, [218, 11])
         elseif minor == 10
           Assert Equals(sen, 256)
-          Assert Equals(last_position, [253, 4])
+          Assert Equals(last_position, [254, 4])
         elseif minor == 6
           Assert Equals(sen, 160)
           Assert Equals(last_position, [152, 65])
@@ -91,7 +91,7 @@ Describe CoquilleIDE
           Assert Equals(last_position, [217, 17])
         elseif minor == 10
           Assert Equals(sen, 255)
-          Assert Equals(last_position, [252, 10])
+          Assert Equals(last_position, [253, 10])
         elseif minor == 6
           Assert Equals(sen, 159)
           Assert Equals(last_position, [152, 54])
