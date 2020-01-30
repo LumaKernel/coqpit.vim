@@ -3,9 +3,7 @@ name: GitHub Actions CI
 on:
   push:
       branches:
-      - master
-      - release*
-      - develop*
+      - nothing
 
 
 jobs:
