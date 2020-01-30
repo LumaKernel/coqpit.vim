@@ -1,0 +1,95 @@
+set encoding=utf-8
+
+try
+  language message C
+catch
+endtry
+set helplang=en
+filetype plugin on
+
+let s:assert = themis#helper('assert')
+call themis#option('recursive', 1)
+call themis#option('reporter', 'spec')
+call themis#helper('command').with(s:assert)
+
+let s:check_values = [
+      \   "--",
+      \   "has('nvim')",
+      \   "v:version",
+      \   "--",
+      \   "has('job')",
+      \   "has('lambda')",
+      \   "exists('*job_start')",
+      \   "exists('*jobstart')",
+      \   "exists('*matchaddpos')",
+      \   "exists('*nvim_create_namespace')",
+      \   "exists('*nvim_buf_add_highlight')",
+      \   "--",
+      \   "executable('coqide')",
+      \   "executable('coqidetop')",
+      \   "--",
+      \ ]
+
+
+" {{{
+function! s:repeat(str, n)
+  return join(map(range(a:n + 1), '""'), a:str)
+endfunction
+
+let s:maxlen = max(map(copy(s:check_values), 'len(v:val)'))
+for s:vals in s:check_values
+  if s:vals ==# '--'
+    call themis#log('------------------------------------------')
+  else
+    call themis#log(s:vals . ':' . s:repeat(' ', s:maxlen + 4 - len(s:vals)) . '%s', eval(s:vals))
+  endif
+endfor
+" }}}
+
+
+" -- Promise
+let g:Promise = vital#coquille#import('Async.Promise')
+
+function! g:Wait(ms)
+  return g:Promise.new({resolve -> timer_start(a:ms, resolve)})
+endfunction
+
+function! g:Next_tick()
+  return g:Wait(0)
+endfunction
+
+" timeout [sec]
+function! g:WaitForEnd(func, timeout) abort
+  let l:o = {}
+  let l:resolved = 0
+  let l:errormsg = 0
+
+  function! l:o.Resolve() closure
+    let l:resolved = 1
+  endfunction
+
+  function! l:o.Reject(errmsg) closure
+     let l:errormsg = a:errmsg
+  endfunction
+
+  let l:id = timer_start(1000 * a:timeout, {->0})
+
+  sleep 10ms
+  while 1
+    if !len(timer_info(l:id)) | let l:errormsg = 'Timeout' | endif
+    if l:errormsg isnot 0 | throw l:errormsg | endif
+    call a:func(l:o.Resolve, l:o.Reject)
+    if l:resolved | return | endif
+    sleep 100ms
+  endwhile
+endfunction
+
+
+" -- Debug mode
+let g:__vital_power_assert_config = {
+  \   '__debug__': 1
+  \ }
+
+" " -- Assert Functions
+" let s:assert = themis#helper('assert')
+" call themis#helper('command').with(s:assert)

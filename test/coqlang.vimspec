@@ -1,0 +1,95 @@
+scriptencoding utf-8 
+
+Describe coqlang# < The Library for Coq as language >
+  It skips comment
+    Assert Equals(coqlang#skip_comment(["hi (**) ."], [0, 0], 0), [0, 0])
+    Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 0], 0), [0, 0])
+    Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 3]), [0, 6])
+    Assert Equals(coqlang#skip_comment([" (* ", "(*", "*)*)--"], [0, 3]), [2, 4])
+    Assert Equals(coqlang#skip_comment([' (* " "" *) "" " *) hello'], [0, 3]), [0, 19])
+    Assert Same(coqlang#skip_comment(['(**', ')'], [0, 2]), v:null)
+    Assert Same(coqlang#skip_comment(['(**', '(*', '*)'], [0, 2]), v:null)
+  End
+
+  It skips string
+    Assert Equals(coqlang#skip_string(['" "yo.'], [0, 1]), [0, 3])
+    Assert Equals(coqlang#skip_string([' " ""', ' "" " hi'], [0, 2]), [1, 5])
+    Assert Equals(coqlang#skip_string(['""'], [0, 1]), [0, 2])
+    Assert Same(coqlang#skip_string(['"'], [0, 1]), v:null)
+    Assert Equals(coqlang#skip_string(['"', '"'], [0, 1]), [1, 1])
+    Assert Same(coqlang#skip_string(['"""', '""'], [0, 1]), v:null)
+  End
+  
+  It searches next pattern
+    Assert Equals(coqlang#next_pattern(["Hi."], [0, 0], g:coqlang#DOT), [0, 3])
+    Assert Equals(coqlang#next_pattern(["Hi (* yay.. *)", ' " *) hi" .'], [0, 3], g:coqlang#DOT), [1, 11])
+    Assert Equals(coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], g:coqlang#DOT), [2, 3])
+    Assert Equals(coqlang#next_pattern(['', "Compute 1."], [0, 0], g:coqlang#DOT), [1, 10])
+    Assert Equals(coqlang#next_pattern(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2], g:coqlang#DOT), [3, 6])
+  End
+
+  It searches next end of one sentence
+    Assert Equals(coqlang#next_sentence(["hi."], [0, 0]), [0, 3])
+    Assert Equals(coqlang#next_sentence(["ya.", "", "hi. x", "wo."], [0, 3]), [2, 3])
+    Assert Equals(coqlang#next_sentence(["hi.hey."], [0, 0]), [0, 7])
+    Assert Equals(coqlang#next_sentence(["hi.\they."], [0, 0]), [0, 3])
+    Assert Equals(coqlang#next_sentence(["hi.","hey."], [0, 0]), [0, 3])
+    Assert Equals(coqlang#next_sentence(["hi.(**)hey."], [0, 0]), [0, 11])
+    Assert Equals(coqlang#next_sentence([" hello."], [0, 0]), [0, 7])
+    Assert Equals(coqlang#next_sentence(["(* oh... *)","--."], [0, 0]), [1, 2])
+    Assert Equals(coqlang#next_sentence(["Axiom A.", "Variable B:Prob."], [0, 0]), [0, 8])
+    Assert Equals(coqlang#next_sentence(["", "Axiom A.", "Variable B:Prob."], [0, 0]), [1, 8])
+    Assert Equals(coqlang#next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]), [2, 8])
+    Assert Equals(coqlang#next_sentence(["-", "Axiom A.", "Variable B:Prob."], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(["-", "Axiom A.", "Variable B:Prob."], [1, 0]), [1, 8])
+    Assert Equals(coqlang#next_sentence(["ya.", "", "Axiom A.", "Variable B:Prob."], [0, 3]), [2, 8])
+    Assert Equals(coqlang#next_sentence(['', "Compute 1."], [0, 0]), [1, 10])
+    Assert Equals(coqlang#next_sentence(['(*  *)', "Compute 1."], [0, 0]), [1, 10])
+    Assert Equals(coqlang#next_sentence(['(* "*)" *)', "Compute 1."], [0, 0]), [1, 10])
+    Assert Equals(coqlang#next_sentence(['(**){(**)'], [0, 0]), [0, 5])
+    Assert Equals(coqlang#next_sentence(['(**)}(**)'], [0, 0]), [0, 5])
+    Assert Equals(coqlang#next_sentence(['{simpl.'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['{-'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['-{'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['}simpl.'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['}-'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['-}'], [0, 0]), [0, 1])
+    Assert Equals(coqlang#next_sentence(['--}'], [0, 0]), [0, 2])
+    Assert Equals(coqlang#next_sentence(['(**)[a]:{simpl.'], [0, 0]), [0, 9])
+
+    Assert Equals(coqlang#next_sentence(['(**)[fooわおbar]:{simpl.'], [0, 0]), [0, 20])
+    Assert Equals(coqlang#next_sentence(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]), [2, 3])
+    
+    Assert Equals(coqlang#next_sentence(['A.', '', 'C. D. (* *)', 'E.'], [0, 2]), [2, 2])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'C. D. (* *)', 'E.'], [0, 2]), [3, 2])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'C x. D. (* *)', 'E.'], [0, 2]), [3, 4])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'C. D. (* *)', '', 'E.'], [0, 2]), [3, 2])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'C x. D. (* *)', '', 'E.'], [0, 2]), [3, 4])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'CC . DD. (* *)', '', 'E.'], [0, 2]), [3, 4])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'CC x. (* *)', '', 'E.'], [0, 2]), [3, 5])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'CC x. D. (* *)', '', 'E.'], [0, 2]), [3, 5])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'CC x. DD. (* *)', '', 'E.'], [0, 2]), [3, 5])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2]), [3, 6])
+    Assert Equals(coqlang#next_sentence(['A.', '', '', 'Goal True. Admitted. (* *)', '', 'E.'], [0, 2]), [3, 10])
+
+    Assert Equals(coqlang#next_sentence(['[nyan] : foo.', '{'], [0, 0]), [0, 13])
+    Assert Equals(coqlang#next_sentence(['[nyan] : {foo. }'], [0, 0]), [0, 10])
+    Assert Equals(coqlang#next_sentence(['[nyan] : { }'], [0, 0]), [0, 10])
+
+    for el in [
+       \ '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:', 
+       \ '1:', '1 : ', '123(**):(**)',
+       \ '']
+      Assert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'admit. {  }'], [0, 0]), [0, 6 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine (f _).'], [0, 0]), [0, 13 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine ({ _ ).'], [0, 0]), [0, 14 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine (:{ _ ).'], [0, 0]), [0, 15 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine (1:{ _ ).'], [0, 0]), [0, 16 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine (a:{ _ ).'], [0, 0]), [0, 16 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine ([a:{ _ ).'], [0, 0]), [0, 17 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine (a]:{ _ ).'], [0, 0]), [0, 17 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . 'refine ([a]:{ _ ).'], [0, 0]), [0, 18 + strlen(el)])
+    endfor
+  End
+End

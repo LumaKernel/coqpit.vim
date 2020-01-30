@@ -1,0 +1,12 @@
+
+
+Describe color#
+  Before all
+    let funcs = themis#helper('scope').funcs('autoload/coquille/color.vim')
+  End
+  It converts color between hex and tuple<int, int, int>
+    Assert Equals(funcs.toTuple("#ABCDEF"), [171, 205, 239])
+    Assert True(funcs.toString([171, 205, 239]) ==? "#abcdef")
+    Assert Equals(funcs.col_mult([171, 205, 239], [1.02, 100, 0.01]), [174, 255, 2])
+  End
+End

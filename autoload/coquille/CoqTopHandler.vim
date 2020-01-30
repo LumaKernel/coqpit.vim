@@ -77,10 +77,10 @@ function! s:CoqTopHandler._make_restart_next(args) abort
       return
     endif
 
-    let coq_version = a:data
+    let self.coq_version = a:data
 
-    if !g:coquille#options#get('silent')
-      echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. coq_version .. ' started running.'
+    if !g:coquille#options#get('silent') >= 1
+      echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. self.coq_version .. ' started running.'
     endif
 
     let job_options = {}
@@ -123,12 +123,15 @@ function! s:CoqTopHandler._out_cb(msg) abort
       continue
     endif
 
-    exe s:assert('self.waiting isnot v:null')
+    " This was happend in Rough test
+    " exe s:assert('self.waiting isnot v:null')
 
     let l:Callback = self.waiting
     let self.waiting = v:null
 
-    call l:Callback(value)
+    if l:Callback isnot v:null
+      call l:Callback(value)
+    endif
 
     for l:Callback in self.after_callback_list
       call l:Callback()

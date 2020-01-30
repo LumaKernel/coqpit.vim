@@ -1,8 +1,9 @@
 coquille
-9d093e2bd7d6edd6f7d73ce09836400e71987d03
+b8641ed90604ae5c36273b1e4c24866a24aa3c25
 
 Vim.PowerAssert
 Web.XML
 Async.Promise
 Vim.SafeString
 Vim.VimlCompiler
+Random

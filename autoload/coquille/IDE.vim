@@ -66,7 +66,6 @@ function! s:IDE.restart() abort
   " first is for internal, second is for apparence
   let self.queue = []
   let self.queueing = 0
-:w
 
   " resulted by coqtop
   let self.state_id_list = []
@@ -260,7 +259,7 @@ function! s:IDE._goal(state_id, is_err, msg, err_loc) abort
       let self.info_message += split(a:msg, "\n")
     endif
   else
-    if a:msg isnot v:null
+    if a:msg isnot v:null && !empty(a:msg)
       " a:msg is xml
       let self.goal_message = coquille#goals#xml2strs(a:msg)
     endif
@@ -528,7 +527,7 @@ function! s:IDE.getContent(...) abort
   endif
 
   if type(l:range) == v:t_number
-    return getbufline(self.handling_bufnr, l:range + 1)[0]
+    return get(getbufline(self.handling_bufnr, l:range + 1), 0, '')
   endif
 
   let [spos, epos] = l:range
@@ -1153,21 +1152,3 @@ function! coquille#IDE#new(...) abort
   return call(s:IDE.new, a:000)
 endfunction
 
-
-" test {{{
-
-function! coquille#IDE#Test()
-  exe g:PAssert('s:pos_lt([0, 1], [0, 2])')
-  exe g:PAssert('!s:pos_lt([0, 2], [0, 1])')
-  exe g:PAssert('!s:pos_lt([0, 2], [0, 2])')
-  exe g:PAssert('s:pos_lt([1, 2], [3, 4])')
-  exe g:PAssert('!s:pos_lt([3, 3], [2, 2])')
-
-  exe g:PAssert('s:pos_le([0, 1], [0, 2])')
-  exe g:PAssert('!s:pos_le([0, 2], [0, 1])')
-  exe g:PAssert('s:pos_le([0, 2], [0, 2])')
-  exe g:PAssert('s:pos_le([1, 2], [3, 4])')
-  exe g:PAssert('!s:pos_le([3, 3], [2, 2])')
-endfunction
-
-" }}}

@@ -1,0 +1,203 @@
+
+Describe CoquilleIDE
+  Before all
+    new
+  End
+  After all
+    %bwipeout!
+  End
+
+  Context Basic usage with eg_proof_handling.v
+    It completes
+      set buftype=nofile
+      exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
+      set filetype=coq
+
+      " ---- CoqLaunch
+
+      CoqLaunch
+      call coquille#check_running()
+      Assert Truthy(exists('b:coquilleIDE'))
+      Assert Truthy(exists('b:coquilleIDE.coqtop_handler'))
+
+
+      function! s:wait(resolve, reject)
+        call coquille#check_running()
+        if exists('b:coquilleIDE.coqtop_handler.coq_version')
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 10)
+
+
+      let coq_version = b:coquilleIDE.coqtop_handler.coq_version
+      Assert Match(coq_version, '^\d\+\.\d\+')
+      call themis#log('      - coqtop version: ' .. coq_version)
+      let major = str2nr(matchlist(coq_version, '^\(\d\+\)\.\d\+')[1])
+      let minor = str2nr(matchlist(coq_version, '^\d\+\.\(\d\+\)')[1])
+
+
+      " ---- CoqToLast
+
+      CoqToLast
+
+      function! s:wait(resolve, reject)
+        call coquille#check_running()
+        if len(b:coquilleIDE.queue) == 0
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 90)
+
+
+      let sen = len(b:coquilleIDE.sentence_end_pos_list)
+      Assert Compare(sen, '>', 0)
+      let last_position = b:coquilleIDE.sentence_end_pos_list[-1]
+
+      if major == 8
+        if minor >= 11
+          Assert Equals(sen, 228)
+          Assert Equals(last_position, [218, 11])
+        elseif minor == 10
+          Assert Equals(sen, 256)
+          Assert Equals(last_position, [253, 4])
+        elseif minor == 6
+          Assert Equals(sen, 160)
+          Assert Equals(last_position, [152, 65])
+        endif
+      endif
+
+
+      " ---- CoqBack
+
+      CoqBack
+
+      function! s:wait(resolve, reject)
+        call coquille#check_running()
+        if len(b:coquilleIDE.queue) == 0
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 20)
+
+      let sen = len(b:coquilleIDE.sentence_end_pos_list)
+      Assert Compare(sen, '>', 0)
+      let last_position = b:coquilleIDE.sentence_end_pos_list[-1]
+
+
+      if major == 8
+        if minor >= 11
+          Assert Equals(sen, 227)
+          Assert Equals(last_position, [217, 17])
+        elseif minor == 10
+          Assert Equals(sen, 255)
+          Assert Equals(last_position, [252, 10])
+        elseif minor == 6
+          Assert Equals(sen, 159)
+          Assert Equals(last_position, [152, 54])
+        endif
+      endif
+
+
+      " ---- CoqToCursor
+
+      call cursor([14, 4])
+      CoqToCursor
+
+      function! s:wait(resolve, reject)
+        call coquille#check_running()
+        if len(b:coquilleIDE.queue) == 0
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 20)
+
+
+      let sen = len(b:coquilleIDE.sentence_end_pos_list)
+      Assert Compare(sen, '>', 0)
+      let last_position = b:coquilleIDE.sentence_end_pos_list[-1]
+
+      Assert Equals(sen, 10)
+      Assert Equals(last_position, [14, 10])
+
+
+      " ---- CoqStopAll
+      CoqStopAll
+
+      function! s:wait(resolve, reject)
+        if b:coquilleIDE.dead()
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 20)
+
+    End
+  End
+
+  Context Rough usage reproduced by random with nasty_notations.v
+    It completes
+      exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
+      set filetype=coq
+
+      let Random = vital#coquille#import('Random')
+      let seed = Random.next()
+      let R = Random.new('', seed)
+      call themis#log('      - seed : ' .. seed)
+
+      CoqLaunch
+
+      for cnt in range(30)
+        let l:move = R.range(1, 4)
+
+        if l:move == 1      " CoqToCursor
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          CoqToCursor
+        elseif l:move == 2  " CoqBack
+          for i in range(R.range(1, 5))
+            CoqBack
+          endfor
+        elseif l:move == 3  " CoqNext
+          for i in range(R.range(1, 5))
+            CoqBack
+          endfor
+        elseif l:move == 4  " Insert
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          exe "normal! o(* foo *)\<ESC>"
+        elseif l:move == 5  " Insert
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          exe "normal! iあいうえお......\<ESC>"
+        endif
+
+        let l:wait_sec = R.range(0, 2)
+
+        if l:wait_sec
+          exe 'sleep' l:wait_sec
+        endif
+
+        call coquille#check_running()
+        
+      endfor
+
+
+      " ---- CoqStopAll
+      CoqStopAll
+
+      function! s:wait(resolve, reject)
+        if b:coquilleIDE.dead()
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 20)
+    End
+  End
+End
+

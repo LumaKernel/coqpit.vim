@@ -57,15 +57,3 @@ function! coquille#annotate#is_ending(content, pos)
   return now_pos isnot v:null
 endfunction
 
-
-function! coquille#annotate#Test()
-  PAssert coquille#annotate#associate('', ['bar.'], [0, 0]) == [0, 0]
-  PAssert coquille#annotate#associate('a b c .', ['a (* *)','bc .'], [0, 0]) == [1, 4]
-  PAssert coquille#annotate#associate('a b c .', ['a (**)','(* *) bc .', 'wow.'], [0, 0]) == [1, 10]
-  PAssert coquille#annotate#associate('abc.', ['a (*foo*)','(* *) bc . foo', '.'], [0, 0]) == [1, 10]
-  PAssert coquille#annotate#associate('abc "efg".', ['abc (**) "efg"', '','(* *) . hi.'], [0, 0]) == [2, 7]
-  PAssert coquille#annotate#associate('abc " e fg".', ['abc (**) " e fg"', '','(* *) .  (* *)'], [0, 0]) == [2, 7]
-  PAssert coquille#annotate#associate('abc " e (*fg".', ['abc (**) " e (*fg"', '','(* *) .', '', ''], [0, 0]) == [2, 7]
-endfunction
-
-
