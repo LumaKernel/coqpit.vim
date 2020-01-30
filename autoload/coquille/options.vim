@@ -1,23 +1,37 @@
 
-function! s:config(name, default = v:null, no_define_default = 0, scopes = ['b', 'g']) abort
-  if !a:no_define_default
+let s:start = function('coquille#util#argsetup')
+let s:get = function('coquille#util#argget')
+let s:end = function('coquille#util#argend')
+
+function! s:config(name, ...) abort
+  call s:start(a:000)
+  let l:default = s:get(v:null)
+  let l:no_define_default = s:get(0)
+  let l:scopes = s:get(['b', 'g'])
+  call s:end()
+
+  if !l:no_define_default
     if !exists('g:coquille_' .. a:name)
-      let g:['coquille_' .. a:name] = a:default
+      let g:['coquille_' .. a:name] = l:default
     endif
   endif
 
   let l:getter = {}
 
-  function! l:getter.get(default2 = v:null) abort closure
-    for scope in a:scopes
+  function! l:getter.get(...) abort closure
+    call s:start(a:000)
+    let l:default2 = s:get(v:null)
+    call s:end()
+
+    for scope in l:scopes
       if exists(scope .. ':coquille_' .. a:name)
         return eval(scope .. ':coquille_' .. a:name)
       endif
     endfor
-    if a:default2 isnot v:null
-      return a:default2
+    if l:default2 isnot v:null
+      return l:default2
     endif
-    return a:default
+    return l:default
   endfunction
 
   let g:['coquille#options#' .. a:name] = l:getter

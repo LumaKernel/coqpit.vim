@@ -5,6 +5,14 @@
 " This is not strict Coq syntax analyzer.
 " This makes just expections for good experience.
 
+
+
+let s:start = function('coquille#util#argsetup')
+let s:get = function('coquille#util#argget')
+let s:end = function('coquille#util#argend')
+
+
+
 " - patterns
 
 let g:coqlang#COMMENT_START = '(\*'
@@ -201,9 +209,13 @@ endfunction
 " nested = 1 : int
 "
 " return Pos | null
-" skip_comment(content, from_pos, nested) {{{
-function! coqlang#skip_comment(content, from_pos, nested = 1) abort
-  if a:nested == 0
+" skip_comment(content, from_pos, nested = 1) {{{
+function! coqlang#skip_comment(content, from_pos, ...) abort
+  call s:start(a:000)
+  let l:nested = s:get(1)
+  call s:end()
+
+  if l:nested == 0
     return a:from_pos
   endif
 
@@ -227,18 +239,18 @@ function! coqlang#skip_comment(content, from_pos, nested = 1) abort
       let col += token[0]
       if token[1] == 0
         " comment start (*
-        return coqlang#skip_comment(a:content, [line, col + 2], a:nested + 1)
+        return coqlang#skip_comment(a:content, [line, col + 2], l:nested + 1)
       elseif token[1] == 1
         " comment end *)
-        return coqlang#skip_comment(a:content, [line, col + 2], a:nested - 1)
+        return coqlang#skip_comment(a:content, [line, col + 2], l:nested - 1)
       elseif token[1] == 2
         " string start "
         let pos = coqlang#skip_string(a:content, [line, col + 1])
-        return coqlang#skip_comment(a:content, pos, a:nested)
+        return coqlang#skip_comment(a:content, pos, l:nested)
       endif
     endif
   endfor
-  return coqlang#skip_comment(a:content, [line + 1, 0], a:nested)
+  return coqlang#skip_comment(a:content, [line + 1, 0], l:nested)
 endfunction  " }}}
 
 

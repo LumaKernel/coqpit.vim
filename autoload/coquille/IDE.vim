@@ -5,6 +5,10 @@
 let s:PowerAssert = vital#coquille#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
 
+let s:start = function('coquille#util#argsetup')
+let s:get = function('coquille#util#argget')
+let s:end = function('coquille#util#argend')
+
 let s:IDE = {}
 let s:bufnr_to_IDE = {}
 
@@ -13,7 +17,11 @@ function! s:getIDE_by_bufnr(bufnr) abort
 endfunction
 
 " IDE.new {{{
-function! s:IDE.new(bufnr, args = []) abort
+function! s:IDE.new(bufnr, ...) abort
+  call s:start(a:000)
+  let l:args = s:get([])
+  call s:end()
+
   let new = deepcopy(self)
   " TODO : Use args
 
@@ -22,7 +30,7 @@ function! s:IDE.new(bufnr, args = []) abort
   let new.GoalBuffers = []
   let new.InfoBuffers = []
 
-  let new.coqtop_handler = coquille#CoqTopHandler#new(a:args)
+  let new.coqtop_handler = coquille#CoqTopHandler#new(l:args)
 
   call new.coqtop_handler.set_info_callback(new._info)
   call new.coqtop_handler.set_add_axiom_callback(new._add_axiom)
@@ -295,7 +303,12 @@ endfunction
 "
 " return [bool] updated
 " _shrink_to(pos, ceil=0, shrink_errors=1) {{{
-function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
+function! s:IDE._shrink_to(pos, ...) abort
+  call s:start(a:000)
+  let l:ceil = s:get(0)
+  let l:shrink_errors = s:get(1)
+  call s:end()
+
   if a:pos is v:null
     return 0
   endif
@@ -315,7 +328,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
     let updated += 1
   endwhile
 
-  if a:ceil && last[0] != -1 && last[1] != a:pos
+  if l:ceil && last[0] != -1 && last[1] != a:pos
     let updated -= 1
     if last[0] == 0
       call add(self.queue, last[1])
@@ -326,7 +339,7 @@ function! s:IDE._shrink_to(pos, ceil=0, shrink_errors=1) abort
 
   for i in reverse(range(len(self.hls)))
     if s:pos_le(get(self.sentence_end_pos_list, -1, [0, 0]), self.hls[i][1][0])
-      if a:shrink_errors || self.hls[i][0] == 'axiom'
+      if l:shrink_errors || self.hls[i][0] == 'axiom'
         call remove(self.hls, i)
       endif
     endif
@@ -450,7 +463,7 @@ function! s:IDE._check_queue() abort
 
   if g:coquille#options#update_status_always.get()
     if self.last_status_check != self.state_id_list[-1]
-      call self.coqtop_handler.status(v:none, self._status)
+      call self.coqtop_handler.status(v:null, self._status)
       return
     endif
   endif
@@ -497,12 +510,16 @@ endfunction
 " range : Range | null
 "
 " return [string]
-function! s:IDE.getContent(range = v:null) abort
-  if a:range is v:null
+function! s:IDE.getContent(...) abort
+  call s:start(a:000)
+  let l:range = s:get(v:null)
+  call s:end()
+
+  if l:range is v:null
     return getbufline(self.handling_bufnr, 1, '$')
   endif
 
-  let [spos, epos] = a:range
+  let [spos, epos] = l:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
 
@@ -546,8 +563,8 @@ function! s:IDE.recolor() abort
   for win_id in win_findbuf(self.handling_bufnr)
     let match_opt = {'window' : win_id}
     let priority = -30
-    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], priority, v:none, match_opt)
-    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], priority, v:none, match_opt)
+    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], priority, v:null, match_opt)
+    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], priority, v:null, match_opt)
 
     for [level, range] in self.hls
       " sweep error and warnings appearing after the top in advance
@@ -562,7 +579,7 @@ function! s:IDE.recolor() abort
         let group = 'CoqCheckedAxiom'
         let priority = -20
       endif
-      let self.colored += s:matchaddrange(maxlen, group, range, priority, v:none, match_opt)
+      let self.colored += s:matchaddrange(maxlen, group, range, priority, v:null, match_opt)
     endfor
   endfor
 endfunction
@@ -615,7 +632,7 @@ function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
 
     if a:is_err
       let self.queueing = 0
-      call self._shrink_to(a:spos, v:none, 0)
+      call self._shrink_to(a:spos, v:null, 0)
       let self.queue = []
 
       if a:err_loc isnot v:null
@@ -669,7 +686,7 @@ function! s:IDE._make_after_result(old_state_id, range) abort
     if a:is_err
       " This easily occurs
       let self.queueing = 0
-      call self._shrink_to(spos, v:none, 0)
+      call self._shrink_to(spos, v:null, 0)
       let self.queue = []
 
       if a:err_loc isnot v:null
@@ -761,7 +778,7 @@ function! s:IDE.coq_back() abort
     return
   endif
 
-  call self._shrink_to(self.get_apparently_last(), v:none, 0)
+  call self._shrink_to(self.get_apparently_last(), v:null, 0)
   call self.recolor()
   call self.refreshInfo()
   call self._check_queue()
@@ -784,7 +801,7 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
 
     let epos = range[1]
 
-    if self._shrink_to(epos, v:none, 0)
+    if self._shrink_to(epos, v:null, 0)
       call self.recolor()
       call self._check_queue()
     endif
@@ -800,8 +817,12 @@ function! s:IDE._after_edit_at(is_err, state_id) abort
 endfunction
 " }}}
 
-" coq_shrink_to_pos {{{
-function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
+" coq_shrink_to_pos(pos, ceil=0) {{{
+function! s:IDE.coq_shrink_to_pos(pos, ...) abort
+  call s:start(a:000)
+  let l:ceil = s:get(0)
+  call s:end()
+
   let self.keep_goal_info = 0
 
   if s:pos_le(self.get_apparently_last(), a:pos)
@@ -810,7 +831,7 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
 
   let content = self.getContent()
 
-  let updated = self._shrink_to(a:pos, a:ceil, 0)
+  let updated = self._shrink_to(a:pos, l:ceil, 0)
   if !updated
     return
   endif
@@ -824,8 +845,12 @@ function! s:IDE.coq_shrink_to_pos(pos, ceil=0) abort
 endfunction
 " }}}
 
-" coq_expand_to_pos {{{
-function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
+" coq_expand_to_pos(pos, ceil=0) {{{
+function! s:IDE.coq_expand_to_pos(pos, ...) abort
+  call s:start(a:000)
+  let l:ceil = s:get(0)
+  call s:end()
+
   let self.keep_goal_info = 0
 
   let content = self.getContent()
@@ -858,7 +883,7 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
       if coquille#annotate#is_ending(content, self.queue[-1][1])
         let last = [len(content) - 1, len(content[-1])]
       else
-        if !a:ceil && s:pos_lt(a:pos, self.queue[-1][0])
+        if !l:ceil && s:pos_lt(a:pos, self.queue[-1][0])
           call remove(self.queue, -1)
         endif
 
@@ -875,20 +900,32 @@ function! s:IDE.coq_expand_to_pos(pos, ceil=0) abort
 endfunction
 " }}}
 
-" coq_to_pos {{{
-function! s:IDE.coq_to_pos(pos, ceil=0) abort
+" coq_to_pos(pos, ceil = 0) {{{
+function! s:IDE.coq_to_pos(pos, ...) abort
+  call s:start(a:000)
+  let l:ceil = s:get(0)
+  call s:end()
+
   let last = self.get_apparently_last()
 
   if s:pos_lt(a:pos, last)
-    call self.coq_shrink_to_pos(a:pos, a:ceil)
+    call self.coq_shrink_to_pos(a:pos, l:ceil)
   else
-    call self.coq_expand_to_pos(a:pos, a:ceil)
+    call self.coq_expand_to_pos(a:pos, l:ceil)
   endif
 endfunction
 " }}}
 
-" coq_to_cursor {{{
-function! s:IDE.coq_to_cursor(ceil=v:null) abort
+" coq_to_cursor(ceil={option's value}) {{{
+function! s:IDE.coq_to_cursor(...) abort
+  call s:start(a:000)
+  let l:ceil = s:get()
+  call s:end()
+
+  if l:ceil is v:null
+    let l:ceil = g:coquille#options#cursor_ceiling.get()
+  endif
+
   if self.handling_bufnr != bufnr('%')
     return
   endif
@@ -896,21 +933,12 @@ function! s:IDE.coq_to_cursor(ceil=v:null) abort
   let curpos = getcurpos()[1:2]
   let pos = [curpos[0] - 1, curpos[1]]
 
-
-  let ceil = 0
-
-  if a:ceil isnot v:null
-    ceil = a:ceil
-  else
-    let ceil = g:coquille#options#cursor_ceiling.get()
-  endif
-
-  call self.coq_to_pos(pos, ceil)
+  call self.coq_to_pos(pos, l:ceil)
 endfunction
 " }}}
 
 " coq_to_last {{{
-function! s:IDE.coq_to_last(ceil=v:null) abort
+function! s:IDE.coq_to_last() abort
   let content = self.getContent()
 
   call self.coq_to_pos([len(content), 0], 1)
@@ -975,7 +1003,13 @@ endfunction
 
 " internal {{{
 
-function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abort
+function! s:matchaddrange(maxlen, group, range, ...) abort
+  call s:start(a:000)
+  let l:priority = s:get(10)
+  let l:id = s:get(-1)
+  let l:dict = s:get({})
+  call s:end()
+
   let [spos, epos] = a:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
@@ -984,32 +1018,41 @@ function! s:matchaddrange(maxlen, group, range, priority=10, id=-1, dict={}) abo
     return []
   endif
 
-  let win_id = get(a:dict, 'window', win_getid())
+  let win_id = get(l:dict, 'window', win_getid())
 
   let ids = []
   if sline == eline
-    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], a:priority, a:id, a:dict), win_id])
+    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], l:priority, l:id, l:dict), win_id])
   else
-    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], a:priority, a:id, a:dict), win_id])
-    call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], a:priority, a:id, a:dict), win_id])
-    let ids += s:matchaddlines(a:group, range(sline + 1, eline - 1), a:priority, a:id, a:dict)
+    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], l:priority, l:id, l:dict), win_id])
+    call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], l:priority, l:id, l:dict), win_id])
+    let ids += s:matchaddlines(a:group, range(sline + 1, eline - 1), l:priority, l:id, l:dict)
   endif
   return ids
 endfunction
 
-function! s:matchaddlines(group, lines, priority=10, id=-1, dict={}) abort
-  let win_id = get(a:dict, 'window', win_getid())
+function! s:matchaddlines(group, lines, ...) abort
+  call s:start(a:000)
+  let l:priority = s:get(10)
+  let l:id = s:get(-1)
+  let l:dict = s:get({})
+  call s:end()
+
+  let win_id = get(l:dict, 'window', win_getid())
 
   let ids = []
   for line in a:lines
-    call add(ids, [matchaddpos(a:group, [[line + 1]], a:priority, a:id, a:dict), win_id])
+    call add(ids, [matchaddpos(a:group, [[line + 1]], l:priority, l:id, l:dict), win_id])
   endfor
   return ids
 endfunction
 
-function! s:first_change(c1, c2, line=0, col=0) abort
-  let line = a:line
-  let col = a:col
+function! s:first_change(c1, c2, ...) abort
+  call s:start(a:000)
+  let l:line = s:get(0)
+  let l:col = s:get(0)
+  call s:end()
+
   while line < len(a:c1) && line < len(a:c2) && a:c1[line] == a:c2[line]
     let line += 1
   endwhile
@@ -1021,15 +1064,17 @@ function! s:first_change(c1, c2, line=0, col=0) abort
   return [line, col]
 endfunction
 
-function! s:pos_lt(pos1, pos2, eq=0) abort
-  if a:eq
+" pos_lt(pos1, pos2, eq=0)
+function! s:pos_lt(pos1, pos2, ...) abort
+  if a:0 && a:1
     return s:pos_le(a:pos1, a:pos2)
   endif
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] < a:pos2[1]
 endfunction
 
-function! s:pos_le(pos1, pos2, eq=1) abort
-  if !a:eq
+" pos_le(pos1, pos2, eq=1)
+function! s:pos_le(pos1, pos2, ...) abort
+  if !(a:0 && a:1)
     return s:pos_lt(a:pos1, a:pos2)
   endif
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] < a:pos2[0] : a:pos1[1] <= a:pos2[1]

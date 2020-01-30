@@ -34,7 +34,7 @@ function! coquille#annotate#associate(xml, content, from_pos) abort
     exe s:assert('now_pos[1] >= 1')
 
     while sentence[now] !=# a:content[now_pos[0]][now_pos[1] - 1]
-      " `sentence` does'nt include comment
+      " `sentence` doesn't include comment
       if sentence[now] ==# '"'
         let pos = coqlang#skip_string([sentence], [0, now + 1])
         exe s:assert('pos isnot v:null')

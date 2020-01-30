@@ -6,16 +6,12 @@ let s:to_check_default = [
       \ 'coqidetop',
       \ '-main-channel',
       \ 'stdfds',
-      \ '-async-proofs',
-      \ 'on'
     \ ],
     \ [
       \ 'coqtop',
       \ '-ideslave',
       \ '-main-channel',
       \ 'stdfds',
-      \ '-async-proofs',
-      \ 'on'
     \ ]
   \ ]
 
@@ -39,7 +35,7 @@ function! coquille#coqtop#get_executable(callback) abort
   let checker.res = {}
 
   function! checker.make_cb(i) abort closure
-    function! self.cb(ok, err_mes = '') abort closure
+    function! self.cb(ok, err_mes) abort closure
       if get(self.done, a:i, 0)
         return
       endif
@@ -87,7 +83,7 @@ function! s:is_executable(cmd, callback) abort
     if !len(coq_info.child)
       return a:callback(0, 'Not recoginizable XML : ' .. a:mas)
     endif
-    call a:callback(coquille#xml#2str(coq_info.child[0]))
+    call a:callback(coquille#xml#2str(coq_info.child[0]), '')
   endfunction
 
   function! job_options.err_cb(ch, msg) abort closure
@@ -107,7 +103,7 @@ function! s:is_executable(cmd, callback) abort
 
   let job = job_start(a:cmd, job_options)
   if job_status(job) ==# 'fail'
-    call a:callback(0)
+    call a:callback(0, '')
     return
   endif
   call ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")

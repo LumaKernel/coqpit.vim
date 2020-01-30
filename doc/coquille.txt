@@ -110,7 +110,7 @@ COMMANDS				*coquille-commands*
 
 
 					*:CoqClear*
-:CoqClear	or `:call b:coquileIDE.clear_info()`
+:CoqClear	or `:call b:coquilleIDE.clear_info()`
 		Clear the Infos buffer.
 
 

@@ -178,7 +178,7 @@ Because pictures are always the best sellers :
 
 ![Coquille use at win32unix with multiple buffers](https://user-images.githubusercontent.com/29811106/71498345-59386280-289f-11ea-9018-2babde26ca82.png)
 
-![Coquile use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
+![Coquille use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
 
 
 ## Known Issues
