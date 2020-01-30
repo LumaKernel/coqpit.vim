@@ -3,7 +3,7 @@ name: Linux Vim/Neovim
 on:
   push:
     branches:
-    - in-themis
+    - master
 
 
 jobs:
@@ -95,7 +95,7 @@ jobs:
         mkdir -p ~/vim/bin
         curl -L https://github.com/vim/vim-appimage/releases/download/${{ matrix.vim-url }} -o ~/vim/bin/vim
         chmod u+x ~/vim/bin/vim
-    - name: Download neovim
+    - name: Download Neovim
       if: startsWith(matrix.name, 'neovim')
       shell: bash
       run: |

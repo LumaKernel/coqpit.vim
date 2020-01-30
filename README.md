@@ -11,7 +11,8 @@ This repository is fork of [the-lambda-church/coquille](https://github.com/the-l
 
 Only Vim ( or Neovim ) and [Coq](https://github.com/coq/coq/releases).
 
-- Vim 8.0 or above or Neovim"TODO version" ( `+job/has('nvim')`, `+lambda`, etc; recommend you `+huge` )
+- Vim8 or Neovim
+  - `has('job') || has('nvim')`, `has('lambda')`, ...
 - Coq 8.6 or above. Checked versions below.
   - Coq8.5pl3
   - Coq8.6
