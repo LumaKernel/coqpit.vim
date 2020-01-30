@@ -1,4 +1,4 @@
-name: Linux-Vim-Neovim
+name: Linux_Vim_Neovim
 
 on:
   push:
