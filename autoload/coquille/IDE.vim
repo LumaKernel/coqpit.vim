@@ -593,7 +593,6 @@ function! s:IDE.recolor() abort
   endif
 
   let l:style_q = self.style_queued
-  let l:style_q = g:coquille#options#get('highlight_style_queued')
   if s:pos_lt(last_checked, last_queued)
     if l:style_q == 'all'
       call s:matchaddrange(self, "CoqQueued", [last_checked, last_queued], -30)
@@ -1087,6 +1086,25 @@ function! s:matchadd(ide, group, line, scol, ecol, priority) abort
     call nvim_buf_add_highlight(a:ide.handling_bufnr, a:ide.ns_id, a:group, a:line, a:scol, ecol)
   endif
 endfunction
+
+
+function! s:first_change(c1, c2, ...) abort
+  call s:start(a:000)
+  let l:line = s:get(0)
+  let l:col = s:get(0)
+  call s:end()
+
+  while line < len(a:c1) && line < len(a:c2) && a:c1[line] == a:c2[line]
+    let line += 1
+  endwhile
+  if line < len(a:c1) && line < len(a:c2)
+    while col < len(a:c1[line]) && col < len(a:c2[line]) && a:c1[line][col] == a:c2[line][col]
+      let col += 1
+    endwhile
+  endif
+  return [line, col]
+endfunction
+
 
 " pos_lt(pos1, pos2, eq=0)
 function! s:pos_lt(pos1, pos2, ...) abort
