@@ -31,6 +31,10 @@ function! s:IDE.new(bufnr, ...) abort
     let new.ns_id = nvim_create_namespace('')
   endif
 
+  let new.highlight = g:coquille#options#get('highlight')
+  let new.style_checked = g:coquille#options#get('highlight_style_checked')
+  let new.style_queued = g:coquille#options#get('highlight_style_queued')
+
   let new.GoalBuffers = []
   let new.InfoBuffers = []
 
@@ -567,10 +571,41 @@ function! s:IDE.recolor() abort
   " This can happen.
   " exe s:assert('s:pos_le(last_checked, last_queued)')
 
-  " if g:coquille#options#get('highlight_style_queued') == 'all'
+  let l:style_c = self.style_checked
+  if l:style_c == 'all'
     call s:matchaddrange(self, "CoqChecked", [[0, 0], last_checked], -30)
+  elseif l:style_c == 'last'
+    if len(self.sentence_end_pos_list) > 1
+      call s:matchaddrange(self, "CoqChecked", [self.sentence_end_pos_list[-2], last_checked], -30)
+    else
+      call s:matchaddrange(self, "CoqChecked", [[0, 0], last_checked], -30)
+    endif
+  elseif l:style_c == 'tail'
+    for pos in self.sentence_end_pos_list
+      call s:matchadd(self, "CoqChecked", pos[0], max([0, pos[1] - 1]), pos[1], -30)
+    endfor
+  elseif l:style_c == 'last_tail'
+    call s:matchadd(self, "CoqChecked", last_checked[0], max([0, last_checked[1] - 1]), last_checked[1], -30)
+  elseif l:style_c == 'last_line'
+    call s:matchadd(self, "CoqChecked", last_checked[0], 0, last_checked[1], -30)
+  endif
 
-    call s:matchaddrange(self, "CoqQueued", [last_checked, last_queued], -30)
+  let l:style_q = self.style_queued
+  let l:style_q = g:coquille#options#get('highlight_style_queued')
+  if s:pos_lt(last_checked, last_queued)
+    if l:style_q == 'all'
+      call s:matchaddrange(self, "CoqQueued", [last_checked, last_queued], -30)
+    elseif l:style_q == 'last_tail'
+      call s:matchadd(self, "CoqQueued", last_queued[0], max([0, last_queued[1] - 1]), last_queued[1], -30)
+    elseif l:style_q == 'last_line'
+      if last_checked[0] == last_queued[0]
+        call s:matchadd(self, "CoqQueued", last_queued[0], last_checked[1], last_queued[1], -30)
+      else
+        call s:matchadd(self, "CoqQueued", last_queued[0], 0, last_queued[1], -30)
+      endif
+    endif
+  endif
+
 
   for [level, range] in self.hls
     " sweep error and warnings appearing after the top in advance
@@ -1019,10 +1054,10 @@ function! s:matchaddrange(ide, group, range, priority) abort
   if spos == epos | return | endif
 
   if sline == eline
-    call s:matchadd(a:ide, a:group, sline, scol, ecol - 1, a:priority)
+    call s:matchadd(a:ide, a:group, sline, scol, ecol, a:priority)
   else
-    call s:matchadd(a:ide, a:group, sline, scol, len(a:ide.getContent(sline)) - scol - 1, a:priority)
-    call s:matchadd(a:ide, a:group, eline, 0, ecol - 1, a:priority)
+    call s:matchadd(a:ide, a:group, sline, scol, len(a:ide.getContent(sline)) - scol, a:priority)
+    call s:matchadd(a:ide, a:group, eline, 0, ecol, a:priority)
     for line in range(sline + 1, eline - 1)
       call s:matchadd(a:ide, a:group, line, 0, -1, a:priority)
     endfor
@@ -1042,11 +1077,11 @@ function! s:matchadd(ide, group, line, scol, ecol, priority) abort
     for win_id in win_findbuf(a:ide.handling_bufnr)
       let l:match_opt = {'window' : win_id}
       call add(a:ide.colored, [
-          \ matchaddpos(a:group, [[a:line + 1, a:scol + 1, ecol - a:scol + 1]],
+          \ matchaddpos(a:group, [[a:line + 1, a:scol + 1, ecol - a:scol]],
           \   a:priority, l:id, l:match_opt), win_id])
     endfor
   else
-    if ecol != -1 | let ecol += 1 | endif
+    " if ecol != -1 | let ecol -= 1 | endif
     call nvim_buf_add_highlight(a:ide.handling_bufnr, a:ide.ns_id, a:group, a:line, a:scol, ecol)
   endif
 endfunction

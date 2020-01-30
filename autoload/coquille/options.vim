@@ -60,8 +60,8 @@ call s:config('auto_launch', 1)
 call s:config('auto_launch_args')
 
 call s:config('highlight', 1)
-call s:config('highlight_style_queued', 'all', ['all', 'tail', 'end_of_all'])
-call s:config('highlight_style_checked', 'all', ['all', 'tail', 'end_of_all'])
+call s:config('highlight_style_checked', 'all', ['all', 'last', 'tail', 'last_tail', 'last_line', 'none'])
+call s:config('highlight_style_queued', 'all', ['all', 'last_tail', 'last_line', 'none'])
 
 call s:config('keep_after_textchange', 0)
 
