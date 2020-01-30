@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        coq-version: [V8.6.1, V8.10.2, V8.11.0]
+        coq-version: [V8.2, V8.6.1, V8.10.2, V8.11.0]
         include:
+          -  coq-version: V8.2
+             coq-binary: coqtop
           -  coq-version: V8.6.1
              coq-binary: coqtop
           -  coq-version: V8.10.2
@@ -50,6 +52,14 @@ jobs:
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
             coq-version: V8.10.2
             coq-binary: coqidetop
+          - name: vim-v8.2
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
+            coq-version: V8.11.0
+            coq-binary: coqidetop
+          - name: vim-v8.2
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
+            coq-version: V8.6.1
+            coq-binary: coqtop
           - name: vim-v8.1
             vim-url: v8.1.2414/GVim-v8.1.2414.glibc2.15-x86_64.AppImage
             coq-version: V8.10.2
@@ -61,6 +71,10 @@ jobs:
           - name: neovim-nightly
             neovim-version: nightly
             coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: neovim-nightly
+            neovim-version: nightly
+            coq-version: V8.11.0
             coq-binary: coqidetop
 
     steps:
