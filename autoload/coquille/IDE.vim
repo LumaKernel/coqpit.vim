@@ -27,6 +27,13 @@ function! s:IDE.new(bufnr, ...) abort
 
   call new._register_buffer(a:bufnr)
 
+  let new.nvim_highlight = has('nvim')
+
+  let new.ns_id = 0
+  if new.nvim_highlight
+    let new.ns_id = nvim_create_namespace('')
+  endif
+
   let new.GoalBuffers = []
   let new.InfoBuffers = []
 
@@ -531,20 +538,20 @@ function! s:IDE.getContent(...) abort
   return lines
 endfunction
 
-function! s:IDE.maxlen() abort
-  return max(map(self.getContent(), 'len(v:val)'))
-endfunction
-
 " }}}
 
 
 " recolor {{{
 function! s:IDE.reset_colors() abort
   if !exists('self.colored') | return | endif
-  for [id, win_id] in self.colored
-    silent! call matchdelete(id, win_id)
-  endfor
-  let self.colored = []
+  if self.nvim_highlight
+    call nvim_buf_clear_namespace(self.handling_bufnr, self.ns_id, 0, -1)
+  else
+    for [id, win_id] in self.colored
+      silent! call matchdelete(id, win_id)
+      let self.colored = []
+    endfor
+  endif
 endfunction
 function! s:IDE.recolor() abort
   if self.dead() | return | endif
@@ -554,17 +561,20 @@ function! s:IDE.recolor() abort
   exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
   let last_checked = get(self.sentence_end_pos_list, -1, [0, 0])
   let last_queued = self.get_apparently_last()
+  let content = self.getContent()
 
   " This can happen.
   " exe s:assert('s:pos_le(last_checked, last_queued)')
 
-  let maxlen = self.maxlen()
-
   for win_id in win_findbuf(self.handling_bufnr)
     let match_opt = {'window' : win_id}
     let priority = -30
-    let self.colored += s:matchaddrange(maxlen, "CoqChecked", [[0, 0], last_checked], priority, v:null, match_opt)
-    let self.colored += s:matchaddrange(maxlen, "CoqQueued", [last_checked, last_queued], priority, v:null, match_opt)
+    let self.colored += s:matchaddrange(
+          \ self.nvim_highlight, self.handling_bufnr, self.ns_id, content,
+          \ "CoqChecked", [[0, 0], last_checked], priority, v:null, match_opt)
+    let self.colored += s:matchaddrange(
+          \ self.nvim_highlight, self.handling_bufnr, self.ns_id, content,
+          \ "CoqQueued", [last_checked, last_queued], priority, v:null, match_opt)
 
     for [level, range] in self.hls
       " sweep error and warnings appearing after the top in advance
@@ -579,7 +589,9 @@ function! s:IDE.recolor() abort
         let group = 'CoqCheckedAxiom'
         let priority = -20
       endif
-      let self.colored += s:matchaddrange(maxlen, group, range, priority, v:null, match_opt)
+      let self.colored += s:matchaddrange(
+            \ self.nvim_highlight, self.handling_bufnr, self.ns_id,
+            \ content, group, range, priority, v:null, match_opt)
     endfor
   endfor
 endfunction
@@ -1003,8 +1015,7 @@ endfunction
 
 " internal {{{
 
-function! s:matchaddrange(maxlen, group, range, ...) abort
-  return []
+function! s:matchaddrange(nvim_highlight, bufnr, ns_id, content, group, range, ...) abort
   call s:start(a:000)
   let l:priority = s:get(10)
   let l:id = s:get(-1)
@@ -1023,46 +1034,30 @@ function! s:matchaddrange(maxlen, group, range, ...) abort
 
   let ids = []
   if sline == eline
-    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], l:priority, l:id, l:dict), win_id])
+    if a:nvim_highlight
+      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, sline, scol + 1, ecol)
+    else
+      call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], l:priority, l:id, l:dict), win_id])
+    endif
   else
-    call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, a:maxlen + 1]], l:priority, l:id, l:dict), win_id])
-    call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], l:priority, l:id, l:dict), win_id])
-    let ids += s:matchaddlines(a:group, range(sline + 1, eline - 1), l:priority, l:id, l:dict)
+
+    if a:nvim_highlight
+      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, sline, scol + 1, -1)
+      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, eline, 1, ecol)
+
+      for line in range(sline + 1, eline - 1)
+        call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, line, 1, -1)
+      endfor
+    else
+      call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, len(a:content[sline]) - scol]], l:priority, l:id, l:dict), win_id])
+      call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], l:priority, l:id, l:dict), win_id])
+
+      for line in range(sline + 1, eline - 1)
+        call add(ids, [matchaddpos(a:group, [[line + 1, 1, len(a:content[line])]], l:priority, l:id, l:dict), win_id])
+      endfor
+    endif
   endif
   return ids
-endfunction
-
-function! s:matchaddlines(group, lines, ...) abort
-  call s:start(a:000)
-  let l:priority = s:get(10)
-  let l:id = s:get(-1)
-  let l:dict = s:get({})
-  call s:end()
-
-  let win_id = get(l:dict, 'window', win_getid())
-
-  let ids = []
-  for line in a:lines
-    call add(ids, [matchaddpos(a:group, [[line + 1]], l:priority, l:id, l:dict), win_id])
-  endfor
-  return ids
-endfunction
-
-function! s:first_change(c1, c2, ...) abort
-  call s:start(a:000)
-  let l:line = s:get(0)
-  let l:col = s:get(0)
-  call s:end()
-
-  while line < len(a:c1) && line < len(a:c2) && a:c1[line] == a:c2[line]
-    let line += 1
-  endwhile
-  if line < len(a:c1) && line < len(a:c2)
-    while col < len(a:c1[line]) && col < len(a:c2[line]) && a:c1[line][col] == a:c2[line][col]
-      let col += 1
-    endwhile
-  endif
-  return [line, col]
 endfunction
 
 " pos_lt(pos1, pos2, eq=0)
