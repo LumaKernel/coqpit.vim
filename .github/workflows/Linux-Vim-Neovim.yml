@@ -11,10 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        coq-version: [V8.2, V8.6.1, V8.10.2, V8.11.0]
+        coq-version: [V8.6.1, V8.10.2, V8.11.0]
         include:
-          -  coq-version: V8.2
-             coq-binary: coqtop
           -  coq-version: V8.6.1
              coq-binary: coqtop
           -  coq-version: V8.10.2
@@ -46,17 +44,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [vim-v8.2, vim-v8.1, neovim-v0.4.3, neovim-nightly]
+        name:
+          - vim-v8.2_coq-V8.11
+          - vim-v8.2_coq-V8.10
+          - vim-v8.2_coq-V8.6
+          - vim-v8.1
+          - neovim-nightly_coq-V8.11
+          - neovim-nightly_coq-V8.10
+          - neovim-v0.4.3
         include:
-          - name: vim-v8.2
-            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
-            coq-version: V8.10.2
-            coq-binary: coqidetop
-          - name: vim-v8.2
+          - name: vim-v8.2_coq-V8.11
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
             coq-version: V8.11.0
             coq-binary: coqidetop
-          - name: vim-v8.2
+          - name: vim-v8.2_coq-V8.10
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: vim-v8.2_coq-V8.6
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
             coq-version: V8.6.1
             coq-binary: coqtop
@@ -64,17 +69,17 @@ jobs:
             vim-url: v8.1.2414/GVim-v8.1.2414.glibc2.15-x86_64.AppImage
             coq-version: V8.10.2
             coq-binary: coqidetop
+          - name: neovim-nightly_coq-V8.11
+            neovim-version: nightly
+            coq-version: V8.11.0
+            coq-binary: coqidetop
+          - name: neovim-nightly_coq-V8.10
+            neovim-version: nightly
+            coq-version: V8.10.2
+            coq-binary: coqidetop
           - name: neovim-v0.4.3
             neovim-version: v0.4.3
             coq-version: V8.10.2
-            coq-binary: coqidetop
-          - name: neovim-nightly
-            neovim-version: nightly
-            coq-version: V8.10.2
-            coq-binary: coqidetop
-          - name: neovim-nightly
-            neovim-version: nightly
-            coq-version: V8.11.0
             coq-binary: coqidetop
 
     steps:
