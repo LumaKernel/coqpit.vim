@@ -203,6 +203,8 @@ function! coquille#define_buffer_commands(...)
   command! -buffer CoqToLast call coquille#check_running() | call b:coquilleIDE.coq_to_last()
   command! -buffer CoqRerun call coquille#check_running() | call b:coquilleIDE.rerun()
   command! -buffer CoqRefresh call coquille#check_running() | call b:coquilleIDE.refresh()
+  command! -buffer CoqRecolor call coquille#check_running() | call b:coquilleIDE.recolor()
+  command! -buffer CoqSwitchHighlight call coquille#switch_highlight()
   command! -buffer CoqStop call coquille#stop()
   command! -buffer MoveToTop call coquille#check_running() | call b:coquilleIDE.move_to_top()
   command! -buffer -nargs=* CoqQuery call coquille#check_running() | call b:coquilleIDE.query(<q-args>)
@@ -241,7 +243,9 @@ function! coquille#delete_commands()
   silent! delc CoqToLast
   silent! delc CoqRerun
   silent! delc CoqRefresh
+  silent! delc CoqRecolor
   silent! delc CoqStop
+  silent! delc CoqSwitchHighlight
   silent! delc MoveToTop
   silent! delc CoqQuery
 endfunction!
@@ -261,6 +265,16 @@ function! coquille#launch(args)
 
   call coquille#reset_panels()
 endfunction
+
+function! coquille#switch_highlight() abort
+  if !exists('b:coquilleIDE') || b:coquilleIDE.dead()
+    return
+  endif
+
+  let b:coquilleIDE.highlight = !b:coquilleIDE.highlight
+  call b:coquilleIDE.recolor()
+endfunction
+
 
 " recognize this buffer as coq
 " NOTE : the buffer's filetype can be not coq

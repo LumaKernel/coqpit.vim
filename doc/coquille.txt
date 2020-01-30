@@ -1,6 +1,8 @@
-*coquille.txt*		For Vim version 8.1	Last change: 2019 Dec 27
+*coquille.txt*		For Vim version 8	Last change: 2019 Dec 27
 
-Version: 2.0
+Coquille brings features to Vim8 and Neovim for coq like CoqIDE with asynchronous.
+
+Version: 2.1
 License: ISC License
 
 ==============================================================================
@@ -13,6 +15,7 @@ COMMANDS			|coquille-commands|
 CONFIGURE HIGHLIGHT		|coquille-configure-highlight|
   HIGHLIGHT GROUPS	  	  |coquille-highlight-groups|
   CUSTMIZE HIGHLIGHT EXAMPLE	  |coquille-configure-highlight-example|
+UTILITIES			|coquille-utilities|
 OPTIONS				|coquille-options|
 CUSTMIZE WINDOW			|coquille-customize-window|
   CUSTMIZE WINDOW EXAMPLE	  |coquille-customize-window-example|
@@ -35,7 +38,7 @@ executable, pass the location like,
   let g:coquille_coq_executable = '/c/Coq8.10/bin/coqtopide'
 <
 
-in your .vimrc . |coquille-options-coq_executable|
+in your .vimrc or init.vim . |coquille-options-coq_executable|
 
 
 ==============================================================================
@@ -125,13 +128,34 @@ COMMANDS				*coquille-commands*
   + Rearrange the Infos/Goals buffer windows.
 
 
+
+					*:CoqRecolor*
+:CoqRecolor	or `:call b:coquilleIDE.recolor()`
+		Coloring. It is useful for setting
+		`b:coquilleIDE.highlight`,
+		`b:coquilleIDE.style_queued`,
+		or `b:coquilleIDE.style_checked`.
+		For more information,
+		see |coquille-switching-highlight-style|.
+
+
+
+					*:CoqSwitchHighlight*
+:CoqSwitchHighlight	or `:call coquille#switch_highlight()`
+		Switching current buffer's highlight.
+		For more information, see also
+		|coquille_highlight| or
+		|coquille-switching-highlight-style|
+
+
+
 ------------------------------------------------------------------------------
 MAPPING EXAMPLE		  		*coquille-mapping-example*
 
 Recommended to define non-buffer local
 because these commands can be also used
 from Infos/Goals buffers too.
-( If not setting |coquille-options-one_window| to 1. )
+( If not setting |coquille_one_window| to 1. )
 >
   function! MyCoqMaps()
     nnoremap <silent> <C-C>        :CoqLaunch<CR>
@@ -225,95 +249,195 @@ hi CoqCheckedError ctermbg=160
 <
 
 ==============================================================================
+UTILITIES				*coquille-utilities*
+
+					*coquille#options#set()*
+coquille#options#set(name [, value [, scope] ] )
+	This function throws an string error if
+	the value or name is invalid. For future
+	compatibility, use this function to set
+	options in your .vimrc or scripts.
+	If you set `value` to |v:null|, it sets
+	the default value. You can see the default
+	values in |coquille-options|.
+
+
+==============================================================================
 OPTIONS					*coquille-options*
 
 Variable scopes are checked left to right as follows.
+To validate values, use |coquille#options#set()| to set options.
 
 
-					*coquille-options-coq_executable*
+					*coquille_coq_executable*
 [b,g]:coquille_coq_executable		: string | list string
 		Specifying the command to run. Use "coqidetop"
 		executable for new versions of Coq or "coqtop"
-		list, coquille use them to |job_start()| as it is.
+		list, coquille use them to |job_start()| in Vim
+		or |jobstart()| in Neovim as it is.
 
 
-					*coquille-options-auto_move*
+					*coquille_auto_move*
 [b,g]:coquille_auto_move		= 0 : bool
 		Moves the cursor after |:CoqNext| and |:CoqBack|
 		command like CoqIDE if set this to 1.
 
 
-					*coquille-options-cursor_ceiling*
+					*coquille_cursor_ceiling*
 [b,g]:coquille_cursor_ceiling	 	= 1 : bool
 		Set behavior about |:CoqToCursor|.
 		If set this to 0, the command will flooring the
 		queue top to sentences. If 1, ceiling.
 
 
-					*coquille-options-show_goal_always*
+
+					*coquille_show_goal_always*
 [b,g]:coquille_show_goal_always		= 0 : bool
 		If set this to 0, Coquille will update Goals
-		after each commands.
+		everytime after sending one senctense.
 
 
 
-					*coquille-options-update_status_always*
+					*coquille_update_status_always*
 [b,g]:coquille_update_status_always	= 1 : bool
 		This sends Update command to CoqTop after each
 		command. Not recommended to change this. See known
 		issues for more information.
 
 
-					*coquille-options-no_define_commands*
+					*coquille_no_define_commands*
 [b,g]:coquille_no_define_commands	= 0 : bool
 		If set this to 1, coquille defines no commands.
 
 
 
-					*coquille-options-one_window*
+					*coquille_one_window*
 [t,g]:coquille_one_window		= 0 : bool
 		If set this to 1, coquille will use one pair of
 		Infos/Goals buffers for each tab.
 
 
 
-					*coquille-options-auto_launch*
+					*coquille_auto_launch*
 [b,g]:coquille_auto_launch		= 0 : bool
 		If set this to 1, coquille will do |:CoqLaunch|
 		automatically when opening coq file.
 
 
 
-					*coquille-options-auto_launch_args*
+					*coquille_auto_launch_args*
 [b,g]:coquille_auto_launch_args		= [] : list string
 		Arguments for the CoqTop launched by
 		|coquille-options-auto_launch|.
 
 
-					*coquille-options-keep_after_textchange*
+
+					*coquille_keep_after_textchange*
 [b,g]:coquille_keep_after_textchange	= 0 : bool
-		set this to 1, keep the Goals/Infos messages
+		If set this to 1, keep the Goals/Infos messages
 		when changing buffer text before you queued.
 		To refresh them, run |:CoqRefresh|.
 
 
-					*coquille-options-refresh_after_focus*
+
+					*coquille_highlight*
+[b,g]:coquille_highlight		= 1 : bool
+		If set this to 0, highlight is disabled.
+		If you want to switch more handy,
+		see also |:CoqSwitchHighlight|.
+		After initialization, `b:coquilleIDE.highlight`
+		is used.
+
+
+
+					*coquille_highlight_style_checked*
+[b,g]:coquille_highlight_style_checked	= "all" : string
+		Style for the code checked by CoqTop.
+		To make faster, use "last_line".
+		If you want to switch more handy,
+		see also |coquille-switching-highlight-style|
+		After initialization, `b:coquilleIDE.style_checked`
+		is used.
+
+		Available options are below:
+		  "all"		: All checked
+		  "last"	: Last sentence only
+		  "tail"	: Tail of all sentences
+		  "last_tail"	: Tail of last sentence only
+		  "last_line"	: Last sentence in last line only
+		  "none"	: No highlight
+
+
+
+					*coquille_highlight_style_queued*
+[b,g]:coquille_highlight_style_queued	= "all" : string
+		Style for the code queued that will be
+		sent to CoqTop. To make faster, use "last_line".
+		If you want to switch more handy,
+		see also |coquille-switching-highlight-style|.
+		After initialization, `b:coquilleIDE.style_queued`
+		is used.
+
+		Available options are below:
+		  "all"		: All checked
+		  "last_tail"	: Tail of last sentence only
+		  "last_line"	: Last sentence in last line only
+		  "none"	: No highlight
+
+
+
+					*coquille_refresh_after_focus*
 [b,g]:coquille_refresh_after_focus	= 0 : bool
 		|:CoqRefresh| after enternig running buffer.
 
 
 
-					*coquille-options-rerun_after_focus*
+					*coquille_rerun_after_focus*
 [b,g]:coquille_rerun_after_focus	= 0 : bool
 		|:CoqRerun| after enternig running buffer.
 
 
 
-					*coquille-options-silent*
+					*coquille_silent*
 [b,g]:coquille_silent			= 0 : bool
 		If set this to 1, echoing no infomations but
 		errors.
 
+==============================================================================
+SWITCHING HIGHLIGHT STYLE		*coquille-switching-highlight-style*
+
+You can make `:CoqSwichStyle` command using
+|coquille_highlight_style_queued|,
+|coquille_highlight_style_checked|,
+and |:CoqRecolor|. After initialization,
+option values will not be used and `b:coquilleIDE.style_checked`
+and `b:coquilleIDE.style_queued` are used.
+Use members prefixed by `my_` in `b:coquilleIDE`.
+Using buffer local variables, it's unable to shere with
+Goal and Info buffers.
+>
+  function! CoqSwitchStyle() abort
+     if !exists('b:coquilleIDE') || b:coquilleIDE.dead()
+         return
+     endif
+
+     if !has_key(b:coquilleIDE.my_style)
+         b:coquilleIDE.my_style = 1
+     endif
+     if b:coquilleIDE.my_style
+       let b:coquilleIDE.style_checked = 'last_line'
+       let b:coquilleIDE.style_queued  = 'last_line'
+     else
+       let b:coquilleIDE.style_checked = 'all'
+       let b:coquilleIDE.style_queued  = 'all'
+     endif
+     CoqRecolor
+     let b:coquilleIDE.my_style = !b:coquilleIDE.my_style
+  endfunction
+  command! CoqSwitchStyle call CoqSwitchStyle()
+<
+
+|:CoqSwitchHighlight| is realized by same approaches.
 
 ==============================================================================
 CUSTMIZE WINDOW				*coquille-customize-window*
@@ -323,7 +447,7 @@ CUSTMIZE WINDOW				*coquille-customize-window*
 2. In that command,
 	- Use `b:coquille_goal_bufnr` and `b:coquille_info_bufnr`
 	  to control Goals/Infos buffers.
-	- If you are with |coquille-options-one_window| set to 1 ,
+	- If you are with |coquille_one_window| set to 1 ,
 	  use tablocal ( prefexed t: ) ones.
 3. Make your own Launch command.
 4. In that command,
