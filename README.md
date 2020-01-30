@@ -177,6 +177,8 @@ let g:coquille_coq_executable = '/c/Coq8.10/bin/coqidetop'
 
 ![Coquille use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
 
+![with highlight\_style\_checked tail](https://user-images.githubusercontent.com/29811106/73458139-26aae980-43b8-11ea-9bba-2ec95521c1f8.png)
+This is with `g:coquille_highlight_style_checked='tail'`.
 
 ## Known Issues
 
