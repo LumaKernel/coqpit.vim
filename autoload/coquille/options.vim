@@ -19,7 +19,11 @@ function! s:config(name, ...) abort
     endif
   endif
 
-  let s:getters[a:name] = {}
+  let s:getters[a:name] = {
+        \   'scopes': l:scopes,
+        \   'default': l:default,
+        \   'candidates': l:candidates
+        \ }
 
   function! s:getters[a:name].get(...) abort closure
     call s:start(a:000)
@@ -46,6 +50,47 @@ function coquille#options#get(name, ...)
   endif
 endfunction
 
+function coquille#options#set(name, ...)
+  call s:start(a:000)
+  let l:value = s:get()
+  let l:scope = s:get('g')
+  call s:end()
+
+  if type(a:name) != v:t_string
+    throw 'Invalid type of option name. ' ..
+          \ 'Only string names are accepted.'
+  endif
+
+  if !has_key(s:getters, a:name)
+    throw 'Invalid option name "' .. a:name .. '"'
+  endif
+
+  let l:scopes = s:getters[a:name].scopes
+  if index(l:scopes, l:scope) == -1
+    throw 'Unexpected scope "' .. l:scope .. '". ' ..
+          \ 'Use one of [' .. join(l:scopes, ', ') ']'
+  endif
+
+  if l:value is v:null
+    let l:value = s:getters[a:name].default
+  endif
+
+  if s:getters[a:name].candidates isnot 0
+    if type(l:value) != v:t_string
+      throw 'Invalid type of option value. ' ..
+            \ 'Option ' .. a:name .. ' only accepts string values.'
+    endif
+    let l:cand = s:getters[a:name].candidates
+    if index(l:cand, l:value) == -1
+      throw 'Invalid option value "' .. l:value .. '". ' ..
+            \ 'Set one of [' .. join(l:cand, ', ') .. ']'
+    endif
+  endif
+
+  exe 'let l:dict = ' .. l:scope .. ':'
+  let l:dict['coquille_' .. a:name] = l:value
+endfunction
+
 
 call s:config('coq_executable', v:null, 1)
 
@@ -70,8 +115,6 @@ call s:config('rerun_after_focus', 0)
 
 call s:config('silent', 0)
 
-
 " g:coquille#options#get({config name})
 " g:coquille#options#get({config name}, default value)
-
 

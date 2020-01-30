@@ -563,6 +563,8 @@ function! s:IDE.recolor() abort
   call self._cache_buffer()
   call self.reset_colors()
 
+  if !self.highlight | return | endif
+
   exe s:assert('len(self.state_id_list) == len(self.sentence_end_pos_list)')
   let last_checked = get(self.sentence_end_pos_list, -1, [0, 0])
   let last_queued = self.get_apparently_last()
