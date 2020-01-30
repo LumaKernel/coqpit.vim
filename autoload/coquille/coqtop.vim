@@ -25,7 +25,7 @@ let s:to_check_default = [
 function! coquille#coqtop#get_executable(callback) abort
   let to_check = deepcopy(s:to_check_default)
   
-  let opt = g:coquille#options#coq_executable.get(v:null)
+  let opt = g:coquille#options#get('coq_executable', v:null)
 
   if type(opt) == v:t_list
     let to_check = [opt]

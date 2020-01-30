@@ -27,10 +27,7 @@ function! s:IDE.new(bufnr, ...) abort
 
   call new._register_buffer(a:bufnr)
 
-  let new.nvim_highlight = has('nvim')
-
-  let new.ns_id = 0
-  if new.nvim_highlight
+  if has('nvim')
     let new.ns_id = nvim_create_namespace('')
   endif
 
@@ -399,12 +396,12 @@ function! s:IDE._after_bufenter() abort
     if self.unfocused
       " after focus
 
-      if g:coquille#options#refresh_after_focus.get()
+      if g:coquille#options#get('refresh_after_focus')
         call self.refreshGoal()
         call self.refreshInfo()
       endif
 
-      if g:coquille#options#rerun_after_focus.get()
+      if g:coquille#options#get('rerun_after_focus')
         call self.rerun()
       endif
     endif
@@ -438,7 +435,7 @@ function! s:IDE._after_textchange() abort
     let pos[1] = max([0, pos[1]-1])
   endif
 
-  if g:coquille#options#keep_after_textchange.get()
+  if g:coquille#options#get('keep_after_textchange')
     let self.keep_goal_info = 1
   endif
 
@@ -460,7 +457,7 @@ function! s:IDE._check_queue() abort
     call remove(self.queue, 0)
   endwhile
 
-  if len(self.queue) == 0 || g:coquille#options#show_goal_always.get()
+  if len(self.queue) == 0 || g:coquille#options#get('show_goal_always')
     if self.last_goal_check != self.state_id_list[-1]
       let self.goal_message = []
       call self.coqtop_handler.refreshGoalInfo(self._goal)
@@ -468,7 +465,7 @@ function! s:IDE._check_queue() abort
     endif
   endif
 
-  if g:coquille#options#update_status_always.get()
+  if g:coquille#options#get('update_status_always')
     if self.last_status_check != self.state_id_list[-1]
       call self.coqtop_handler.status(v:null, self._status)
       return
@@ -526,6 +523,10 @@ function! s:IDE.getContent(...) abort
     return getbufline(self.handling_bufnr, 1, '$')
   endif
 
+  if type(l:range) == v:t_number
+    return getbufline(self.handling_bufnr, l:range + 1)[0]
+  endif
+
   let [spos, epos] = l:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
@@ -544,13 +545,13 @@ endfunction
 " recolor {{{
 function! s:IDE.reset_colors() abort
   if !exists('self.colored') | return | endif
-  if self.nvim_highlight
-    call nvim_buf_clear_namespace(self.handling_bufnr, self.ns_id, 0, -1)
-  else
+  if !has('nvim')
     for [id, win_id] in self.colored
       silent! call matchdelete(id, win_id)
       let self.colored = []
     endfor
+  else
+    call nvim_buf_clear_namespace(self.handling_bufnr, self.ns_id, 0, -1)
   endif
 endfunction
 function! s:IDE.recolor() abort
@@ -566,33 +567,25 @@ function! s:IDE.recolor() abort
   " This can happen.
   " exe s:assert('s:pos_le(last_checked, last_queued)')
 
-  for win_id in win_findbuf(self.handling_bufnr)
-    let match_opt = {'window' : win_id}
-    let priority = -30
-    let self.colored += s:matchaddrange(
-          \ self.nvim_highlight, self.handling_bufnr, self.ns_id, content,
-          \ "CoqChecked", [[0, 0], last_checked], priority, v:null, match_opt)
-    let self.colored += s:matchaddrange(
-          \ self.nvim_highlight, self.handling_bufnr, self.ns_id, content,
-          \ "CoqQueued", [last_checked, last_queued], priority, v:null, match_opt)
+  " if g:coquille#options#get('highlight_style_queued') == 'all'
+    call s:matchaddrange(self, "CoqChecked", [[0, 0], last_checked], -30)
 
-    for [level, range] in self.hls
-      " sweep error and warnings appearing after the top in advance
-      let is_in_checked = s:pos_le(range[1], last_checked)
-      if level == 'error'
-        let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
-        let priority = -10
-      elseif level == 'warning'
-        let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
-        let priority = -20
-      elseif level == 'axiom'
-        let group = 'CoqCheckedAxiom'
-        let priority = -20
-      endif
-      let self.colored += s:matchaddrange(
-            \ self.nvim_highlight, self.handling_bufnr, self.ns_id,
-            \ content, group, range, priority, v:null, match_opt)
-    endfor
+    call s:matchaddrange(self, "CoqQueued", [last_checked, last_queued], -30)
+
+  for [level, range] in self.hls
+    " sweep error and warnings appearing after the top in advance
+    let is_in_checked = s:pos_le(range[1], last_checked)
+    if level == 'error'
+      let group = is_in_checked ? 'CoqCheckedError' : 'CoqMarkedError'
+      let priority = -10
+    elseif level == 'warning'
+      let group = is_in_checked ? 'CoqCheckedWarn' : 'CoqMarkedWarn'
+      let priority = -20
+    elseif level == 'axiom'
+      let group = 'CoqCheckedAxiom'
+      let priority = -20
+    endif
+    call s:matchaddrange(self, group, range, priority)
   endfor
 endfunction
 " }}}
@@ -761,7 +754,7 @@ function! s:IDE.coq_next() abort
   call self.recolor()
   call self.refreshInfo()
 
-  if g:coquille#options#auto_move.get()
+  if g:coquille#options#get('auto_move')
     call self.move(expected_sentence_end_pos)
   endif
 endfunction
@@ -795,7 +788,7 @@ function! s:IDE.coq_back() abort
   call self.refreshInfo()
   call self._check_queue()
 
-  if g:coquille#options#auto_move.get()
+  if g:coquille#options#get('auto_move')
     call self.move(self.get_apparently_last())
   endif
 endfunction
@@ -935,7 +928,7 @@ function! s:IDE.coq_to_cursor(...) abort
   call s:end()
 
   if l:ceil is v:null
-    let l:ceil = g:coquille#options#cursor_ceiling.get()
+    let l:ceil = g:coquille#options#get('cursor_ceiling')
   endif
 
   if self.handling_bufnr != bufnr('%')
@@ -1015,49 +1008,47 @@ endfunction
 
 " internal {{{
 
-function! s:matchaddrange(nvim_highlight, bufnr, ns_id, content, group, range, ...) abort
-  call s:start(a:000)
-  let l:priority = s:get(10)
-  let l:id = s:get(-1)
-  let l:dict = s:get({})
-  call s:end()
+function! s:matchaddrange(ide, group, range, priority) abort
 
   let [spos, epos] = a:range
   let [sline, scol] = spos
   let [eline, ecol] = epos
 
-  if spos == epos
-    return []
-  endif
+  let l:id = -1
 
-  let win_id = get(l:dict, 'window', win_getid())
+  if spos == epos | return | endif
 
-  let ids = []
   if sline == eline
-    if a:nvim_highlight
-      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, sline, scol + 1, ecol)
-    else
-      call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, ecol - scol]], l:priority, l:id, l:dict), win_id])
-    endif
+    call s:matchadd(a:ide, a:group, sline, scol, ecol - 1, a:priority)
   else
-
-    if a:nvim_highlight
-      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, sline, scol + 1, -1)
-      call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, eline, 1, ecol)
-
-      for line in range(sline + 1, eline - 1)
-        call nvim_buf_add_highlight(a:bufnr, a:ns_id, a:group, line, 1, -1)
-      endfor
-    else
-      call add(ids, [matchaddpos(a:group, [[sline + 1, scol + 1, len(a:content[sline]) - scol]], l:priority, l:id, l:dict), win_id])
-      call add(ids, [matchaddpos(a:group, [[eline + 1, 1, ecol]], l:priority, l:id, l:dict), win_id])
-
-      for line in range(sline + 1, eline - 1)
-        call add(ids, [matchaddpos(a:group, [[line + 1, 1, len(a:content[line])]], l:priority, l:id, l:dict), win_id])
-      endfor
-    endif
+    call s:matchadd(a:ide, a:group, sline, scol, len(a:ide.getContent(sline)) - scol - 1, a:priority)
+    call s:matchadd(a:ide, a:group, eline, 0, ecol - 1, a:priority)
+    for line in range(sline + 1, eline - 1)
+      call s:matchadd(a:ide, a:group, line, 0, -1, a:priority)
+    endfor
   endif
-  return ids
+endfunction
+
+" shim for matchaddpos and nvim_buf_add_highlight
+function! s:matchadd(ide, group, line, scol, ecol, priority) abort
+  if a:ecol != -1 && a:scol >= a:ecol | return | endif
+
+  let ecol = a:ecol
+  if !has('nvim')
+    let l:id = -1
+    if ecol == -1
+      let ecol = len(a:ide.getContent(a:line))
+    endif
+    for win_id in win_findbuf(a:ide.handling_bufnr)
+      let l:match_opt = {'window' : win_id}
+      call add(a:ide.colored, [
+          \ matchaddpos(a:group, [[a:line + 1, a:scol + 1, ecol - a:scol + 1]],
+          \   a:priority, l:id, l:match_opt), win_id])
+    endfor
+  else
+    if ecol != -1 | let ecol += 1 | endif
+    call nvim_buf_add_highlight(a:ide.handling_bufnr, a:ide.ns_id, a:group, a:line, a:scol, ecol)
+  endif
 endfunction
 
 " pos_lt(pos1, pos2, eq=0)

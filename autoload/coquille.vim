@@ -33,7 +33,7 @@ function! coquille#reset_panels(...) abort
   let l:force = s:get(0)
   call s:end()
 
-  if g:coquille#options#one_window.get()
+  if g:coquille#options#get('one_window')
 
     call coquille#init_tablocal_windows(l:force)
     
@@ -153,7 +153,7 @@ endfunction
 function! coquille#stop()
   if !exists('b:coquilleIDE') | return | endif
 
-  if !g:coquille#options#one_window.get()
+  if !g:coquille#options#get('one_window')
     if exists('b:coquille_goal_bufnr') | silent! execute 'bwipeout' .. b:coquille_goal_bufnr | endif
     if exists('b:coquille_info_bufnr') | silent! execute 'bwipeout' .. b:coquille_info_bufnr | endif
   endif
@@ -193,7 +193,7 @@ function! coquille#define_buffer_commands(...)
   let l:force = s:get(0)
   call s:end()
 
-  if !l:force && g:coquille#options#no_define_commands.get()
+  if !l:force && g:coquille#options#get('no_define_commands')
     return
   endif
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
@@ -214,7 +214,7 @@ function! coquille#define_global_commands(...)
   let l:force = s:get(0)
   call s:end()
 
-  if !l:force && g:coquille#options#no_define_commands.get()
+  if !l:force && g:coquille#options#get('no_define_commands')
     return
   endif
   command! CoqStopAll call coquille#stop_all()
@@ -265,12 +265,12 @@ endfunction
 " recognize this buffer as coq
 " NOTE : the buffer's filetype can be not coq
 function! coquille#register()
-  if g:coquille#options#auto_launch.get() isnot 0
-    let args = g:coquille#options#auto_launch_args.get()
+  if g:coquille#options#get('auto_launch') isnot 0
+    let args = g:coquille#options#get('auto_launch_args')
     call coquille#launch(args)
   endif
 
-  if !g:coquille#options#no_define_commands.get()
+  if !g:coquille#options#get('no_define_commands')
     command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
   endif
 endfunction

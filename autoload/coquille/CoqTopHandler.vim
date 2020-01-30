@@ -79,7 +79,7 @@ function! s:CoqTopHandler._make_restart_next(args) abort
 
     let coq_version = a:data
 
-    if !g:coquille#options#silent.get()
+    if !g:coquille#options#get('silent')
       echo '[coquille.vim / CoqTop Handler] CoqTop version ' .. coq_version .. ' started running.'
     endif
 
