@@ -1,6 +1,10 @@
 
 let s:xml = vital#coquille#import('Web.XML')
 
+let s:job_start = function('coquille#job#job_start')
+let s:job_status = function('coquille#job#job_status')
+let s:ch_sendraw = function('coquille#job#ch_sendraw')
+
 let s:to_check_default = [
     \ [
       \ 'coqidetop',
@@ -70,7 +74,7 @@ function! s:is_executable(cmd, callback) abort
   let job_options = {}
   let err = 0
 
-  function! job_options.out_cb(ch, msg) abort closure
+  function! job_options.out_cb(msg) abort closure
     let xml = s:xml.parse(a:msg)
     if xml.name !=# 'value' | return | endif
     if get(xml.attr, 'val') !=# 'good'
@@ -86,27 +90,24 @@ function! s:is_executable(cmd, callback) abort
     call a:callback(coquille#xml#2str(coq_info.child[0]), '')
   endfunction
 
-  function! job_options.err_cb(ch, msg) abort closure
+  function! job_options.err_cb(msg) abort closure
     call a:callback(0, 'Unexpected error : ' .. a:msg)
   endfunction
 
-  function! job_options.exit_cb(ch, exit_status) abort closure
-    call a:callback(0, 'Unexpected exit')
+  function! job_options.exit_cb(exit_status) abort closure
+    call a:callback(0, 'Unexpected exit : ' .. exit_status)
   endfunction
 
-  let job_options.in_mode = 'raw'
-  let job_options.out_mode = 'raw'
-  let job_options.err_mode = 'nl'
   let job_options.out_cb = function(job_options.out_cb, job_options)
   let job_options.err_cb = function(job_options.err_cb, job_options)
   let job_options.exit_cb = function(job_options.exit_cb, job_options)
 
-  let job = job_start(a:cmd, job_options)
-  if job_status(job) ==# 'fail'
+  let job = s:job_start(a:cmd, job_options)
+  if s:job_status(job) ==# 'fail'
     call a:callback(0, '')
     return
   endif
-  call ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
+  call s:ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
   call timer_start(10000, {->a:callback(0, 'Timeout')})
 endfunction
 

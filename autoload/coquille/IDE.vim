@@ -1004,6 +1004,7 @@ endfunction
 " internal {{{
 
 function! s:matchaddrange(maxlen, group, range, ...) abort
+  return []
   call s:start(a:000)
   let l:priority = s:get(10)
   let l:id = s:get(-1)

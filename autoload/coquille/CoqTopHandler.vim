@@ -13,6 +13,12 @@ let s:start = function('coquille#util#argsetup')
 let s:get = function('coquille#util#argget')
 let s:end = function('coquille#util#argend')
 
+let s:job_start = function('coquille#job#job_start')
+let s:job_status = function('coquille#job#job_status')
+let s:job_stop = function('coquille#job#job_stop')
+let s:job_setoptions = function('coquille#job#job_setoptions')
+let s:ch_sendraw = function('coquille#job#ch_sendraw')
+
 let s:CoqTopHandler = {}
 
 function! s:CoqTopHandler.new(...) abort
@@ -42,8 +48,8 @@ function! s:CoqTopHandler.restart(...) abort
 
   if self.running()
     let self.expected_running = 0
-    call job_setoptions(self.job, {'exit_cb': {...->0}})
-    call job_stop(self.job, 'term')
+    call s:job_setoptions(self.job, {'exit_cb': {...->0}})
+    call s:job_stop(self.job)
   endif
 
   let self.call_queue = []
@@ -79,16 +85,12 @@ function! s:CoqTopHandler._make_restart_next(args) abort
 
     let job_options = {}
 
-    let job_options.in_mode = 'raw'
-    let job_options.out_mode = 'raw'
-    let job_options.err_mode = 'nl'
-
-    let job_options.out_cb = self._out_cb
-    let job_options.err_cb = self._err_cb
-    let job_options.exit_cb = self._exit_cb
+    let job_options.out_cb = s:bind_itself(self._out_cb)
+    let job_options.err_cb = s:bind_itself(self._err_cb)
+    let job_options.exit_cb = s:bind_itself(self._exit_cb)
 
     let self.trying_to_run = 0
-    let self.job = job_start(a:cmd, job_options)
+    let self.job = s:job_start(a:cmd, job_options)
 
     let self.expected_running = 1
 
@@ -109,8 +111,8 @@ endfunction
 
 
 " callback for job object {{{
-function! s:CoqTopHandler._out_cb(channel, msg) abort
-  if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
+function! s:CoqTopHandler._out_cb(msg) abort
+  if !self.running() | return | endif
 
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
 
@@ -160,14 +162,13 @@ function! s:CoqTopHandler._out_cb(channel, msg) abort
 endfunction
 " }}}
 
-function! s:CoqTopHandler._err_cb(channel, msg) abort
-  if !self.running() || a:channel isnot job_getchannel(self.job) | return | endif
+function! s:CoqTopHandler._err_cb(msg) abort
+  if !self.running() | return | endif
   echoerr "[coquille.vim / CoqTop Handler] Internal error with following error message."
   echoerr a:msg
 endfunction
 
-function! s:CoqTopHandler._exit_cb(channel, status) abort
-  " if a:channel isnot job_getchannel(self.job) | return | endif
+function! s:CoqTopHandler._exit_cb(status) abort
   if self.expected_running
     let self.expected_running = 0
     echoerr '[coquille.vim / CoqTop Handler] Unfortunately, CoqTop was exited with status '
@@ -187,8 +188,7 @@ endfunction
 function! s:CoqTopHandler.running() abort
   return
     \ exists("self.job")
-    \ && type(self.job) == v:t_job
-    \ && job_status(self.job) == "run"
+    \ && s:job_status(self.job) == "run"
 endfunction
 
 function! s:CoqTopHandler.dead() abort
@@ -198,7 +198,7 @@ endfunction
 function! s:CoqTopHandler.kill() abort
   if self.running()
     let self.expected_running = 0
-    call job_stop(self.job, 'term')
+    call s:job_stop(self.job)
     unlet self.job
   endif
 endfunction
@@ -224,7 +224,7 @@ function! s:CoqTopHandler._check_call_queue() abort
 
 
   let self.waiting = l:Callback
-  call ch_sendraw(self.job, msg .. "\n")
+  call s:ch_sendraw(self.job, msg .. "\n")
 endfunction
 
 function! s:CoqTopHandler.interrupt() abort
