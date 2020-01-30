@@ -1,0 +1,112 @@
+name: Linux_Vim_Neovim
+
+on:
+  push:
+    branches:
+    - in-themis
+
+
+jobs:
+  install-coq:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        coq-version: [V8.6.1, V8.10.2, V8.11.0]
+        include:
+          -  coq-version: V8.6.1
+             coq-binary: coqtop
+          -  coq-name: V8.10.2
+             coq-binary: coqidetop
+          -  name: V8.11.0
+             coq-binary: coqidetop
+    steps:
+    - uses: actions/cache@v1
+      id: coq-cache
+      with:
+        path: ~/bin/coq/${{ matrix.coq-version }}
+        key: ${{ runner.os }}-${{ matrix.coq-version }}
+    - name: Install Coq
+      if: steps.coq-cache.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get install -y opam
+        opam --version
+        git clone https://github.com/coq/coq /tmp/coq
+        cd /tmp/coq
+        git checkout ${{ matrix.coq-version }}
+        ./configure -prefix=$HOME/bin/coq/${{ matrix.coq-version }}
+        make && make install
+    - name: Show Coq version
+      run: ~/bin/coq/${{ matrix.coq-version }}/bin/${{ matrix.coq-binary }} --version
+
+  test:
+    needs: [install-coq]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [vim-v8.2, vim-v8.0, neovim-v0.4.3, neovim-nightly]
+        include:
+          - name: vim-v8.2
+            vim-url: v8.2.0037/GVim-v8.2.0037.glib2.15-x86_64.AppImage
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: vim-v8.0
+            vim-url: v8.0.1848/GVim-v8.0.1848-git4d6cd291c-glibc2.15.glibc2.15-x86_64.AppImage
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: neovim-v0.4.3
+            neovim-version: v0.4.3
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: neovim-nightly
+            neovim-version: nightly
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+
+    steps:
+    - uses: actions/cache@v1
+      id: coq-cache
+      with:
+        path: ~/bin/coq/${{ env.coq-version }}
+        key: ${{ runner.os }}-${{ env.coq-version }}
+    - name: Download Vim
+      if: startsWith(matrix.name, 'vim')
+      run: |
+        mkdir -p ~/vim/bin
+        curl -L https://github.com/vim/vim-appimage/releases/download/${{ matrix.vim-url }} -o ~/vim/bin/vim
+        chmod u+x ~/vim/bin/vim
+    - name: Download neovim
+      if: startsWith(matrix.name, 'neovim')
+      shell: bash
+      run: |
+        mkdir -p ~/nvim/bin
+        curl -L https://github.com/neovim/neovim/releases/download/${{ matrix.neovim-version }}/nvim.appimage -o ~/nvim/bin/nvim
+        chmod u+x ~/nvim/bin/nvim
+    - name: Download vim-themis
+      run: git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis ~/themis
+
+    - uses: actions/checkout@v2
+
+    - name: Run test with Vim
+      if: startsWith(matrix.name, 'vim')
+      timeout-minutes: 10
+      run: |
+        export PATH=~/vim/bin:$PATH
+        export PATH=~/themis/bin:$PATH
+        export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
+        export THEMIS_VIM=vim
+        vim --version
+        themis --version
+        themis
+
+    - name: Run test with Neovim
+      if: startsWith(matrix.name, 'neovim')
+      timeout-minutes: 10
+      run: |
+        export PATH=~/nvim/bin:$PATH
+        export PATH=~/themis/bin:$PATH
+        export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
+        export THEMIS_VIM=nvim
+        nvim --version
+        themis --version
+        themis
