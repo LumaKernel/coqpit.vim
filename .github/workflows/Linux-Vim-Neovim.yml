@@ -2,6 +2,8 @@ name: Linux Vim/Neovim
 
 on:
   push:
+    paths-ignore:
+    - 'docs/**'
     branches:
     - master
 
