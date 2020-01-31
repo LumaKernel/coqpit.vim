@@ -1,23 +1,24 @@
-name: Linux_Vim_Neovim
+name: Linux Vim/Neovim
 
 on:
   push:
     branches:
-    - in-themis
+    - master
 
 
 jobs:
   install-coq:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         coq-version: [V8.6.1, V8.10.2, V8.11.0]
         include:
           -  coq-version: V8.6.1
              coq-binary: coqtop
-          -  coq-name: V8.10.2
+          -  coq-version: V8.10.2
              coq-binary: coqidetop
-          -  name: V8.11.0
+          -  coq-version: V8.11.0
              coq-binary: coqidetop
     steps:
     - uses: actions/cache@v1
@@ -44,22 +45,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [vim-v8.2, vim-v8.0, neovim-v0.4.3, neovim-nightly]
+        name:
+          - vim-v8.2_coq-V8.11
+          - vim-v8.2_coq-V8.10
+          - vim-v8.2_coq-V8.6
+          - vim-v8.1
+          - neovim-nightly_coq-V8.11
+          - neovim-nightly_coq-V8.10
+          - neovim-v0.4.3
         include:
-          - name: vim-v8.2
-            vim-url: v8.2.0037/GVim-v8.2.0037.glib2.15-x86_64.AppImage
+          - name: vim-v8.2_coq-V8.11
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
+            coq-version: V8.11.0
+            coq-binary: coqidetop
+          - name: vim-v8.2_coq-V8.10
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
             coq-version: V8.10.2
             coq-binary: coqidetop
-          - name: vim-v8.0
-            vim-url: v8.0.1848/GVim-v8.0.1848-git4d6cd291c-glibc2.15.glibc2.15-x86_64.AppImage
+          - name: vim-v8.2_coq-V8.6
+            vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
+            coq-version: V8.6.1
+            coq-binary: coqtop
+          - name: vim-v8.1
+            vim-url: v8.1.2414/GVim-v8.1.2414.glibc2.15-x86_64.AppImage
+            coq-version: V8.10.2
+            coq-binary: coqidetop
+          - name: neovim-nightly_coq-V8.11
+            neovim-version: nightly
+            coq-version: V8.11.0
+            coq-binary: coqidetop
+          - name: neovim-nightly_coq-V8.10
+            neovim-version: nightly
             coq-version: V8.10.2
             coq-binary: coqidetop
           - name: neovim-v0.4.3
             neovim-version: v0.4.3
-            coq-version: V8.10.2
-            coq-binary: coqidetop
-          - name: neovim-nightly
-            neovim-version: nightly
             coq-version: V8.10.2
             coq-binary: coqidetop
 
@@ -67,15 +87,15 @@ jobs:
     - uses: actions/cache@v1
       id: coq-cache
       with:
-        path: ~/bin/coq/${{ env.coq-version }}
-        key: ${{ runner.os }}-${{ env.coq-version }}
+        path: ~/bin/coq/${{ matrix.coq-version }}
+        key: ${{ runner.os }}-${{ matrix.coq-version }}
     - name: Download Vim
       if: startsWith(matrix.name, 'vim')
       run: |
         mkdir -p ~/vim/bin
         curl -L https://github.com/vim/vim-appimage/releases/download/${{ matrix.vim-url }} -o ~/vim/bin/vim
         chmod u+x ~/vim/bin/vim
-    - name: Download neovim
+    - name: Download Neovim
       if: startsWith(matrix.name, 'neovim')
       shell: bash
       run: |

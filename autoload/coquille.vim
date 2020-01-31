@@ -2,6 +2,10 @@
 " coquille
 " ========
 
+let s:start = function('coquille#util#argsetup')
+let s:get = function('coquille#util#argget')
+let s:end = function('coquille#util#argend')
+
 
 let coquille#repository_url = 'https://github.com/LumaKernel/coquille'
 
@@ -23,11 +27,15 @@ function! s:name_buffer_unique(name) abort
   silent exe 'file [' .. a:name .. '_' .. s:num .. ']'
 endfunction
 
-" reset_pannels {{{
-function! coquille#reset_panels(force = 0) abort
-  if g:coquille#options#one_window.get()
+" reset_pannels(force = 0) {{{
+function! coquille#reset_panels(...) abort
+  call s:start(a:000)
+  let l:force = s:get(0)
+  call s:end()
 
-    call coquille#init_tablocal_windows(a:force)
+  if g:coquille#options#get('one_window')
+
+    call coquille#init_tablocal_windows(l:force)
     
     call b:coquilleIDE.addGoalBuffer(t:coquille_goal_bufnr)
     call b:coquilleIDE.addInfoBuffer(t:coquille_info_bufnr)
@@ -43,7 +51,7 @@ function! coquille#reset_panels(force = 0) abort
 endfunction
 " }}}
 
-" ini_tablocal_windows {{{
+" ini_tablocal_windows() {{{
 function! coquille#init_tablocal_windows(force) abort
   if !exists('b:coquilleIDE') | return | endif
 
@@ -84,7 +92,7 @@ function! coquille#init_tablocal_windows(force) abort
 endfunction
 " }}}
 
-" init_buflocal_windows {{{
+" init_buflocal_windows() {{{
 function! coquille#init_buflocal_windows(force) abort
   if !exists('b:coquilleIDE') | return | endif
 
@@ -145,7 +153,7 @@ endfunction
 function! coquille#stop()
   if !exists('b:coquilleIDE') | return | endif
 
-  if !g:coquille#options#one_window.get()
+  if !g:coquille#options#get('one_window')
     if exists('b:coquille_goal_bufnr') | silent! execute 'bwipeout' .. b:coquille_goal_bufnr | endif
     if exists('b:coquille_info_bufnr') | silent! execute 'bwipeout' .. b:coquille_info_bufnr | endif
   endif
@@ -179,9 +187,13 @@ function! coquille#query(query_str)
   call (a:query_str)
 endfunction
 
-" define commands {{{
-function! coquille#define_buffer_commands(force = 0)
-  if !a:force && g:coquille#options#no_define_commands.get()
+" coquille#define_buffer_commands(force = 0) < define commands > {{{
+function! coquille#define_buffer_commands(...)
+  call s:start(a:000)
+  let l:force = s:get(0)
+  call s:end()
+
+  if !l:force && g:coquille#options#get('no_define_commands')
     return
   endif
   command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
@@ -191,14 +203,20 @@ function! coquille#define_buffer_commands(force = 0)
   command! -buffer CoqToLast call coquille#check_running() | call b:coquilleIDE.coq_to_last()
   command! -buffer CoqRerun call coquille#check_running() | call b:coquilleIDE.rerun()
   command! -buffer CoqRefresh call coquille#check_running() | call b:coquilleIDE.refresh()
+  command! -buffer CoqRecolor call coquille#check_running() | call b:coquilleIDE.recolor()
+  command! -buffer CoqSwitchHighlight call coquille#switch_highlight()
   command! -buffer CoqStop call coquille#stop()
   command! -buffer MoveToTop call coquille#check_running() | call b:coquilleIDE.move_to_top()
   command! -buffer -nargs=* CoqQuery call coquille#check_running() | call b:coquilleIDE.query(<q-args>)
-  command! -buffer CoqClear call coquille#check_running() | call b:coquileIDE.clear_info()
+  command! -buffer CoqClear call coquille#check_running() | call b:coquilleIDE.clear_info()
 endfunction
 
-function! coquille#define_global_commands(force = 0)
-  if !a:force && g:coquille#options#no_define_commands.get()
+function! coquille#define_global_commands(...)
+  call s:start(a:000)
+  let l:force = s:get(0)
+  call s:end()
+
+  if !l:force && g:coquille#options#get('no_define_commands')
     return
   endif
   command! CoqStopAll call coquille#stop_all()
@@ -225,7 +243,9 @@ function! coquille#delete_commands()
   silent! delc CoqToLast
   silent! delc CoqRerun
   silent! delc CoqRefresh
+  silent! delc CoqRecolor
   silent! delc CoqStop
+  silent! delc CoqSwitchHighlight
   silent! delc MoveToTop
   silent! delc CoqQuery
 endfunction!
@@ -246,15 +266,25 @@ function! coquille#launch(args)
   call coquille#reset_panels()
 endfunction
 
+function! coquille#switch_highlight() abort
+  if !exists('b:coquilleIDE') || b:coquilleIDE.dead()
+    return
+  endif
+
+  let b:coquilleIDE.highlight = !b:coquilleIDE.highlight
+  call b:coquilleIDE.recolor()
+endfunction
+
+
 " recognize this buffer as coq
 " NOTE : the buffer's filetype can be not coq
 function! coquille#register()
-  if g:coquille#options#auto_launch.get() isnot 0
-    let args = g:coquille#options#auto_launch_args.get()
+  if g:coquille#options#get('auto_launch') isnot 0
+    let args = g:coquille#options#get('auto_launch_args')
     call coquille#launch(args)
   endif
 
-  if !g:coquille#options#no_define_commands.get()
+  if !g:coquille#options#get('no_define_commands')
     command! -bar -buffer -nargs=* -complete=file CoqLaunch call coquille#launch([<f-args>])
   endif
 endfunction

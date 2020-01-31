@@ -34,7 +34,7 @@ function! coquille#annotate#associate(xml, content, from_pos) abort
     exe s:assert('now_pos[1] >= 1')
 
     while sentence[now] !=# a:content[now_pos[0]][now_pos[1] - 1]
-      " `sentence` does'nt include comment
+      " `sentence` doesn't include comment
       if sentence[now] ==# '"'
         let pos = coqlang#skip_string([sentence], [0, now + 1])
         exe s:assert('pos isnot v:null')
@@ -56,16 +56,4 @@ function! coquille#annotate#is_ending(content, pos)
   let now_pos = coqlang#next_pattern(a:content, a:pos, s:possibles)
   return now_pos isnot v:null
 endfunction
-
-
-function! coquille#annotate#Test()
-  PAssert coquille#annotate#associate('', ['bar.'], [0, 0]) == [0, 0]
-  PAssert coquille#annotate#associate('a b c .', ['a (* *)','bc .'], [0, 0]) == [1, 4]
-  PAssert coquille#annotate#associate('a b c .', ['a (**)','(* *) bc .', 'wow.'], [0, 0]) == [1, 10]
-  PAssert coquille#annotate#associate('abc.', ['a (*foo*)','(* *) bc . foo', '.'], [0, 0]) == [1, 10]
-  PAssert coquille#annotate#associate('abc "efg".', ['abc (**) "efg"', '','(* *) . hi.'], [0, 0]) == [2, 7]
-  PAssert coquille#annotate#associate('abc " e fg".', ['abc (**) " e fg"', '','(* *) .  (* *)'], [0, 0]) == [2, 7]
-  PAssert coquille#annotate#associate('abc " e (*fg".', ['abc (**) " e (*fg"', '','(* *) .', '', ''], [0, 0]) == [2, 7]
-endfunction
-
 

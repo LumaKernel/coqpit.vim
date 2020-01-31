@@ -7,7 +7,7 @@ Goal True. trivial. Qed.
 
 Goal True. trivial. Defined.
 
-Compute Unnamed_thm.  (* Opaque  			*)
+Compute Unnamed_thm.  (* Opaque       *)
 Compute Unnamed_thm0. (* Transparent  *)
 
 
@@ -150,7 +150,7 @@ Section sec2.
     repeat split.
     
     (* Focus, Unfocus, Unfocused *)
-    Focus 2. { trivial. (* not Unfocused *) } Unfocus. Unfocused.
+    Focus 2. { trivial. (* not Unfocused *) } Unfocus. Unfocused.  (* <- 8.6 comes here *)
     2: { auto. }
     auto.
   Qed.
@@ -216,7 +216,7 @@ Section sec2.
     Show 2.
     eexists ?[n].
     Show n.
-    Show Script. (* deprecated! *)
+    Show Script. (* <- 8.11+ comes here *) (* deprecated! *)
     Show Proof.
     Show Conjectures.
   Admitted.
@@ -251,4 +251,4 @@ Goal True.
   Optimize Proof.
   Optimize Heap.
   trivial.
-Qed.
+Qed. (* <- 8.10 comes here *)

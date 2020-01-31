@@ -1,21 +1,21 @@
 
 let s:xml = vital#coquille#import('Web.XML')
 
+let s:job_start = function('coquille#job#job_start')
+let s:job_status = function('coquille#job#job_status')
+let s:ch_sendraw = function('coquille#job#ch_sendraw')
+
 let s:to_check_default = [
     \ [
       \ 'coqidetop',
       \ '-main-channel',
       \ 'stdfds',
-      \ '-async-proofs',
-      \ 'on'
     \ ],
     \ [
       \ 'coqtop',
       \ '-ideslave',
       \ '-main-channel',
       \ 'stdfds',
-      \ '-async-proofs',
-      \ 'on'
     \ ]
   \ ]
 
@@ -25,7 +25,7 @@ let s:to_check_default = [
 function! coquille#coqtop#get_executable(callback) abort
   let to_check = deepcopy(s:to_check_default)
   
-  let opt = g:coquille#options#coq_executable.get(v:null)
+  let opt = g:coquille#options#get('coq_executable', v:null)
 
   if type(opt) == v:t_list
     let to_check = [opt]
@@ -39,7 +39,7 @@ function! coquille#coqtop#get_executable(callback) abort
   let checker.res = {}
 
   function! checker.make_cb(i) abort closure
-    function! self.cb(ok, err_mes = '') abort closure
+    function! self.cb(ok, err_mes) abort closure
       if get(self.done, a:i, 0)
         return
       endif
@@ -74,7 +74,7 @@ function! s:is_executable(cmd, callback) abort
   let job_options = {}
   let err = 0
 
-  function! job_options.out_cb(ch, msg) abort closure
+  function! job_options.out_cb(msg) abort closure
     let xml = s:xml.parse(a:msg)
     if xml.name !=# 'value' | return | endif
     if get(xml.attr, 'val') !=# 'good'
@@ -87,30 +87,32 @@ function! s:is_executable(cmd, callback) abort
     if !len(coq_info.child)
       return a:callback(0, 'Not recoginizable XML : ' .. a:mas)
     endif
-    call a:callback(coquille#xml#2str(coq_info.child[0]))
+    call a:callback(coquille#xml#2str(coq_info.child[0]), '')
   endfunction
 
-  function! job_options.err_cb(ch, msg) abort closure
+  function! job_options.err_cb(msg) abort closure
     call a:callback(0, 'Unexpected error : ' .. a:msg)
   endfunction
 
-  function! job_options.exit_cb(ch, exit_status) abort closure
-    call a:callback(0, 'Unexpected exit')
+  function! job_options.exit_cb(exit_status) abort closure
+    call a:callback(0, 'Unexpected exit : ' .. a:exit_status)
   endfunction
 
-  let job_options.in_mode = 'raw'
-  let job_options.out_mode = 'raw'
-  let job_options.err_mode = 'nl'
   let job_options.out_cb = function(job_options.out_cb, job_options)
   let job_options.err_cb = function(job_options.err_cb, job_options)
   let job_options.exit_cb = function(job_options.exit_cb, job_options)
 
-  let job = job_start(a:cmd, job_options)
-  if job_status(job) ==# 'fail'
-    call a:callback(0)
+  try
+    let job = s:job_start(a:cmd, job_options)
+  catch /.*/
+    call a:callback(0, 'Fail to start job : ' .. v:exception)
+    return
+  endtry
+  if s:job_status(job) ==# 'fail'
+    call a:callback(0, '')
     return
   endif
-  call ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
+  call s:ch_sendraw(job, '<call val="About"><unit /></call>' .. "\n")
   call timer_start(10000, {->a:callback(0, 'Timeout')})
 endfunction
 
