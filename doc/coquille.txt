@@ -17,6 +17,7 @@ CONFIGURE HIGHLIGHT		|coquille-configure-highlight|
   CUSTMIZE HIGHLIGHT EXAMPLE	  |coquille-configure-highlight-example|
 UTILITIES			|coquille-utilities|
 OPTIONS				|coquille-options|
+SWITCHING HIGHLIGHT STYLE	|coquille-switching-highlight-style|
 CUSTMIZE WINDOW			|coquille-customize-window|
   CUSTMIZE WINDOW EXAMPLE	  |coquille-customize-window-example|
 
@@ -405,6 +406,7 @@ To validate values, use |coquille#options#set()| to set options.
 
 ==============================================================================
 SWITCHING HIGHLIGHT STYLE		*coquille-switching-highlight-style*
+					*:CoqSwichStyle*
 
 You can make `:CoqSwichStyle` command using
 |coquille_highlight_style_queued|,
