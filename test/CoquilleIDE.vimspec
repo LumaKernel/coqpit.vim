@@ -134,7 +134,7 @@ Describe CoquilleIDE
     End
   End
 
-  Context Rough usage reproduced by random with nasty_notations.v
+  Context Rough usage reproduced by random with eg_proof_handling.v
     It completes
       exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
       set filetype=coq
@@ -146,7 +146,72 @@ Describe CoquilleIDE
 
       CoqLaunch
 
-      for cnt in range(30)
+      for cnt in range(100)
+        let l:move = R.range(1, 4)
+
+        if l:move == 1      " CoqToCursor
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          CoqToCursor
+        elseif l:move == 2  " CoqBack
+          for i in range(R.range(1, 5))
+            CoqBack
+          endfor
+        elseif l:move == 3  " CoqNext
+          for i in range(R.range(1, 5))
+            CoqBack
+          endfor
+        elseif l:move == 4  " Insert
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          exe "normal! o(* foo *)\<ESC>"
+        elseif l:move == 5  " Insert
+          let l:line = R.range(1, 63)
+          let l:col = R.range(1, 50)
+
+          call cursor([l:line, l:col])
+          exe "normal! iあいうえお......\<ESC>"
+        endif
+
+        let l:wait_sec = R.range(0, 2)
+
+        if l:wait_sec
+          exe 'sleep' l:wait_sec
+        endif
+
+        call coquille#check_running()
+        
+      endfor
+
+
+      " ---- CoqStopAll
+      CoqStopAll
+
+      function! s:wait(resolve, reject)
+        if b:coquilleIDE.dead()
+          call a:resolve()
+        endif
+      endfunction
+      call WaitForEnd(function('s:wait'), 20)
+    End
+  End
+  Context Rough usage reproduced by random with nasty_notations.v
+    It completes
+      exe 'read ' .. 'test/fixtures/nasty_notations.v'
+      set filetype=coq
+
+      let Random = vital#coquille#import('Random')
+      let seed = Random.next()
+      let R = Random.new('', seed)
+      call themis#log('      - seed : ' .. seed)
+
+      CoqLaunch
+
+      for cnt in range(100)
         let l:move = R.range(1, 4)
 
         if l:move == 1      " CoqToCursor
