@@ -1,0 +1,88 @@
+name: Windows Vim/Neovim
+
+on:
+  push:
+    paths-ignore:
+    - 'docs/**'
+    branches:
+    - master
+
+
+jobs:
+  test:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        name:
+          - vim-v8.2_coq-V8.11
+          - vim-v8.2_coq-V8.6
+          - neovim-nightly
+          - neovim-v0.4.3
+        include:
+          - name: vim-v8.2_coq-V8.11
+            vim-url: https://github.com/vim/vim-win32-installer/releases/download/v8.2.0190/gvim_8.2.0190_x64.zip
+            vim-ver-path: vim82
+            coq-version: 8.11.0
+            coq-binary: coqidetop
+          - name: vim-v8.2_coq-V8.6
+            vim-url: https://github.com/vim/vim-win32-installer/releases/download/v8.2.0190/gvim_8.2.0190_x64.zip
+            vim-ver-path: vim82
+            coq-version: 8.6.1
+            coq-binary: coqtop
+          - name: neovim-nightly
+            neovim-version: nightly
+            coq-version: 8.11.0
+            coq-binary: coqidetop
+          - name: neovim-v0.4.3
+            neovim-version: v0.4.3
+            coq-version: 8.11.0
+            coq-binary: coqidetop
+
+    steps:
+    - name: Install scoop
+      run: |
+        iwr -useb get.scoop.sh | iex
+    - name: Install Coq
+      run: |
+        $env:PATH = "$env:USERPROFILE/scoop/shims;$env:PATH"
+        scoop install coq@${{ matrix.coq-version }}
+    - name: Install Vim
+      if: startsWith(matrix.name, 'vim')
+      run: |
+        Invoke-WebRequest -Uri ${{ matrix.vim-url }} -OutFile vim.zip
+        Expand-Archive -Path vim.zip -DestinationPath $env:USERPROFILE
+    - name: Install Neovim
+      if: startsWith(matrix.name, 'neovim')
+      run: |
+        Invoke-WebRequest -Uri https://github.com/neovim/neovim/releases/download/${{ matrix.neovim-version }}/nvim-win64.zip -OutFile neovim.zip
+        Expand-Archive -Path neovim.zip -DestinationPath $env:USERPROFILE
+    - name: Install vim-themis
+      run: |
+        git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis $env:USERPROFILE/themis
+
+    - uses: actions/checkout@v2
+
+    - name: Run test with Vim
+      if: startsWith(matrix.name, 'vim')
+      timeout-minutes: 10
+      run: |
+        $env:PATH = "$env:USERPROFILE\vim\${{ matrix.vim-ver-path }};$env:PATH"
+        $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
+        $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
+        $env:THEMIS_VIM = "vim"
+        vim --version
+        themis --version
+        themis
+
+    - name: Run test with Neovim
+      if: startsWith(matrix.name, 'neovim')
+      timeout-minutes: 10
+      run: |
+        $env:PATH = "$env:USERPROFILE\Neovim\bin;$env:PATH"
+        $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
+        $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
+        $env:THEMIS_VIM = "nvim"
+        nvim --version
+        themis --version
+        themis

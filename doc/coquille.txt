@@ -1,4 +1,4 @@
-*coquille.txt*		For Vim version 8	Last change: 2019 Dec 27
+*coquille.txt*		For Vim version 8.1	Last change: 2019 Dec 27
 
 Coquille brings features to Vim8 and Neovim for coq like CoqIDE with asynchronous.
 

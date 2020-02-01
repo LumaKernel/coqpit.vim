@@ -91,20 +91,20 @@ jobs:
       with:
         path: ~/bin/coq/${{ matrix.coq-version }}
         key: ${{ runner.os }}-${{ matrix.coq-version }}
-    - name: Download Vim
+    - name: Install Vim
       if: startsWith(matrix.name, 'vim')
       run: |
         mkdir -p ~/vim/bin
         curl -L https://github.com/vim/vim-appimage/releases/download/${{ matrix.vim-url }} -o ~/vim/bin/vim
         chmod u+x ~/vim/bin/vim
-    - name: Download Neovim
+    - name: Install Neovim
       if: startsWith(matrix.name, 'neovim')
       shell: bash
       run: |
         mkdir -p ~/nvim/bin
         curl -L https://github.com/neovim/neovim/releases/download/${{ matrix.neovim-version }}/nvim.appimage -o ~/nvim/bin/nvim
         chmod u+x ~/nvim/bin/nvim
-    - name: Download vim-themis
+    - name: Install vim-themis
       run: git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis ~/themis
 
     - uses: actions/checkout@v2

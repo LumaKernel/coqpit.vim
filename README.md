@@ -1,6 +1,7 @@
 # Coquille
 
-![](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
+![Linux Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
+![Windows Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
 
 Coquille brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
 
@@ -11,7 +12,7 @@ This repository is fork of [the-lambda-church/coquille](https://github.com/the-l
 
 Only Vim ( or Neovim ) and [Coq](https://github.com/coq/coq/releases).
 
-- Vim8 or Neovim
+- Vim ( 8.1 or above ) or Neovim
   - `has('job') || has('nvim')`, `has('lambda')`, ...
 - Coq 8.6 or above. Checked versions below.
   - Coq8.5pl3
