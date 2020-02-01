@@ -1,7 +1,7 @@
 # Coquille
 
 ![Linux Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
-![Windows Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
+![Windows Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Windows%20Vim%2fNeovim/badge.svg)
 
 Coquille brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
 
