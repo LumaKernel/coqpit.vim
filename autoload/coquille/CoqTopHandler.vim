@@ -117,27 +117,30 @@ function! s:CoqTopHandler._out_cb(msg) abort
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
 
   for value in xml.findAll('value')
+
+    " NOTE : CoqTop sometimes sends <status> multiple times ....
+    " FIXME : This is dirty hack.
+    if len(value.child) == 1 && value.child[0].name ==# 'status' && !self.is_status
+      continue
+    endif
+
     exe s:assert('self.abandon >= 0')
     if self.abandon
       let self.abandon -= 1
       continue
     endif
 
-    " This was happend in Rough test
-    " exe s:assert('self.waiting isnot v:null')
+    exe s:assert('self.waiting isnot v:null')
 
     let l:Callback = self.waiting
     let self.waiting = v:null
+    let self.is_status = 0
 
-    if l:Callback isnot v:null
-      call l:Callback(value)
-    endif
+    call l:Callback(value)
 
     for l:Callback in self.after_callback_list
       call l:Callback()
     endfor
-
-    let option = xml.find("value").find("option")
   endfor
 
 
@@ -210,10 +213,14 @@ endfunction
 
 " -- core functions {{{
 
-function! s:CoqTopHandler._call(msg_func, cb) abort
-  if !self.running() | return | endif
+function! s:CoqTopHandler._call(msg_func, cb, ...) abort
+  call s:start(a:000)
+  let l:is_status = s:get(0)
+  call s:end()
 
-  call add(self.call_queue, [a:msg_func, a:cb])
+  if self.dead() | return | endif
+
+  call add(self.call_queue, [a:msg_func, a:cb, l:is_status])
 
   call self._check_call_queue()
 endfunction
@@ -222,21 +229,22 @@ function! s:CoqTopHandler._check_call_queue() abort
   if self.waiting isnot v:null | return | endif
   if len(self.call_queue) == 0 | return | endif
 
-  let [l:Msg_func, l:Callback] = remove(self.call_queue, 0)
+  let [l:Msg_func, l:Callback, l:is_status] = remove(self.call_queue, 0)
   let msg = l:Msg_func(self.tip)
 
 
   let self.waiting = l:Callback
+  let self.is_status = l:is_status
   call s:ch_sendraw(self.job, msg .. "\n")
 endfunction
 
 function! s:CoqTopHandler.interrupt() abort
   if self.waiting isnot v:null
     let self.abandon = 1
-    let self.tip = -1
     let self.waiting = v:null
-    let self.call_queue = []
   endif
+  let self.tip = -1
+  let self.call_queue = []
 endfunction!
 
 " }}}
@@ -480,7 +488,7 @@ function! s:CoqTopHandler.status(...) abort
 
   call self._call({->
     \ '<call val="Status"><bool val="' .. (l:force ? 'true' : 'false') .. '"></bool></call>'
-    \ }, self._make_after_status(l:Callback))
+    \ }, self._make_after_status(l:Callback), 1)
 endfunction
 function! s:CoqTopHandler._make_after_status(callback) abort
   function! self.after_status(value) abort closure
