@@ -6,6 +6,7 @@ catch
 endtry
 set helplang=en
 filetype plugin on
+set mfd=100000
 
 let s:assert = themis#helper('assert')
 call themis#option('recursive', 1)
