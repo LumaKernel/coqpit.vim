@@ -6,7 +6,7 @@ let s:assert = s:PowerAssert.assert
 
 
 let s:possibly_end = [
-      \   '{', '}', '\-', '+', '\*', '\.'
+      \   '{', '}', '\-\%(>\)\@!', '+', '\*', '\.'
       \ ]
 
 let s:possibles = join(s:possibly_end, '\|')
@@ -56,4 +56,3 @@ function! coquille#annotate#is_ending(content, pos)
   let now_pos = coqlang#next_pattern(a:content, a:pos, s:possibles)
   return now_pos isnot v:null
 endfunction
-
