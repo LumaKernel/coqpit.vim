@@ -70,7 +70,7 @@ function! g:WaitForEnd(func, timeout) abort
   endfunction
 
   function! l:o.Reject(errmsg) closure
-     let l:errormsg = a:errmsg
+    let l:errormsg = a:errmsg
   endfunction
 
   let l:id = timer_start(1000 * a:timeout, {->0})

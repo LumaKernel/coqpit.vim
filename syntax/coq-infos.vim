@@ -64,20 +64,20 @@ syn sync minlines=50
 syn sync maxlines=500
 
 
- " VERNACULAR COMMANDS
+" VERNACULAR COMMANDS
 hi def link coqSectionDecl       coqTopLevel
 hi def link coqModuleEnd         coqTopLevel
 
- " DEFINED OBJECTS
+" DEFINED OBJECTS
 hi def link coqSectionName               Identifier
 hi def link coqDefName                   Identifier
 hi def link coqDefNameHidden             Identifier
 
- " SPECIFICATIONS
+" SPECIFICATIONS
 hi def link coqArgumentSpecificationKeywords      Underlined
 hi def link coqScopeSpecification                 Underlined
 
- " WARNINGS AND ERRORS
+" WARNINGS AND ERRORS
 hi def link coqBad                       WarningMsg
 hi def link coqVeryBad                   ErrorMsg
 hi def link coqWarningMsg                WarningMsg

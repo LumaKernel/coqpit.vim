@@ -1,4 +1,4 @@
-scriptencoding utf-8 
+scriptencoding utf-8
 
 Describe coqlang# < The Library for Coq as language >
   It skips comment
@@ -19,7 +19,7 @@ Describe coqlang# < The Library for Coq as language >
     Assert Equals(coqlang#skip_string(['"', '"'], [0, 1]), [1, 1])
     Assert Same(coqlang#skip_string(['"""', '""'], [0, 1]), v:null)
   End
-  
+
   It searches next pattern
     Assert Equals(coqlang#next_pattern(["Hi."], [0, 0], g:coqlang#DOT), [0, 3])
     Assert Equals(coqlang#next_pattern(["Hi (* yay.. *)", ' " *) hi" .'], [0, 3], g:coqlang#DOT), [1, 11])
@@ -59,7 +59,7 @@ Describe coqlang# < The Library for Coq as language >
 
     Assert Equals(coqlang#next_sentence(['(**)[fooわおbar]:{simpl.'], [0, 0]), [0, 20])
     Assert Equals(coqlang#next_sentence(["(**)[__123__''(*'", '*)', ']:{(**)bar.'], [0, 0]), [2, 3])
-    
+
     Assert Equals(coqlang#next_sentence(['A.', '', 'C. D. (* *)', 'E.'], [0, 2]), [2, 2])
     Assert Equals(coqlang#next_sentence(['A.', '', '', 'C. D. (* *)', 'E.'], [0, 2]), [3, 2])
     Assert Equals(coqlang#next_sentence(['A.', '', '', 'C x. D. (* *)', 'E.'], [0, 2]), [3, 4])
@@ -77,10 +77,11 @@ Describe coqlang# < The Library for Coq as language >
     Assert Equals(coqlang#next_sentence(['[nyan] : { }'], [0, 0]), [0, 10])
 
     for el in [
-       \ '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:', 
-       \ '1:', '1 : ', '123(**):(**)',
-       \ '']
-      Assert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
+      \   '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:',
+      \   '1:', '1 : ', '123(**):(**)',
+      \   ''
+      \ ]
+      ssert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'admit. {  }'], [0, 0]), [0, 6 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'refine (f _).'], [0, 0]), [0, 13 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'refine ({ _ ).'], [0, 0]), [0, 14 + strlen(el)])
