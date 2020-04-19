@@ -76,8 +76,8 @@ jobs:
         $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
         $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
         $env:THEMIS_VIM = "vim"
-        $env:THEMIS_LOG_FILE = "${{ matrix.name }}.log"
-        $env:THEMIS_LOG_FILE = "NONE"
+        $env:TEST_LOG_FILE = "${{ matrix.name }}.log"
+        $env:TEST_LOG_FILE = "NONE"
         vim --version
         themis --version
         themis
@@ -90,8 +90,8 @@ jobs:
         $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
         $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
         $env:THEMIS_VIM = "nvim"
-        $env:THEMIS_LOG_FILE = "${{ matrix.name }}.log"
-        $env:THEMIS_LOG_FILE = "NONE"
+        $env:TEST_LOG_FILE = "${{ matrix.name }}.log"
+        $env:TEST_LOG_FILE = "NONE"
         nvim --version
         themis --version
         themis

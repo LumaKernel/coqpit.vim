@@ -13,11 +13,11 @@ call themis#option('recursive', 1)
 call themis#option('reporter', 'spec')
 call themis#helper('command').with(s:assert)
 
-let s:themis_log_file = $THEMIS_LOG_FILE is# ''
+let s:test_log_file = $TEST_LOG_FILE is# ''
       \ ? expand('<sfile>:p:h') . '/themis.log'
-      \ : $THEMIS_LOG_FILE is# 'NONE'
+      \ : $TEST_LOG_FILE is# 'NONE'
       \ ? 0
-      \ : resolve(expand('<sfile>:p:h') . '/' . $THEMIS_LOG_FILE)
+      \ : resolve(expand('<sfile>:p:h') . '/' . $TEST_LOG_FILE)
 
 let s:check_values = [
       \   "--",
@@ -103,10 +103,9 @@ let g:__vital_power_assert_config = {
 
 let g:coqpit_debug = 1
 augroup themis-settings
-  if s:themis_log_file isnot# 0
-    call themis#log(printf('You can check the logs in "%s"', s:themis_log_file))
-    autocmd VimLeave * silent! call writefile(coqpit#logger#get_log(), s:themis_log_file)
+  if s:test_log_file isnot# 0
+    call themis#log(printf('You can check the logs in "%s"', s:test_log_file))
+    autocmd VimLeave * silent! call writefile(coqpit#logger#get_log(), s:test_log_file)
   endif
 augroup END
-
 
