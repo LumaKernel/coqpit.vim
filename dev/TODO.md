@@ -1,6 +1,13 @@
 
 ## TODO
 
+- [ ] Make logger to ease debugging
+
+- [ ] User Events
+  - [ ] After Open Goals/Infos Window
+    - useful for customizing the window settings
+    - like `cursorline`, `wrap`, etc...
+
 - [ ] write help@ja
 - [ ] setup editorconfig
 - [ ] check in other OS
