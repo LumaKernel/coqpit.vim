@@ -102,9 +102,9 @@ let g:__vital_power_assert_config = {
 " call themis#helper('command').with(s:assert)
 
 let g:coqpit_debug = 1
-call themis#log(printf('You can check the logs in "%s"', s:themis_log_file))
 augroup themis-settings
   if s:themis_log_file isnot# 0
+    call themis#log(printf('You can check the logs in "%s"', s:themis_log_file))
     autocmd VimLeave * silent! call writefile(coqpit#logger#get_log(), s:themis_log_file)
   endif
 augroup END
