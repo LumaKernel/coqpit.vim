@@ -152,6 +152,8 @@ function! s:CoqTopHandler._out_cb(msg) abort
   for feedback in xml.findAll('feedback')
     let content = feedback.find('feedback_content')
     if get(get(content, 'attr', {}), 'val', '') ==# 'message'
+          \ && has_key(get(feedback.find('state_id'), 'attr', {}), 'val')
+          \ && has_key(get(content.find('message_level'), 'attr', {}), 'val')
       let state_id = str2nr(feedback.find('state_id').attr.val)
       let level = content.find('message_level').attr.val
       let msg = coqpit#xml#2str(content.find('richpp'))
