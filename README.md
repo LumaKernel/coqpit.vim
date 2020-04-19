@@ -20,7 +20,7 @@ Only Vim ( or Neovim ) and [Coq](https://github.com/coq/coq/releases).
   - Coq8.7
   - [Coq8.9](https://github.com/coq/coq/releases/tag/V8.9.1)
   - [Coq8.10](https://github.com/coq/coq/releases/tag/V8.10.2)
-  - Coq8.11 (beta)
+  - [Coq8.11](https://github.com/coq/coq/releases/tag/V8.11.1)
   - Recomended to use newer and more stable version.
 
 
