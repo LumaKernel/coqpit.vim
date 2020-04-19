@@ -153,6 +153,7 @@ Describe coqpitIDE
     set filetype=coq
 
     let seed = Random.next()
+    let seed = -2107595973
     call s:DoRandomly(seed)
   End
 
