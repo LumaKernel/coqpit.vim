@@ -1,12 +1,15 @@
 name: Windows Vim/Neovim
 
 on:
+  cron: "0 0 */5 * *"
   push:
-    paths-ignore:
-    - 'docs/**'
-    - 'README.md'
     branches:
     - master
+    - dev
+  pull_request:
+    branches:
+    - master
+    - dev
 
 
 jobs:
