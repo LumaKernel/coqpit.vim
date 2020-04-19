@@ -115,7 +115,7 @@ Coqpit.vim will set the highligh colors automatically from backgrond color of yo
 - CoqCheckedError
 
 Needless to say, literally. Please check by yourself while using.
-For more information, see `:help coquille-highlight-groups`
+For more information, see `:help coqpit-highlight-groups`
 
 ### Example for highlight config
 
