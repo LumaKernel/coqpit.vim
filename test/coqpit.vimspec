@@ -140,7 +140,6 @@ Describe coqpitIDE
 
   " TODO : check the implementation of Coq ...
   It handles rough usage reproduced by random with eg_proof_handling.v
-    Skip skips
     exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
     set filetype=coq
 
@@ -148,7 +147,6 @@ Describe coqpitIDE
     call s:DoRandomly(seed)
   End
   It handles rough usage reproduced by random with nasty_notations.v
-    Skip skips
     exe 'read ' .. 'test/fixtures/nasty_notations.v'
     set filetype=coq
 
@@ -157,7 +155,6 @@ Describe coqpitIDE
   End
 
   It skips unexpected <status> folded by <value> sent from Coq
-    Skip skips
     exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
     set filetype=coq
 
@@ -240,7 +237,7 @@ function! s:DoRandomly(seed) abort
     let l:wait_ms = R.range(0, 2) * 20
 
     if l:wait_ms
-      exe 'sleep ' .. l:wait_ms .. 'ms'
+      exe 'sleep ' .. l:wait_ms .. 'm'
     endif
 
     call coqpit#check_running()

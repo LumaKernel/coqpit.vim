@@ -6,7 +6,7 @@ on:
   push:
     branches:
     - master
-    - dev
+    - dev*
   pull_request:
     branches:
     - master
@@ -28,7 +28,7 @@ jobs:
           - name: vim-v8.2_coq-V8.11
             vim-url: https://github.com/vim/vim-win32-installer/releases/download/v8.2.0190/gvim_8.2.0190_x64.zip
             vim-ver-path: vim82
-            coq-version: 8.11.0
+            coq-version: 8.11.1
             coq-binary: coqidetop
           - name: vim-v8.2_coq-V8.6
             vim-url: https://github.com/vim/vim-win32-installer/releases/download/v8.2.0190/gvim_8.2.0190_x64.zip
@@ -37,11 +37,11 @@ jobs:
             coq-binary: coqtop
           - name: neovim-nightly
             neovim-version: nightly
-            coq-version: 8.11.0
+            coq-version: 8.11.1
             coq-binary: coqidetop
           - name: neovim-v0.4.3
             neovim-version: v0.4.3
-            coq-version: 8.11.0
+            coq-version: 8.11.1
             coq-binary: coqidetop
 
     steps:
