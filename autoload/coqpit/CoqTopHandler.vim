@@ -5,6 +5,8 @@
 " + support for Coq 8.7
 
 let s:xml = vital#coqpit#import('Web.XML')
+let g:coqpit_debug = 1
+let s:log = function('coqpit#logger#log')
 
 let s:PowerAssert = vital#coqpit#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert

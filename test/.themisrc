@@ -14,10 +14,10 @@ call themis#option('reporter', 'spec')
 call themis#helper('command').with(s:assert)
 
 let s:themis_log_file = $THEMIS_LOG_FILE is# ''
-      \ ? expand('<sfile>:h') . '/themis.log'
+      \ ? expand('<sfile>:p:h') . '/themis.log'
       \ : $THEMIS_LOG_FILE is# 'NONE'
       \ ? 0
-      \ : $THEMIS_LOG_FILE
+      \ : resolve(expand('<sfile>:p:h') . '/' . $THEMIS_LOG_FILE)
 
 let s:check_values = [
       \   "--",

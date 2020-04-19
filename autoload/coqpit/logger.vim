@@ -33,7 +33,7 @@ function! coqpit#logger#log(...) abort
 endfunction
 
 function! coqpit#logger#_log(str) abort
-  call add(s:log_list, a:str)
+  let s:log_list += split(a:str, '\n')
 endfunction
 
 
@@ -45,7 +45,7 @@ function! coqpit#logger#clear_log() abort
 endfunction
 
 function! s:descriptor() abort
-  return '(expand("<sfile>:p") . ": line " . expand("<slnum>")) . " : "'
+  return '(expand("<sfile>:p") . ": line " . expand("<sflnum>")) . " : "'
 endfunction
 
 function! s:build_str(str) abort
