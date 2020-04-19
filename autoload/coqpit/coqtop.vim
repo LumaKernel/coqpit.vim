@@ -5,6 +5,8 @@ let s:job_start = function('coqpit#job#job_start')
 let s:job_status = function('coqpit#job#job_status')
 let s:ch_sendraw = function('coqpit#job#ch_sendraw')
 
+let s:log = function('coqpit#logger#log')
+
 let s:to_check_default = [
     \ [
       \ 'coqidetop',
@@ -75,6 +77,7 @@ function! s:is_executable(cmd, callback) abort
   let err = 0
 
   function! job_options.out_cb(msg) abort closure
+    exe s:log("CoqTop check : out : ", a:msg)
     let xml = s:xml.parse(a:msg)
     if xml.name !=# 'value' | return | endif
     if get(xml.attr, 'val') !=# 'good'
@@ -91,10 +94,12 @@ function! s:is_executable(cmd, callback) abort
   endfunction
 
   function! job_options.err_cb(msg) abort closure
+    exe s:log("CoqTop check : err : ", a:msg)
     call a:callback(0, 'Unexpected error : ' .. a:msg)
   endfunction
 
   function! job_options.exit_cb(exit_status) abort closure
+    exe s:log("CoqTop check : exit : ", a:exit_status)
     call a:callback(0, 'Unexpected exit : ' .. a:exit_status)
   endfunction
 

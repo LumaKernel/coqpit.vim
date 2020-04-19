@@ -9,6 +9,8 @@ let s:start = function('coqpit#util#argsetup')
 let s:get = function('coqpit#util#argget')
 let s:end = function('coqpit#util#argend')
 
+let s:log = function('coqpit#logger#log')
+
 let s:IDE = {}
 let s:bufnr_to_IDE = {}
 
@@ -127,6 +129,7 @@ function! s:IDE.dead() abort
 endfunction
 
 function! s:IDE.kill()
+  exe s:log("IDE kill is issued.")
   call self.reset_colors()
 
   let self.GoalBuffers = []
@@ -136,6 +139,7 @@ function! s:IDE.kill()
 endfunction
 
 function! s:IDE.after_init(state_id) abort
+  exe s:log(printf("after init : state_id = %s", string(a:state_id)))
   exe s:assert('len(self.sentence_end_pos_list) == 0 && len(self.state_id_list) == 0')
   call add(self.sentence_end_pos_list, [0, 0])
   call add(self.state_id_list, a:state_id)
@@ -644,6 +648,7 @@ function! s:IDE._process_queue()
     return
   endif
 
+  exe s:log("process queue: self.sentence_end_pos_list, self.queue", self.sentence_end_pos_list, self.queue)
   exe s:assert('len(self.sentence_end_pos_list) >= 1')
 
   let last_checked = self.sentence_end_pos_list[-1]
@@ -665,6 +670,7 @@ endfunction
 " IDE._make_after_get_sentence_end(state_id, last_checked) {{{
 function! s:IDE._make_after_get_sentence_end(state_id, spos) abort
   function! self.after_get_sentence_end(is_err, err_msg, err_loc, epos) abort closure
+    exe s:log(printf("after get sentence end: is_err(%s), err_msg(%s), err_loc(%s), epos(%s), spos(%s)", string(a:is_err), string(a:err_msg), string(a:err_loc), string(a:epos), string(a:spos)))
 
     if self.sentence_end_pos_list[-1] != a:spos
           \ || len(self.queue) == 0
@@ -716,6 +722,7 @@ endfunction
 " IDE._make_after_result(old_state_id, range) {{{
 function! s:IDE._make_after_result(old_state_id, range) abort
   function! self.after_result(state_id, is_err, msg, err_loc) abort closure
+    exe s:log(printf("after result: state_id(%s), is_err(%s), msg(%s), err_loc(%s)", string(a:state_id), string(a:is_err), string(a:msg), string(a:err_loc)))
     let [spos, epos] = a:range
 
     if self.sentence_end_pos_list[-1] != spos

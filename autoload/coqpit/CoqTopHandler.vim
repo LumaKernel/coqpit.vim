@@ -114,6 +114,7 @@ endfunction
 
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(msg) abort
+  exe s:log("get callback from coqtop", a:msg)
   if !self.running() | return | endif
 
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
@@ -123,8 +124,11 @@ function! s:CoqTopHandler._out_cb(msg) abort
     " NOTE : CoqTop sometimes sends <status> multiple times ....
     " FIXME : This is dirty hack.
     if len(value.child) == 1 && value.child[0].name ==# 'status' && !self.is_status
+      exe s:log(printf("<value><status>...</ ... is skipped."))
       continue
     endif
+    
+    exe s:log(printf("Abandon(%s), waiting->type()(%s)", self.abandon, type(self.waiting)))
 
     exe s:assert('self.abandon >= 0')
     if self.abandon
@@ -233,6 +237,7 @@ function! s:CoqTopHandler._check_call_queue() abort
 
   let [l:Msg_func, l:Callback, l:is_status] = remove(self.call_queue, 0)
   let msg = l:Msg_func(self.tip)
+  exe s:log("Message sending : ", msg)
 
 
   let self.waiting = l:Callback
