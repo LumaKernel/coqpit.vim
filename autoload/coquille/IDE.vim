@@ -499,6 +499,10 @@ function! s:IDE.refreshGoal() abort
   for bufnr in self.GoalBuffers
     call deletebufline(bufnr, 1, '$')
     call setbufline(bufnr, 1, self.goal_message)
+    let current_winnr = winnr()
+    let goal_winnr = bufwinnr(bufnr)
+    exe goal_winnr 'windo normal! G'
+    exe current_winnr 'wincmd w'
   endfor
 endfunction
 
