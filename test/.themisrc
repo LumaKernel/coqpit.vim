@@ -1,5 +1,10 @@
 set encoding=utf-8
 
+if $TEST_PROFILE !=# ''
+  exe 'profile start' $TEST_PROFILE
+  profile! file ./autoload/*
+endif
+
 try
   language message C
 catch
@@ -14,7 +19,7 @@ call themis#option('reporter', 'spec')
 call themis#helper('command').with(s:assert)
 
 let s:test_log_file = $TEST_LOG_FILE is# ''
-      \ ? expand('<sfile>:p:h') . '/themis.log'
+      \ ? expand('<sfile>:p:h') . '/coqpit.log'
       \ : $TEST_LOG_FILE is# 'NONE'
       \ ? 0
       \ : resolve(expand('<sfile>:p:h') . '/' . $TEST_LOG_FILE)
@@ -93,9 +98,9 @@ endfunction
 
 
 " -- Debug mode
-let g:__vital_power_assert_config = {
-  \   '__debug__': 1
-  \ }
+" let g:__vital_power_assert_config = {
+"  \   '__debug__': 1
+"  \ }
 
 " " -- Assert Functions
 " let s:assert = themis#helper('assert')

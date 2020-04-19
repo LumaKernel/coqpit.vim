@@ -64,7 +64,7 @@ jobs:
         Expand-Archive -Path neovim.zip -DestinationPath $env:USERPROFILE
     - name: Install vim-themis
       run: |
-        git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis $env:USERPROFILE/themis
+        git clone --depth 1 --branch v1.5.4-test --single-branch https://github.com/LumaKernel/vim-themis $env:USERPROFILE/themis
 
     - uses: actions/checkout@v2
 
@@ -76,8 +76,7 @@ jobs:
         $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
         $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
         $env:THEMIS_VIM = "vim"
-        $env:TEST_LOG_FILE = "${{ matrix.name }}.log"
-        $env:TEST_LOG_FILE = "NONE"
+        $env:TEST_PROFILE = "${{ matrix.name }}.profile"
         vim --version
         themis --version
         themis
@@ -90,8 +89,19 @@ jobs:
         $env:PATH = "$env:USERPROFILE\themis\bin;$env:PATH"
         $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
         $env:THEMIS_VIM = "nvim"
-        $env:TEST_LOG_FILE = "${{ matrix.name }}.log"
-        $env:TEST_LOG_FILE = "NONE"
+        $env:TEST_PROFILE = "${{ matrix.name }}.profile"
+        $env:THEMIS_ARGS = "-e -s --headless"
         nvim --version
         themis --version
         themis
+
+    - name: Show profile
+      if: always()
+      run: |
+        cat ${{ matrix.name }}.profile
+
+    - name: Show coqpit.vim log file
+      if: always()
+      run: |
+        cat ./test/coqpit.log
+

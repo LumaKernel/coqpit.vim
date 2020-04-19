@@ -122,7 +122,7 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=vim
-        export TEST_LOG_FILE=${{ matrix.name }}.log
+        export TEST_PROFILE=${{ matrix.name }}.profile
         vim --version
         themis --version
         themis
@@ -135,7 +135,18 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=nvim
-        export TEST_LOG_FILE=${{ matrix.name }}.log
+        export TEST_PROFILE=${{ matrix.name }}.profile
         nvim --version
         themis --version
         themis
+
+    - name: Show profile
+      if: always()
+      run: |
+        cat ${{ matrix.name }}.profile
+
+    - name: Show coqpit.vim log file
+      if: always()
+      run: |
+        cat ./test/coqpit.log
+
