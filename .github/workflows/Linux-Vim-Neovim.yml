@@ -122,6 +122,7 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=vim
+        export THEMIS_LOG_FILE=${{ matrix.name }}
         vim --version
         themis --version
         themis
@@ -134,6 +135,7 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=nvim
+        export THEMIS_LOG_FILE=${{ matrix.name }}
         nvim --version
         themis --version
         themis
