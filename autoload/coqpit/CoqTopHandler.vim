@@ -246,7 +246,7 @@ endfunction
 
 function! s:CoqTopHandler.interrupt() abort
   if self.waiting isnot v:null
-    let self.abandon = 1
+    let self.abandon += 1
     let self.waiting = v:null
   endif
   let self.tip = -1
