@@ -1,8 +1,7 @@
 name: Linux Vim/Neovim
 
 on:
-  cron:
-    "0 0 */5 * *"
+  cron: "0 0 */5 * *"
   push:
     branches:
     - master
