@@ -1,0 +1,39 @@
+Describe coqpit#logger#
+  Before all
+    let funcs = themis#helper('scope').funcs('autoload/coqpit/logger.vim')
+    let XML = vital#coqpit#import('Web.XML')
+  End
+  After all
+    let g:coqpit_debug = 1
+  End
+
+  Context s:obj_to_str(obj)
+    It transforms object to string
+      Assert Equals(funcs.obj_to_str("abc"), string("abc"))
+      Assert Equals(funcs.obj_to_str(123), string(123))
+    End
+    It transforms XML to string through proper function
+      let xml_obj = XML.createElement("elem")
+      Assert Equals(funcs.obj_to_str(xml_obj), xml_obj.toString())
+    End
+  End
+
+  Context log(...)
+    It do nothing without config
+      exe coqpit#logger#clear_log()
+      let g:coqpit_debug = 0
+      call coqpit#logger#log("foo")
+      Assert Equals(coqpit#logger#get_log(), [])
+    End
+    It write logs
+      call coqpit#logger#clear_log()
+      let g:coqpit_debug = 1
+      exe coqpit#logger#log("foo")
+      Assert Equals(len(coqpit#logger#get_log()), 1)
+      Assert Equals(type(coqpit#logger#get_log()[0]), v:t_string)
+      Assert Match(coqpit#logger#get_log()[0], 'foo')
+      call coqpit#logger#clear_log()
+      Assert Equals(coqpit#logger#get_log(), [])
+    End
+  End
+End

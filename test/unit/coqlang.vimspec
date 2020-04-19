@@ -81,7 +81,7 @@ Describe coqlang# < The Library for Coq as language >
       \   '1:', '1 : ', '123(**):(**)',
       \   ''
       \ ]
-      ssert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
+      Assert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'admit. {  }'], [0, 0]), [0, 6 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'refine (f _).'], [0, 0]), [0, 13 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'refine ({ _ ).'], [0, 0]), [0, 14 + strlen(el)])

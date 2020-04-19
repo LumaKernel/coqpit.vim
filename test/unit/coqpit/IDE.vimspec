@@ -24,4 +24,37 @@ Describe coqpit#IDE#
     Assert True(funcs.pos_lt([0, 1], [0, 2], 1))
     Assert True(!funcs.pos_lt([0, 2], [0, 1], 1))
   End
+
+  Context s:steps()
+    It returns stepped position
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 0], 2, 0), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 1], 2, 0), [1, 0])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], 2, 0), [1, 1])
+    End
+    It returns stepped position with treating line end as one char
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 0], 2, 1), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 1], 2, 1), [0, 3])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], 2, 1), [1, 0])
+    End
+    It returns same position if num=0
+      Assert Equals(funcs.steps(['abc', 'def'], [1, 1], 0, 0), [1, 1])
+      Assert Equals(funcs.steps(['abc', 'def'], [1, 1], 0, 1), [1, 1])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], 0, 0), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], 0, 1), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 3], 0, 0), [1, 0])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 3], 0, 1), [0, 3])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 4], 0, 0), [1, 0])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 4], 0, 1), [0, 3])
+    End
+    It returns same position if num<0
+      Assert Equals(funcs.steps(['abc', 'def'], [1, 1], -3, 0), [1, 1])
+      Assert Equals(funcs.steps(['abc', 'def'], [1, 1], -3, 1), [1, 1])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], -3, 0), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 2], -3, 1), [0, 2])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 3], -3, 0), [1, 0])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 3], -3, 1), [0, 3])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 4], -3, 0), [1, 0])
+      Assert Equals(funcs.steps(['abc', 'def'], [0, 4], -3, 1), [0, 3])
+    End
+  End
 End

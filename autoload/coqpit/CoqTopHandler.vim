@@ -5,6 +5,8 @@
 " + support for Coq 8.7
 
 let s:xml = vital#coqpit#import('Web.XML')
+let g:coqpit_debug = 1
+let s:log = function('coqpit#logger#log')
 
 let s:PowerAssert = vital#coqpit#import('Vim.PowerAssert')
 let s:assert = s:PowerAssert.assert
@@ -112,17 +114,20 @@ endfunction
 
 " callback for job object {{{
 function! s:CoqTopHandler._out_cb(msg) abort
+  exe s:log("get callback from coqtop", a:msg)
   if !self.running() | return | endif
 
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
 
   for value in xml.findAll('value')
-
     " NOTE : CoqTop sometimes sends <status> multiple times ....
     " FIXME : This is dirty hack.
-    if len(value.child) == 1 && value.child[0].name ==# 'status' && !self.is_status
+    if len(value.child) == 1 && value.child[0].name ==# 'option' && has_key(value.child[0].attr, 'val') && value.child[0].attr.val is# "none"
+      exe s:log(printf('<value><option val="none" /></value> is skipped.'))
       continue
     endif
+    
+    exe s:log(printf("Abandon(%s), waiting->type()(%s)", self.abandon, type(self.waiting)))
 
     exe s:assert('self.abandon >= 0')
     if self.abandon
@@ -231,6 +236,7 @@ function! s:CoqTopHandler._check_call_queue() abort
 
   let [l:Msg_func, l:Callback, l:is_status] = remove(self.call_queue, 0)
   let msg = l:Msg_func(self.tip)
+  exe s:log("Message sending : ", msg)
 
 
   let self.waiting = l:Callback
@@ -245,7 +251,7 @@ function! s:CoqTopHandler.interrupt() abort
   endif
   let self.tip = -1
   let self.call_queue = []
-endfunction!
+endfunction
 
 " }}}
 
