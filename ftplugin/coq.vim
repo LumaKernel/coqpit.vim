@@ -1,9 +1,8 @@
 " register this buffer as a coq file
-call coquille#register()
-call coquille#color#defineColorScheme()
+call coqpit#register()
+call coqpit#color#defineColorScheme()
 
-augroup coquille_colorscheme
+augroup coqpit_colorscheme
   autocmd!
-  autocmd ColorScheme * :call coquille#color#defineColorScheme()
+  autocmd ColorScheme * :call coqpit#color#defineColorScheme()
 augroup END
-

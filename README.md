@@ -1,9 +1,9 @@
-# Coquille
+# Coqpit.vim
 
-![Linux Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Linux%20Vim%2fNeovim/badge.svg)
-![Windows Vim/Neovim](https://github.com/lumakernel/coquille/workflows/Windows%20Vim%2fNeovim/badge.svg)
+![Linux Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Linux%20Vim%2fNeovim/badge.svg)
+![Windows Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Windows%20Vim%2fNeovim/badge.svg)
 
-Coquille brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
+Coqpit.vim brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
 
 This repository is fork of [the-lambda-church/coquille](https://github.com/the-lambda-church/coquille).
 
@@ -26,7 +26,7 @@ Only Vim ( or Neovim ) and [Coq](https://github.com/coq/coq/releases).
 
 ## Installation
 
-Please clone this repository to your vim `runtimepath` or if you use plugin manager like [dein.vim](https://github.com/Shougo/dein.vim), add `LumaKernel/coquille` repository.
+Please clone this repository to your vim `runtimepath` or if you use plugin manager like [dein.vim](https://github.com/Shougo/dein.vim), add `LumaKernel/coqpit.vim` repository.
 
 ### Example for [dein.vim](https://github.com/Shougo/dein.vim)
 
@@ -34,7 +34,7 @@ Add following to your toml file.
 
 ```toml
 [[plugins]]
-repo = "LumaKernel/coquille"
+repo = "LumaKernel/coqpit.vim"
 ```
 
 ## Specifying coq executable
@@ -43,20 +43,20 @@ By default, coq will check the command `coqidetop`
 followed by checking `coqtop`.
 
 However, if you want to use a specific version or executable,
-set variable `g:coquille_coq_executable` in your `.vimrc` .
+set variable `g:coqpit_coq_executable` in your `.vimrc` .
 
 Typically, you should specify `{CoqInstallPath}/bin/coqidetop`
 or `{CoqInstallPath}/bin/coqtop` for old versions.
 
 
-To learn more flexible options, see `:help coquille-options` .
+To learn more flexible options, see `:help coqpit-options` .
 
 
 ## Getting started
 
 
 1. Open coq file that typically ends with `.v`
-2. Run `:CoqLaunch` ( or write `let g:coquille_auto_launch=1` in your `.vimrc` )
+2. Run `:CoqLaunch` ( or write `let g:coqpit_auto_launch=1` in your `.vimrc` )
 3. Opening Infos/Goals buffers automatically.
 
 Now, these commands can be used.
@@ -69,7 +69,7 @@ Now, these commands can be used.
   + Forward to cursor.
 - `:CoqToLast`
   + Forward to end of file.
-- And other commands. See `:help coquille-commands` .
+- And other commands. See `:help coqpit-commands` .
 
 ## Mapping Examples
 
@@ -99,12 +99,12 @@ augroup END
 
 
 Recommended to define non-buffer local because these commands can be also used
-from Infos/Goals buffers too. ( If not using `coquille_one_window=1`. )
+from Infos/Goals buffers too. ( If not using `coqpit_one_window=1`. )
 
 
 ## Configuration Highlight Colors
 
-Coquille will set the highligh colors automatically from backgrond color of your color scheme if you are using gui Vim.
+Coqpit.vim will set the highligh colors automatically from backgrond color of your color scheme if you are using gui Vim.
 
 - CoqChecked
 - CoqCheckedAxiom
@@ -135,9 +135,9 @@ hi CoqCheckedError ctermbg=160
 
 1. Make your own Rearrange command.
 2. In that command,
-  - Use `b:coquille_goal_bufnr` and `b:coquille_info_bufnr`
+  - Use `b:coqpit_goal_bufnr` and `b:coqpit_info_bufnr`
     to control Goals/Infos buffers.
-  - If you are using `coquille_one_window=1` option,
+  - If you are using `coqpit_one_window=1` option,
     use tablocal ( prefexed `t:` ) ones.
 3. Make your own Launch command.
 4. In that command,
@@ -146,7 +146,7 @@ hi CoqCheckedError ctermbg=160
 
 Use your command or replace with original ones.
 
-For concrete example, see `:help coquille-customize-window-example` .
+For concrete example, see `:help coqpit-customize-window-example` .
 
 
 ## F.A.Q.
@@ -156,8 +156,8 @@ For concrete example, see `:help coquille-customize-window-example` .
 To reset all __Infos__ and __Goals__ windows,
 
 1. `:bdelete` all not needed `[Goals]` and `[Infos]` buffers by yourself.
-  - or use `:CoqStopAll` command [or `:call coquille#stop_all()`]
-2. Run `:CoqRearrange` [or `:call coquille#reset_panels(1)`]
+  - or use `:CoqStopAll` command [or `:call coqpit#stop_all()`]
+2. Run `:CoqRearrange` [or `:call coqpit#reset_panels(1)`]
   - on each window attached by coq file if you open multiple buffers and configure `one_window` is '0'
   - on each tab if you open multiple tabs
 
@@ -169,24 +169,24 @@ Or, reboot your Vim.
 Like this.
 
 ```vim
-let g:coquille_coq_executable = '/c/Coq8.10/bin/coqidetop'
+let g:coqpit_coq_executable = '/c/Coq8.10/bin/coqidetop'
 ```
 
 
 ## Screenshoots
 
-![Coquille use at win32unix with multiple buffers](https://user-images.githubusercontent.com/29811106/71498345-59386280-289f-11ea-9018-2babde26ca82.png)
+![Coqpit.vim use at win32unix with multiple buffers](https://user-images.githubusercontent.com/29811106/71498345-59386280-289f-11ea-9018-2babde26ca82.png)
 
-![Coquille use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
+![Coqpit.vim use at win32](https://user-images.githubusercontent.com/29811106/71498699-aff26c00-28a0-11ea-97c9-ea165542ccd8.png)
 
 ![with highlight\_style\_checked tail](https://user-images.githubusercontent.com/29811106/73458139-26aae980-43b8-11ea-9bba-2ec95521c1f8.png)
-This is with `g:coquille_highlight_style_checked='last-line'`.
+This is with `g:coqpit_highlight_style_checked='last-line'`.
 
 ## Known Issues
 
-- With configure `g:coquille_update_status_always` to `0`, [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
+- With configure `g:coqpit_update_status_always` to `0`, [coq issues #9680](https://github.com/coq/coq/issues/9680) happens also in this plugin.
   - I recommend you NOT change this option. By default, working fine.
-- If you use too many memory, coquille fails with like an error message `Error: Out of memory`.
+- If you use too many memory, coqpit fails with like an error message `Error: Out of memory`.
   - Refrain from using in unstable environment.
 
 

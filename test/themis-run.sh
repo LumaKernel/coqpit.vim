@@ -1,4 +1,5 @@
 #!/bin/bash
+PATH=~/.local/bin/coq/V8.11.1/bin:$PATH
 themis --version
 
 export THEMIS_VIM="vim"

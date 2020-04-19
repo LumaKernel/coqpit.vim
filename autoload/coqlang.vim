@@ -7,9 +7,9 @@
 
 
 
-let s:start = function('coquille#util#argsetup')
-let s:get = function('coquille#util#argget')
-let s:end = function('coquille#util#argend')
+let s:start = function('coqpit#util#argsetup')
+let s:get = function('coqpit#util#argget')
+let s:end = function('coqpit#util#argend')
 
 
 
@@ -341,4 +341,3 @@ endfunction  " }}}
 function! s:pos_cmp(pos1, pos2) abort
   return a:pos1[0] != a:pos2[0] ? a:pos1[0] - a:pos2[0] : a:pos1[1] - a:pos2[1]
 endfunction
-

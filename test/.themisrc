@@ -49,7 +49,7 @@ endfor
 
 
 " -- Promise
-let g:Promise = vital#coquille#import('Async.Promise')
+let g:Promise = vital#coqpit#import('Async.Promise')
 
 function! g:Wait(ms)
   return g:Promise.new({resolve -> timer_start(a:ms, resolve)})
