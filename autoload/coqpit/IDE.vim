@@ -1133,13 +1133,28 @@ function! s:pos_le(pos1, pos2, ...) abort
 endfunction
 
 function! s:steps(content, pos, num, newline_as_one) abort
+  let num = a:num
+
+  if num < 0
+    let num = 0
+  endif
+
   let now = 0
   let [line, col] = a:pos
   let linenum = len(a:content)
 
+  if line > linenum
+    let line = linenum
+  endif
+
+  let linelen = len(get(a:content, line, ''))
+  if col > linelen
+    let col = linelen
+  endif
+
   while line < linenum
-    exe s:assert('a:num >= now')
-    let newcol = col + a:num - now
+    exe s:assert('now <= num')
+    let newcol = col + num - now
     if newcol < len(a:content[line]) + a:newline_as_one
       return [line, newcol]
     else
