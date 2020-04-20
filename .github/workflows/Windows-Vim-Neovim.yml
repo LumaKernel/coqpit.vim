@@ -64,7 +64,7 @@ jobs:
         Expand-Archive -Path neovim.zip -DestinationPath $env:USERPROFILE
     - name: Install vim-themis
       run: |
-        git clone --depth 1 --branch v1.5.4-test --single-branch https://github.com/LumaKernel/vim-themis $env:USERPROFILE/themis
+        git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis $env:USERPROFILE/themis
 
     - uses: actions/checkout@v2
 
@@ -90,7 +90,6 @@ jobs:
         $env:PATH = "$env:USERPROFILE\scoop\apps\coq\${{ matrix.coq-version }}\bin;$env:PATH"
         $env:THEMIS_VIM = "nvim"
         $env:TEST_PROFILE = "${{ matrix.name }}.profile"
-        $env:THEMIS_ARGS = "-e -s --headless"
         nvim --version
         themis --version
         themis

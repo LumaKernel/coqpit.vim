@@ -97,9 +97,9 @@ endfunction
 
 
 " -- Debug mode
-" let g:__vital_power_assert_config = {
-"  \   '__debug__': 1
-"  \ }
+let g:__vital_power_assert_config = {
+ \   '__debug__': 1
+ \ }
 
 " " -- Assert Functions
 " let s:assert = themis#helper('assert')
