@@ -144,6 +144,7 @@ Describe coqpitIDE
     set filetype=coq
 
     let seed = Random.next()
+    let seed = 1464251667
     call s:DoRandomly(seed)
   End
   It handles rough usage reproduced by random with nasty_notations.v
