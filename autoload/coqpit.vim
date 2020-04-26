@@ -288,3 +288,7 @@ function! coqpit#register()
     command! -bar -buffer -nargs=* -complete=file CoqLaunch call coqpit#launch([<f-args>])
   endif
 endfunction
+
+function! coqpit#version()
+  return 'v2.0.0'
+endfunction
