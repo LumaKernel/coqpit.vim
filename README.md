@@ -195,6 +195,11 @@ This is with `g:coqpit_highlight_style_checked='last-line'`.
 [ISC License](https://www.isc.org/licenses/)
 
 
+## Contribution
+
+Welcome all issues and PRs.
+( 日本語で issue を書くこともできます ; I welcome Japanse Issues as well. )
+
 ## Thanks
 
 - [the-lambda-church/coquille](https://github.com/the-lambda-church/coquille)

@@ -52,8 +52,3 @@ paste your vim version info
 ```
  - Coq version ( `coqc --version` ):
  - coqpit.vim version ( `:echo coqpit#version()` from vim ):
-
-**Setting for coqpit.vim (please make smaller configuration vimscript to reproduce)**:
-```
-paste your applicable vimrc or init.vim .
-```
