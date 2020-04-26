@@ -1,4 +1,4 @@
 doc/tags
 bugreport.txt
-test/themis*.log
+test/*.log
 
