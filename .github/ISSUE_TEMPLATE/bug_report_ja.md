@@ -60,4 +60,5 @@ assignees: LumaKernel
 出力された vim か neovim のバージョンをここに貼り付けてください。
 ```
  - Coq version ( `coqc --version` ):
+ - Coq version in vim ( `:echo coqpit#coq_version()` from vim ):
  - coqpit.vim version ( `:echo coqpit#version()` from vim ):

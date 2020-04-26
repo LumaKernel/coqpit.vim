@@ -289,6 +289,14 @@ function! coqpit#register()
   endif
 endfunction
 
+function! coqpit#coq_version() abort
+  if !exists('b:coqpitIDE')
+    throw '[coqpit.vim] Coqpit.vim is not running in current buffer.'
+  endif
+
+  return b:coqpitIDE.coqtop_handler.coq_version
+endfunction
+
 function! coqpit#version()
   return 'v2.0.0'
 endfunction

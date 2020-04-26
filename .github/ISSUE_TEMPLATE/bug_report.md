@@ -51,4 +51,5 @@ If applicable, add screenshots to help explain your problem.
 paste your vim version info
 ```
  - Coq version ( `coqc --version` ):
+ - Coq version in vim ( `:echo coqpit#coq_version()` from vim ):
  - coqpit.vim version ( `:echo coqpit#version()` from vim ):
