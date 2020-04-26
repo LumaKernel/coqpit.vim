@@ -1,5 +1,5 @@
 
-function! coqpit#xml#2str(xml)
+function! coqpit#xml#2str(xml) abort
   if type(a:xml) == v:t_string
     return coqpit#xml#unescape(a:xml)
   endif

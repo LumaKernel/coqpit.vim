@@ -15,7 +15,7 @@ endfunction
 
 function! coqpit#util#argget(...) abort
   if a:0 > 1
-    throw "[coqpit.vim] At most one deafult value is accepted."
+    throw '[coqpit.vim] At most one deafult value is accepted.'
   endif
   let l:Ret = get(s:args, s:index, v:null)
   let s:index += 1
@@ -27,7 +27,7 @@ endfunction
 
 function! coqpit#util#argend() abort
   if len(s:args) > s:index
-    throw "[coqpit.vim] Too many args."
+    throw '[coqpit.vim] Too many args.'
   endif
   unlet s:args
   unlet s:index
