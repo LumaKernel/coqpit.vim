@@ -62,9 +62,9 @@ jobs:
       run: |
         Invoke-WebRequest -Uri https://github.com/neovim/neovim/releases/download/${{ matrix.neovim-version }}/nvim-win64.zip -OutFile neovim.zip
         Expand-Archive -Path neovim.zip -DestinationPath $env:USERPROFILE
-    - name: Install vim-themis
+    - name: Install vim-themis (my patch version)
       run: |
-        git clone --depth 1 --branch v1.5.4 --single-branch https://github.com/thinca/vim-themis $env:USERPROFILE/themis
+        git clone --depth 1 --branch v1.5.4-mypatch --single-branch https://github.com/LumaKernel/vim-themis $env:USERPROFILE/themis
 
     - uses: actions/checkout@v2
 
