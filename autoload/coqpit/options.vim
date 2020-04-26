@@ -68,7 +68,7 @@ function coqpit#options#set(name, ...)
   let l:scopes = s:getters[a:name].scopes
   if index(l:scopes, l:scope) == -1
     throw 'Unexpected scope "' .. l:scope .. '". ' ..
-          \ 'Use one of [' .. join(l:scopes, ', ') ']'
+          \ 'Use one of [' .. join(l:scopes, ', ') .. ']'
   endif
 
   if l:value is v:null

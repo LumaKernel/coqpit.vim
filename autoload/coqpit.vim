@@ -184,7 +184,7 @@ endfunction
 function! coqpit#query(query_str)
   if !exists('b:coqpitIDE') | return | endif
 
-  call (a:query_str)
+  call b:coqpitIDE.query(a:query_str)
 endfunction
 
 " coqpit#define_buffer_commands(force = 0) < define commands > {{{
@@ -248,7 +248,7 @@ function! coqpit#delete_commands()
   silent! delc CoqSwitchHighlight
   silent! delc MoveToTop
   silent! delc CoqQuery
-endfunction!
+endfunction
 " }}}
 
 " restart coqpit IDE

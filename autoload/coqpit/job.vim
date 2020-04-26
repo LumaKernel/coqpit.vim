@@ -126,8 +126,7 @@ elseif has('nvim')  " {{{1
   function! coqpit#job#ch_sendraw(job, raw) abort
     call chansend(a:job.id, a:raw)
   endfunction
-
-elseif " {{{1
+else  " {{{1
   function! coqpit#job#job_start() abort
     throw 'Job features are not supported'
   endfunction
