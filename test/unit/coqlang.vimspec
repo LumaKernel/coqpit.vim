@@ -1,31 +1,85 @@
 scriptencoding utf-8
 
 Describe coqlang# < The Library for Coq as language >
-  It skips comment
-    Assert Equals(coqlang#skip_comment(["hi (**) ."], [0, 0], 0), [0, 0])
-    Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 0], 0), [0, 0])
-    Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 3]), [0, 6])
-    Assert Equals(coqlang#skip_comment([" (* ", "(*", "*)*)--"], [0, 3]), [2, 4])
-    Assert Equals(coqlang#skip_comment([' (* " "" *) "" " *) hello'], [0, 3]), [0, 19])
-    Assert Same(coqlang#skip_comment(['(**', ')'], [0, 2]), v:null)
-    Assert Same(coqlang#skip_comment(['(**', '(*', '*)'], [0, 2]), v:null)
+  Context skip_comment
+    It skip comment
+      Assert Equals(coqlang#skip_comment(["hi (**) ."], [0, 0], 0), [0, 0])
+      Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 0], 0), [0, 0])
+      Assert Equals(coqlang#skip_comment([" (* *) hello"], [0, 3]), [0, 6])
+      Assert Equals(coqlang#skip_comment([" (* ", "(*", "*)*)--"], [0, 3]), [2, 4])
+      Assert Equals(coqlang#skip_comment([' (* " "" *) "" " *) hello'], [0, 3]), [0, 19])
+      Assert Same(coqlang#skip_comment(['(**', ')'], [0, 2]), v:null)
+      Assert Same(coqlang#skip_comment(['(**', '(*', '*)'], [0, 2]), v:null)
+
+      Assert Equals(coqlang#skip_comment(['', ' ( *)'], [0, 1]), [1, 5])
+    End
+
+    It tolerate over stepping
+      Assert Same(coqlang#skip_comment(['', ' (*)'], [0, 1]), v:null)
+      Assert Same(coqlang#skip_comment(['', ' (* (*'], [0, 2]), v:null)
+      Assert Same(coqlang#skip_comment(['  (*', ' *)'], [0, 0]), v:null)
+      Assert Same(coqlang#skip_comment(['', '(*'], [1, 1]), v:null)
+      Assert Same(coqlang#skip_comment(['(*', ''], [1, 2]), v:null)
+      Assert Same(coqlang#skip_comment(['', '"'], [2, 0]), v:null)
+      Assert Same(coqlang#skip_comment(['', '""'], [2, 1]), v:null)
+    End
+
+    It tolerate negative position
+      Assert Equals(coqlang#skip_comment(['""', '*) *)'], [-1, 0]), [1, 2])
+      Assert Equals(coqlang#skip_comment(['""', '*) *)'], [-1, 7]), [1, 2])
+    End
   End
 
-  It skips string
-    Assert Equals(coqlang#skip_string(['" "yo.'], [0, 1]), [0, 3])
-    Assert Equals(coqlang#skip_string([' " ""', ' "" " hi'], [0, 2]), [1, 5])
-    Assert Equals(coqlang#skip_string(['""'], [0, 1]), [0, 2])
-    Assert Same(coqlang#skip_string(['"'], [0, 1]), v:null)
-    Assert Equals(coqlang#skip_string(['"', '"'], [0, 1]), [1, 1])
-    Assert Same(coqlang#skip_string(['"""', '""'], [0, 1]), v:null)
+  Context skip_string()
+    It skip string
+      Assert Equals(coqlang#skip_string(['" "yo.'], [0, 1]), [0, 3])
+      Assert Equals(coqlang#skip_string([' " ""', ' "" " hi'], [0, 2]), [1, 5])
+      Assert Equals(coqlang#skip_string(['""'], [0, 1]), [0, 2])
+      Assert Same(coqlang#skip_string(['"'], [0, 1]), v:null)
+      Assert Equals(coqlang#skip_string(['"', '"'], [0, 1]), [1, 1])
+      Assert Same(coqlang#skip_string(['"""', '""'], [0, 1]), v:null)
+      Assert Same(coqlang#skip_string(['"""', ' ""'], [0, 1]), v:null)
+      Assert Same(coqlang#skip_string(['"""', 'a""'], [0, 1]), v:null)
+      Assert Same(coqlang#skip_string(['"""', 'a ""'], [0, 1]), v:null)
+    End
+
+    It tolerate over stepping
+      Assert Same(coqlang#skip_string(['"', ''], [0, 1]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [0, 2]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [1, 0]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [1, 1]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [1, 2]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [2, 0]), v:null)
+      Assert Same(coqlang#skip_string(['"', ''], [2, 1]), v:null)
+    End
+
+    It tolerate negative position
+      Assert Equals(coqlang#skip_string(['"', ''], [-1, 1]), [0, 1])
+    End
   End
 
-  It searches next pattern
-    Assert Equals(coqlang#next_pattern(["Hi."], [0, 0], g:coqlang#DOT), [0, 3])
-    Assert Equals(coqlang#next_pattern(["Hi (* yay.. *)", ' " *) hi" .'], [0, 3], g:coqlang#DOT), [1, 11])
-    Assert Equals(coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], g:coqlang#DOT), [2, 3])
-    Assert Equals(coqlang#next_pattern(['', "Compute 1."], [0, 0], g:coqlang#DOT), [1, 10])
-    Assert Equals(coqlang#next_pattern(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2], g:coqlang#DOT), [3, 6])
+  Context next_pattern
+    It searches next pattern
+      Assert Equals(coqlang#next_pattern(["Hi."], [0, 0], g:coqlang#DOT), [0, 3])
+      Assert Equals(coqlang#next_pattern(["Hi (* yay.. *)", ' " *) hi" .'], [0, 3], g:coqlang#DOT), [1, 11])
+      Assert Equals(coqlang#next_pattern(["ya.", "", "hi. x", "wo."], [0, 3], g:coqlang#DOT), [2, 3])
+      Assert Equals(coqlang#next_pattern(['', "Compute 1."], [0, 0], g:coqlang#DOT), [1, 10])
+      Assert Equals(coqlang#next_pattern(['A.', '', '', 'CC xx. DD. (* *)', '', 'E.'], [0, 2], g:coqlang#DOT), [3, 6])
+    End
+
+    It tolerate over stepping
+      Assert Same(coqlang#next_pattern(['"', ''], [0, 1], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [0, 2], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [1, 0], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [1, 1], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [1, 2], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [2, 0], g:coqlang#DOT), v:null)
+      Assert Same(coqlang#next_pattern(['"', ''], [2, 1], g:coqlang#DOT), v:null)
+    End
+
+    It tolerate negative position
+      Assert Equals(coqlang#next_pattern(['a...', ''], [-1, 1], g:coqlang#DOT), [0, 4])
+    End
   End
 
   It searches next end of one sentence
@@ -77,10 +131,10 @@ Describe coqlang# < The Library for Coq as language >
     Assert Equals(coqlang#next_sentence(['[nyan] : { }'], [0, 0]), [0, 10])
 
     for el in [
-      \   '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:',
-      \   '1:', '1 : ', '123(**):(**)',
-      \   ''
-      \ ]
+          \   '[mofu]:', '[(**)mofu]:', '[mofu (* *) ]:',
+          \   '1:', '1 : ', '123(**):(**)',
+          \   ''
+          \ ]
       Assert Equals(coqlang#next_sentence([el . '{ admit. }'], [0, 0]), [0, 1 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'admit. {  }'], [0, 0]), [0, 6 + strlen(el)])
       Assert Equals(coqlang#next_sentence([el . 'refine (f _).'], [0, 0]), [0, 13 + strlen(el)])
