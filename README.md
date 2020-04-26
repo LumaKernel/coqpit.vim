@@ -1,7 +1,7 @@
 # Coqpit.vim
 
-![Linux Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Linux%20Vim%2fNeovim/badge.svg)
-![Windows Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Windows%20Vim%2fNeovim/badge.svg)
+[![Linux Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Linux%20Vim%2fNeovim/badge.svg)](https://github.com/LumaKernel/coqpit.vim/actions?query=workflow%3A%22Linux+Vim%2FNeovim%22+branch%3Amaster)
+[![Windows Vim/Neovim](https://github.com/lumakernel/coqpit.vim/workflows/Windows%20Vim%2fNeovim/badge.svg)](https://github.com/LumaKernel/coqpit.vim/actions?query=workflow%3A%22Windows+Vim%2FNeovim%22+branch%3Amaster)
 
 Coqpit.vim brings the interactivity and asynchronous of CoqIDE into Vim and Neovim.
 
