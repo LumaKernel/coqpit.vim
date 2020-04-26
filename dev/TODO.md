@@ -27,7 +27,7 @@ Not easy ones.
   - [ ] `rerun after compile`
 - [ ] Jump to Axiom
   - Sounds good for rewriting `admit.`
-- [ ] Coq setting (not coquille) by Global Vim Variables
+- [ ] Coq setting (not coqpit.vim) by Global Vim Variables
   - Hm, it's nasty... make just a function to configure.
 - [ ] Query command
   - simply, one command ?

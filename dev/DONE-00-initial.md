@@ -11,7 +11,7 @@
   - This fixes [Coq issues #9680](https://github.com/coq/coq/issues/9680)
 
 - [x] specifying Coq binary
-  - [x] `g:coquille_coq_executable`
+  - [x] `g:coquille_coq_executable` (now `g:coqpit_coq_executable`)
 - [x] Clearify dependencies
   - [x] ~~python version~~
   - [x] Coq version
