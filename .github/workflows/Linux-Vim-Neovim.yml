@@ -57,9 +57,9 @@ jobs:
           - vim-v8.2_coq-V8.10
           - vim-v8.2_coq-V8.6
           - vim-v8.1
-          - neovim-nightly_coq-V8.11
-          - neovim-nightly_coq-V8.10
-          - neovim-v0.4.3
+          - neovim-v0.4.3_coq-V8.11
+          - neovim-v0.4.3_coq-V8.10
+          - neovim-v0.4.3_coq-V8.6
         include:
           - name: vim-v8.2_coq-V8.11
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
@@ -77,18 +77,18 @@ jobs:
             vim-url: v8.1.2414/GVim-v8.1.2414.glibc2.15-x86_64.AppImage
             coq-version: V8.10.2
             coq-binary: coqidetop
-          - name: neovim-nightly_coq-V8.11
-            neovim-version: nightly
+          - name:  neovim-v0.4.3_coq-V8.11
+            neovim-version: v0.4.3
             coq-version: V8.11.1
             coq-binary: coqidetop
-          - name: neovim-nightly_coq-V8.10
-            neovim-version: nightly
-            coq-version: V8.10.2
-            coq-binary: coqidetop
-          - name: neovim-v0.4.3
+          - name:  neovim-v0.4.3_coq-V8.10
             neovim-version: v0.4.3
             coq-version: V8.10.2
             coq-binary: coqidetop
+          - name:  neovim-v0.4.3_coq-V8.6
+            neovim-version: v0.4.3
+            coq-version: V8.6.1
+            coq-binary: coqtop
 
     steps:
     - uses: actions/cache@v1
