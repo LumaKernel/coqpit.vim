@@ -22,8 +22,8 @@ jobs:
         name:
           - vim-v8.2_coq-V8.11
           - vim-v8.2_coq-V8.6
-          - neovim-nightly
-          - neovim-v0.4.3
+          - neovim-v0.4.3-coq_V8.11
+          - neovim-v0.4.3-coq_V8.10
         include:
           - name: vim-v8.2_coq-V8.11
             vim-url: https://github.com/vim/vim-win32-installer/releases/download/v8.2.0190/gvim_8.2.0190_x64.zip
@@ -35,13 +35,13 @@ jobs:
             vim-ver-path: vim82
             coq-version: 8.6.1
             coq-binary: coqtop
-          - name: neovim-nightly
-            neovim-version: nightly
-            coq-version: 8.11.1
-            coq-binary: coqidetop
-          - name: neovim-v0.4.3
+          - name: neovim-v0.4.3-coq_V8.11
             neovim-version: v0.4.3
             coq-version: 8.11.1
+            coq-binary: coqidetop
+          - name: neovim-v0.4.3-coq_V8.10
+            neovim-version: v0.4.3
+            coq-version: 8.10.2
             coq-binary: coqidetop
 
     steps:
