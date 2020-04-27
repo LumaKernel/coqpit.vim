@@ -423,7 +423,7 @@ Goal and Info buffers.
          return
      endif
 
-     if !has_key(b:coqpitIDE.my_style)
+     if !has_key(b:coqpitIDE, 'my_style')
          b:coqpitIDE.my_style = 1
      endif
      if b:coqpitIDE.my_style
