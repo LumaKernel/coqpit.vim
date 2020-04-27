@@ -241,7 +241,7 @@ Section sec2.
 End sec2.
 
 (* Set Diffs "on" | "off" | "removed" *)
-(* TODO : How should we treat this in Coquille ? *)
+(* TODO : How should we treat this in coqpit.vim ? *)
 
 Set Hyps Limit 2.
 Set Nested Proofs Allowed.

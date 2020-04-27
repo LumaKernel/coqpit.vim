@@ -1,11 +1,11 @@
 
-## For just coquille uesr
+## For just coqtop.vim uesr
 
 These installations are not needed.
-Just included in coquille by the `autoload/vital/coquille.vim`.
+Just included in coqtop.vim by the `autoload/vital/coqtop.vim`.
 
 
-## For coquille developer
+## For coqtop.vim developer
 
 There is no way to setup by setting file like a `package.json` for npm.
 In this file shows how to reset and reinstall the vital plugins.
@@ -18,10 +18,10 @@ In this file shows how to reset and reinstall the vital plugins.
 ### dev-dependencies
 
 - Async.Promise (default)
+- Random (default)
 
 
 ```
-:Vitalize . --name=coquille Vim.PowerAssert Web.XML Async.Promise Vital.Random
+:Vitalize . --name=coqtop.vim Vim.PowerAssert Web.XML Async.Promise Random
 ```
-
 

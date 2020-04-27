@@ -1,0 +1,259 @@
+
+Describe coqpitIDE
+  Before each
+    let Random = vital#coqpit#import('Random')
+    new
+  End
+  After each
+    %bwipeout!
+  End
+
+  It handles basic usage with eg_proof_handling.v
+    set buftype=nofile
+    exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
+    set filetype=coq
+
+    " ---- CoqLaunch
+
+    CoqLaunch
+    call coqpit#check_running()
+    Assert Truthy(exists('b:coqpitIDE'))
+    Assert Truthy(exists('b:coqpitIDE.coqtop_handler'))
+    Assert Equals(b:coqpitIDE.getContent()[0], '')
+    Assert Equals(b:coqpitIDE.getContent()[1], '(* Proof handling *)')
+
+
+    function! s:wait(resolve, reject)
+      call coqpit#check_running()
+      if exists('b:coqpitIDE.coqtop_handler.coq_version')
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 10)
+
+
+    let coq_version = b:coqpitIDE.coqtop_handler.coq_version
+    Assert Match(coq_version, '^\d\+\.\d\+')
+    call themis#log('      - coqtop version: ' .. coq_version)
+    let major = str2nr(matchlist(coq_version, '^\(\d\+\)\.\d\+')[1])
+    let minor = str2nr(matchlist(coq_version, '^\d\+\.\(\d\+\)')[1])
+
+
+    " ---- CoqToLast
+
+    CoqToLast
+
+    function! s:wait(resolve, reject)
+      call coqpit#check_running()
+      if len(b:coqpitIDE.queue) == 0
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 180)
+
+
+    let sen = len(b:coqpitIDE.sentence_end_pos_list)
+    Assert Compare(sen, '>', 0)
+    let last_position = b:coqpitIDE.sentence_end_pos_list[-1]
+
+    if major == 8
+      if minor >= 11
+        Assert Equals(sen, 228)
+        Assert Equals(last_position, [218, 11])
+      elseif minor == 10
+        Assert Equals(sen, 256)
+        Assert Equals(last_position, [254, 4])
+      elseif minor == 6
+        Assert Equals(sen, 160)
+        Assert Equals(last_position, [153, 65])
+      endif
+    endif
+
+
+    " ---- CoqBack
+
+    CoqBack
+
+    function! s:wait(resolve, reject)
+      call coqpit#check_running()
+      if len(b:coqpitIDE.queue) == 0
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 20)
+
+    let sen = len(b:coqpitIDE.sentence_end_pos_list)
+    Assert Compare(sen, '>', 0)
+    let last_position = b:coqpitIDE.sentence_end_pos_list[-1]
+
+
+    if major == 8
+      if minor >= 11
+        Assert Equals(sen, 227)
+        Assert Equals(last_position, [217, 17])
+      elseif minor == 10
+        Assert Equals(sen, 255)
+        Assert Equals(last_position, [253, 10])
+      elseif minor == 6
+        Assert Equals(sen, 159)
+        Assert Equals(last_position, [153, 54])
+      endif
+    endif
+
+
+    " ---- CoqToCursor
+
+    call cursor([14, 4])
+    CoqToCursor
+
+    function! s:wait(resolve, reject)
+      call coqpit#check_running()
+      if len(b:coqpitIDE.queue) == 0
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 20)
+
+
+    let sen = len(b:coqpitIDE.sentence_end_pos_list)
+    Assert Compare(sen, '>', 0)
+    let last_position = b:coqpitIDE.sentence_end_pos_list[-1]
+
+    Assert Equals(sen, 10)
+    Assert Equals(last_position, [14, 10])
+
+
+    " ---- CoqStopAll
+    CoqStopAll
+
+    function! s:wait(resolve, reject)
+      if b:coqpitIDE.dead()
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 20)
+
+    Assert Equals(b:coqpitIDE.getContent()[0], '')
+    Assert Equals(b:coqpitIDE.getContent()[1], '(* Proof handling *)')
+
+  End
+
+  " TODO : check the implementation of Coq ...
+  It handles rough usage reproduced by random with eg_proof_handling.v
+    exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
+    set filetype=coq
+
+    let seed = Random.next()
+    let seed = 1464251667
+    call s:DoRandomly(seed)
+  End
+  It handles rough usage reproduced by random with nasty_notations.v
+    exe 'read ' .. 'test/fixtures/nasty_notations.v'
+    set filetype=coq
+
+    let seed = Random.next()
+    call s:DoRandomly(seed)
+  End
+
+  It skips unexpected <status> folded by <value> sent from Coq
+    return
+    exe 'read ' .. 'test/fixtures/eg_proof_handling.v'
+    set filetype=coq
+
+    CoqLaunch
+
+    call cursor([14, 6])
+    CoqToCursor
+
+    sleep 1
+
+    call cursor([25, 6])
+    CoqToCursor
+
+    sleep 1
+
+    CoqBack
+    CoqBack
+    CoqBack
+
+    call cursor([11, 9])
+    CoqToCursor
+
+    call cursor([38, 14])
+    CoqToCursor
+
+
+    " ---- wait for finishing
+    function! s:wait(resolve, reject)
+      call coqpit#check_running()
+      if len(b:coqpitIDE.queue) == 0
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 90)
+
+
+    " ---- CoqStopAll
+    CoqStopAll
+    function! s:wait(resolve, reject)
+      if b:coqpitIDE.dead()
+        call a:resolve()
+      endif
+    endfunction
+    call WaitForEnd(function('s:wait'), 20)
+  End
+End
+
+
+function! s:DoRandomly(seed) abort
+  let Random = vital#coqpit#import('Random')
+  let R = Random.new('', a:seed)
+  call themis#log('      - seed : ' .. a:seed)
+
+  CoqLaunch
+
+  for cnt in range(100)
+    let l:line = R.range(1, 63)
+    let l:col = R.range(1, 50)
+
+    call cursor([l:line, l:col])
+
+    let l:move = R.range(1, 6)
+
+    if l:move == 1      " CoqToCursor
+      CoqToCursor
+    elseif l:move == 2  " CoqBack
+      for i in range(R.range(1, 5))
+        CoqBack
+      endfor
+    elseif l:move == 3  " CoqNext
+      for i in range(R.range(1, 5))
+        CoqNext
+      endfor
+    elseif l:move == 4  " Insert
+      exe "normal! oyesyes\<ESC>"
+    elseif l:move == 5  " Insert
+      exe "normal! iあいうえお......\<ESC>"
+    endif
+
+    let l:wait_ms = R.range(0, 2) * 20
+
+    if l:wait_ms
+      exe 'sleep ' .. l:wait_ms .. 'm'
+    endif
+
+    call coqpit#check_running()
+
+  endfor
+
+
+  " ---- CoqStopAll
+  CoqStopAll
+
+  function! s:wait(resolve, reject)
+    if b:coqpitIDE.dead()
+      call a:resolve()
+    endif
+  endfunction
+  call WaitForEnd(function('s:wait'), 20)
+endfunction

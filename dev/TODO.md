@@ -1,9 +1,21 @@
 
 ## TODO
 
+- [ ] Make logger to ease debugging
+
+- [ ] User Events
+  - [ ] After Launching
+  - [ ] After Open Goals/Infos Window
+    - useful for customizing the window settings
+    - like `cursorline`, `wrap`, etc...
+  - Think up any more
+
+- [ ] Vim version and support checking
+
+- [ ] Auto tests for editorconfig
+
 - [ ] write help@ja
-- [ ] setup editorconfig
-- [ ] check in other OS
+- [x] setup editorconfig
 
 Not easy ones.
 
@@ -15,16 +27,18 @@ Not easy ones.
   - [ ] `rerun after compile`
 - [ ] Jump to Axiom
   - Sounds good for rewriting `admit.`
-- [ ] Coq setting (not coquille) by Global Vim Variables
+- [ ] Coq setting (not coqpit.vim) by Global Vim Variables
   - Hm, it's nasty... make just a function to configure.
 - [ ] Query command
   - simply, one command ?
   - prompt buffer ?
   - or using other plugin ?
   - `prompt()` ?
-- [ ] Vim diff
+- [ ] Diff mode (like Coq IDE)
 
-- [ ] Write with Promise for future developers.
+- [ ] Rewrite to Promise for the future
+  - [ ] Implementation
+  - [ ] Test
 
 
 ## Not clear about CoqTop

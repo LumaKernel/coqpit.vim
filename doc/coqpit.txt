@@ -1,0 +1,512 @@
+*coqpit.txt*		For Vim version 8.1	Last change: 2019 Dec 27
+
+Coqpit.vim brings features to Vim8 and Neovim for coq like CoqIDE with asynchronous.
+
+Version: 2.1
+License: ISC License
+
+==============================================================================
+CONTENTS				*coqpit-contents*
+
+INTRODUCTION			|coqpit-introduction|
+USAGE				|coqpit-usage|
+COMMANDS			|coqpit-commands|
+  MAPPING EXAMPLE		  |coqpit-mapping-example|
+CONFIGURE HIGHLIGHT		|coqpit-configure-highlight|
+  HIGHLIGHT GROUPS	  	  |coqpit-highlight-groups|
+  CUSTMIZE HIGHLIGHT EXAMPLE	  |coqpit-configure-highlight-example|
+UTILITIES			|coqpit-utilities|
+OPTIONS				|coqpit-options|
+SWITCHING HIGHLIGHT STYLE	|coqpit-switching-highlight-style|
+CUSTMIZE WINDOW			|coqpit-customize-window|
+  CUSTMIZE WINDOW EXAMPLE	  |coqpit-customize-window-example|
+
+
+==============================================================================
+INTRODUCTION				*coqpit-introduction*
+
+*coqpit.vim* is a Coq interactive IDE for Vimmers.
+
+Use with Vim 8.1 or above and Coq executable installed.
+You can get Coq from https://github.com/coq/coq/releases.
+
+coqpit.vim is using Coq through the "coqidetop" or "coqtop"
+for old versions. In many cases, you don't need to specify
+the excutable location. If coqpit.vim does'nt recognize the
+executable, pass the location like,
+
+>
+  let g:coqpit_coq_executable = '/c/Coq8.10/bin/coqtopide'
+<
+
+in your .vimrc or init.vim . |coqpit-options-coq_executable|
+
+
+==============================================================================
+USAGE					*coqpit-usage*
+
+1. Open coq file that typically ends with .v
+2. Run |:CoqLaunch|
+   ( or set |coqpit-options-auto_launch| to 1 in your .vimrc )
+3. Opening Infos/Goals buffers automatically.
+4. You can use commands |coqpit-commands| that controls the proofs.
+
+
+==============================================================================
+COMMANDS				*coqpit-commands*
+
+
+					*:CoqLaunch*
+:CoqLaunch [args]	or `:call coqpit#launch([args])`
+		Launch the coqpit. Set up Infos/Goals buffers.
+		Re-Launch the coqpit if already running.
+		When you are in trouble, run this command.
+		args will be passed to CoqTop executable. It is not needed.
+
+
+					*:CoqNext*
+:CoqNext	or `:call b:coqpitIDE.coq_next()`
+		Forward one command.
+
+
+					*:CoqBack*
+:CoqBack	or `:call b:coqpitIDE.coq_back()`
+		Drop last command.
+
+
+					*:CoqToCursor*
+:CoqToCursor	or `:call b:coqpitIDE.coq_to_cursor()`
+		Forward to cursor.
+
+
+					*:CoqToLast*
+:CoqToLast	or `:call b:coqpitIDE.coq_to_last()`
+		Forward to end of file.
+
+
+					*:CoqRerun*
+:CoqRerun	or `:call b:coqpitIDE.rerun()`
+		Run all commands from the first of file.
+
+
+					*:CoqRefresh*
+:CoqRefresh	or `:call b:coqpitIDE.refresh()`
+		Refresh coloring and Infos/Goals window.
+		In the situation that you edit Infos buffer by yourself,
+		you can revert them by this command.
+
+
+					*:CoqStop*
+:CoqStop	or `:call coqpit#stop()`
+		Stop running process behind which is parsing and running commands.
+		Close no longer needed Infos/Goals buffers.
+
+
+					*:MoveToTop*
+:MoveToTop	or `:call b:coqpitIDE.move_to_top()`
+		Move cursor to top of the colored.
+
+
+					*:CoqQuery*
+:CoqQuery [command]	or `:call b:coqpitIDE.query(command)`
+		Query commands like Compute. Answers will be shown in Infos buffer.
+		If not checked all commands yet, this will done after all of that.
+
+
+					*:CoqClear*
+:CoqClear	or `:call b:coqpitIDE.clear_info()`
+		Clear the Infos buffer.
+
+
+					*:CoqStopAll*
+:CoqStopAll	or `:call coqpit#stop_all()`
+		Like running |:CoqStop| to all running coqpit instances.
+		When you are in trouble, run this command in combination with `:CoqLaunch`
+
+
+					*:CoqRearrange*
+:CoqRearrange	or `:call coqpit#reset_panels(1)`
+  + Rearrange the Infos/Goals buffer windows.
+
+
+
+					*:CoqRecolor*
+:CoqRecolor	or `:call b:coqpitIDE.recolor()`
+		Coloring. It is useful for setting
+		`b:coqpitIDE.highlight`,
+		`b:coqpitIDE.style_queued`,
+		or `b:coqpitIDE.style_checked`.
+		For more information,
+		see |coqpit-switching-highlight-style|.
+
+
+
+					*:CoqSwitchHighlight*
+:CoqSwitchHighlight	or `:call coqpit#switch_highlight()`
+		Switching current buffer's highlight.
+		For more information, see also
+		|coqpit_highlight| or
+		|coqpit-switching-highlight-style|
+
+
+
+------------------------------------------------------------------------------
+MAPPING EXAMPLE		  		*coqpit-mapping-example*
+
+Recommended to define non-buffer local
+because these commands can be also used
+from Infos/Goals buffers too.
+( If not setting |coqpit_one_window| to 1. )
+>
+  function! MyCoqMaps()
+    nnoremap <silent> <C-C>        :CoqLaunch<CR>
+    nnoremap <silent> <Leader>j    :CoqNext<CR>
+    nnoremap <silent> <Leader>k    :CoqBack<CR>
+    nnoremap <silent> <Leader>l    :CoqToCursor<CR>
+    nnoremap <silent> <Leader>G    :CoqToLast<CR>
+    nnoremap <silent> <Leader>g    :CoqRerun<CR>
+    nnoremap <silent> <Leader>t    :MoveToTop<CR>
+    nnoremap <silent> <Leader><F5> :CoqRefresh<CR>
+
+    nnoremap <Leader>compute :CoqQuery Compute .<Left>
+    nnoremap <Leader>print :CoqQuery Print .<Left>
+    nnoremap <Leader>check :CoqQuery Check .<Left>
+    nnoremap <Leader>se :CoqQuery Search ().<Left><Left>
+  endfunction
+
+  augroup my_coq
+    au!
+    au FileType coq :call MyCoqMaps()
+  augroup END
+<
+
+
+==============================================================================
+CONFIGURE HIGHLIGH			*coqpit-configure-highlight*
+
+coqpit.vim will set the highligh colors automatically
+from backgrond color of your color scheme if you are
+using gui Vim.
+
+In cterm environment, colors are hard coded.
+
+
+------------------------------------------------------------------------------
+HIGHLIGHT GROUPS 			*coqpit-highlight-groups*
+
+
+CoqChecked 				*CoqCheck*
+
+	Used for sentences that CoqTop responsed.
+
+
+CoqCheckedAxiom				*CoqCheckedAxiom*
+
+	Used for sentences that CoqTop responsed as an axiom.
+
+
+CoqQueued				*CoqQueued*
+
+	Used for sentences that coqpit.vim queued for preparing
+	to send to CoqTop.
+
+
+CoqMarkedWarn				*CoqMarkedWarn*
+
+	Used for sentences that CoqTop say warning.
+	This is beyond the coqpit.vim queue.
+
+
+CoqCheckedWarn				*CoqCheckedWarn*
+
+	Used for sentences that CoqTop say warning.
+	This is under the coqpit.vim queue.
+
+
+CoqMarkedError				*CoqMarkedError*
+
+	Used for sentences that CoqTop say error.
+	This is beyond the coqpit.vim queue.
+
+
+CoqCheckedError				*CoqCheckedError*
+
+	Used for sentences that CoqTop say error.
+	This is under the coqpit.vim queue.
+
+------------------------------------------------------------------------------
+CUSTMIZE HIGHLIGH EXAMPLE		*coqpit-configure-highlight-example*
+
+This is example assuming for cterm with hybrid color scheme.
+
+>
+hi CoqChecked      ctermbg=17
+hi CoqCheckedAxiom ctermbg=58
+hi CoqQueued       ctermbg=22
+hi CoqMarkedWarn   ctermbg=64
+hi CoqCheckedWarn  ctermbg=64
+hi CoqMarkedError  ctermbg=160
+hi CoqCheckedError ctermbg=160
+<
+
+==============================================================================
+UTILITIES				*coqpit-utilities*
+
+					*coqpit#options#set()*
+coqpit#options#set(name [, value [, scope] ] )
+	This function throws an string error if
+	the value or name is invalid. For future
+	compatibility, use this function to set
+	options in your .vimrc or scripts.
+	If you set `value` to |v:null|, it sets
+	the default value. You can see the default
+	values in |coqpit-options|.
+
+
+==============================================================================
+OPTIONS					*coqpit-options*
+
+Variable scopes are checked left to right as follows.
+To validate values, use |coqpit#options#set()| to set options.
+
+
+					*coqpit_coq_executable*
+[b,g]:coqpit_coq_executable		: string | list string
+		Specifying the command to run. Use "coqidetop"
+		executable for new versions of Coq or "coqtop"
+		list, coqpit use them to |job_start()| in Vim
+		or |jobstart()| in Neovim as it is.
+
+
+					*coqpit_auto_move*
+[b,g]:coqpit_auto_move		= 0 : bool
+		Moves the cursor after |:CoqNext| and |:CoqBack|
+		command like CoqIDE if set this to 1.
+
+
+					*coqpit_cursor_ceiling*
+[b,g]:coqpit_cursor_ceiling	 	= 1 : bool
+		Set behavior about |:CoqToCursor|.
+		If set this to 0, the command will flooring the
+		queue top to sentences. If 1, ceiling.
+
+
+
+					*coqpit_show_goal_always*
+[b,g]:coqpit_show_goal_always		= 0 : bool
+		If set this to 0, coqpit.vim will update Goals
+		everytime after sending one senctense.
+
+
+
+					*coqpit_update_status_always*
+[b,g]:coqpit_update_status_always	= 1 : bool
+		This sends Update command to CoqTop after each
+		command. Not recommended to change this. See known
+		issues for more information.
+
+
+					*coqpit_no_define_commands*
+[b,g]:coqpit_no_define_commands	= 0 : bool
+		If set this to 1, coqpit defines no commands.
+
+
+
+					*coqpit_one_window*
+[t,g]:coqpit_one_window		= 0 : bool
+		If set this to 1, coqpit will use one pair of
+		Infos/Goals buffers for each tab.
+
+
+
+					*coqpit_auto_launch*
+[b,g]:coqpit_auto_launch		= 0 : bool
+		If set this to 1, coqpit will do |:CoqLaunch|
+		automatically when opening coq file.
+
+
+
+					*coqpit_auto_launch_args*
+[b,g]:coqpit_auto_launch_args		= [] : list string
+		Arguments for the CoqTop launched by
+		|coqpit-options-auto_launch|.
+
+
+
+					*coqpit_keep_after_textchange*
+[b,g]:coqpit_keep_after_textchange	= 0 : bool
+		If set this to 1, keep the Goals/Infos messages
+		when changing buffer text before you queued.
+		To refresh them, run |:CoqRefresh|.
+
+
+
+					*coqpit_highlight*
+[b,g]:coqpit_highlight		= 1 : bool
+		If set this to 0, highlight is disabled.
+		If you want to switch more handy,
+		see also |:CoqSwitchHighlight|.
+		After initialization, `b:coqpitIDE.highlight`
+		is used.
+
+
+
+					*coqpit_highlight_style_checked*
+[b,g]:coqpit_highlight_style_checked	= "all" : string
+		Style for the code checked by CoqTop.
+		To make faster, use "last_line".
+		If you want to switch more handy,
+		see also |coqpit-switching-highlight-style|
+		After initialization, `b:coqpitIDE.style_checked`
+		is used.
+
+		Available options are below:
+		  "all"		: All checked
+		  "last"	: Last sentence only
+		  "tail"	: Tail of all sentences
+		  "last_tail"	: Tail of last sentence only
+		  "last_line"	: Last sentence in last line only
+		  "none"	: No highlight
+
+
+
+					*coqpit_highlight_style_queued*
+[b,g]:coqpit_highlight_style_queued	= "all" : string
+		Style for the code queued that will be
+		sent to CoqTop. To make faster, use "last_line".
+		If you want to switch more handy,
+		see also |coqpit-switching-highlight-style|.
+		After initialization, `b:coqpitIDE.style_queued`
+		is used.
+
+		Available options are below:
+		  "all"		: All checked
+		  "last_tail"	: Tail of last sentence only
+		  "last_line"	: Last sentence in last line only
+		  "none"	: No highlight
+
+
+
+					*coqpit_refresh_after_focus*
+[b,g]:coqpit_refresh_after_focus	= 0 : bool
+		|:CoqRefresh| after enternig running buffer.
+
+
+
+					*coqpit_rerun_after_focus*
+[b,g]:coqpit_rerun_after_focus	= 0 : bool
+		|:CoqRerun| after enternig running buffer.
+
+
+
+					*coqpit_silent*
+[b,g]:coqpit_silent			= 0 : bool
+		If set this to 1, echoing no infomations but
+		errors.
+
+==============================================================================
+SWITCHING HIGHLIGHT STYLE		*coqpit-switching-highlight-style*
+					*:CoqSwichStyle*
+
+You can make `:CoqSwichStyle` command using
+|coqpit_highlight_style_queued|,
+|coqpit_highlight_style_checked|,
+and |:CoqRecolor|. After initialization,
+option values will not be used and `b:coqpitIDE.style_checked`
+and `b:coqpitIDE.style_queued` are used.
+Use members prefixed by `my_` in `b:coqpitIDE`.
+Using buffer local variables, it's unable to shere with
+Goal and Info buffers.
+>
+  function! CoqSwitchStyle() abort
+     if !exists('b:coqpitIDE') || b:coqpitIDE.dead()
+         return
+     endif
+
+     if !has_key(b:coqpitIDE.my_style)
+         b:coqpitIDE.my_style = 1
+     endif
+     if b:coqpitIDE.my_style
+       let b:coqpitIDE.style_checked = 'last_line'
+       let b:coqpitIDE.style_queued  = 'last_line'
+     else
+       let b:coqpitIDE.style_checked = 'all'
+       let b:coqpitIDE.style_queued  = 'all'
+     endif
+     CoqRecolor
+     let b:coqpitIDE.my_style = !b:coqpitIDE.my_style
+  endfunction
+  command! CoqSwitchStyle call CoqSwitchStyle()
+<
+
+|:CoqSwitchHighlight| is realized by same approaches.
+
+==============================================================================
+CUSTMIZE WINDOW				*coqpit-customize-window*
+
+
+1. Make your own Rearrange command.
+2. In that command,
+	- Use `b:coqpit_goal_bufnr` and `b:coqpit_info_bufnr`
+	  to control Goals/Infos buffers.
+	- If you are with |coqpit_one_window| set to 1 ,
+	  use tablocal ( prefexed t: ) ones.
+3. Make your own Launch command.
+4. In that command,
+	4-1. Run `:CoqLaunch`
+	4-2. Run your own Rearrange command.
+
+
+Use your command or replace with original ones.
+
+For more information, see |coqpit-customize-window-example|.
+
+------------------------------------------------------------------------------
+CUSTMIZE WINDOW EXAMPLE			*coqpit-customize-window-example*
+
+Think the situation that is set 'hidden'.
+Using horizontal split.
+Show one window and <Leader>s to switch Goals/Infos.
+
+>
+  function! MyCoqSwitch()
+      let l:old_bufnr = bufnr('%')
+      if exists('b:coqpit_goal_bufnr') && l:old_bufnr == b:coqpit_goal_bufnr
+          exe b:coqpit_info_bufnr .. 'buffer'
+      elseif exists('b:coqpit_info_bufnr') && l:old_bufnr == b:coqpit_info_bufnr
+          exe b:coqpit_goal_bufnr .. 'buffer'
+      endif
+  endfunction
+
+  function! MyCoqRearrange() abort
+      :CoqRearrange
+
+      let gbuf = b:coqpit_goal_bufnr
+      let ibuf = b:coqpit_info_bufnr
+      let oldwin = winnr()
+
+      for win_id in win_findbuf(gbuf) + win_findbuf(ibuf)
+          let winnr = win_id2win(win_id)
+          if winnr > 0 && winnr('$') > 1
+            exe winnr .. 'winc w'
+            quit
+          endif
+      endfor
+
+      botright split
+          exe gbuf .. 'buffer'
+
+      exe oldwin .. 'winc w'
+  endfunction
+
+  function! MyCoqLaunch() abort
+      :CoqLaunch
+      call MyCoqRearrange()
+      augroup MyCoqBufferSwap
+          nnoremap <Leader>s :call MyCoqSwitch()<CR>
+      augroup END
+  endfunction
+<
+
+==============================================================================
+vim:tw=78:fo=tcq2mM:ts=8:ft=help:norl

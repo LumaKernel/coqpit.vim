@@ -1,12 +1,16 @@
 name: Linux Vim/Neovim
 
 on:
+  schedule:
+    - cron: "0 0 */5 * *"
   push:
-    paths-ignore:
-    - 'docs/**'
-    - 'README.md'
     branches:
     - master
+    - dev*
+  pull_request:
+    branches:
+    - master
+    - dev
 
 
 jobs:
@@ -15,13 +19,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: [V8.6.1, V8.10.2, V8.11.0]
+        coq-version: [V8.6.1, V8.10.2, V8.11.1]
         include:
           -  coq-version: V8.6.1
              coq-binary: coqtop
           -  coq-version: V8.10.2
              coq-binary: coqidetop
-          -  coq-version: V8.11.0
+          -  coq-version: V8.11.1
              coq-binary: coqidetop
     steps:
     - uses: actions/cache@v1
@@ -59,7 +63,7 @@ jobs:
         include:
           - name: vim-v8.2_coq-V8.11
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
-            coq-version: V8.11.0
+            coq-version: V8.11.1
             coq-binary: coqidetop
           - name: vim-v8.2_coq-V8.10
             vim-url: v8.2.0182/GVim-v8.2.0182.glibc2.15-x86_64.AppImage
@@ -75,7 +79,7 @@ jobs:
             coq-binary: coqidetop
           - name: neovim-nightly_coq-V8.11
             neovim-version: nightly
-            coq-version: V8.11.0
+            coq-version: V8.11.1
             coq-binary: coqidetop
           - name: neovim-nightly_coq-V8.10
             neovim-version: nightly
@@ -118,6 +122,7 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=vim
+        export TEST_PROFILE=${{ matrix.name }}.profile
         vim --version
         themis --version
         themis
@@ -130,6 +135,18 @@ jobs:
         export PATH=~/themis/bin:$PATH
         export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
         export THEMIS_VIM=nvim
+        export TEST_PROFILE=${{ matrix.name }}.profile
         nvim --version
         themis --version
         themis
+
+    - name: Show profile
+      if: always()
+      run: |
+        cat ${{ matrix.name }}.profile
+
+    - name: Show coqpit.vim log file
+      if: always()
+      run: |
+        cat ./test/coqpit.log
+
