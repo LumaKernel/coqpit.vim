@@ -120,13 +120,6 @@ function! s:CoqTopHandler._out_cb(msg) abort
   let xml = s:xml.parse('<root>' . a:msg . '</root>')
 
   for value in xml.findAll('value')
-    " NOTE : CoqTop sometimes sends <status> multiple times ....
-    " FIXME : This is dirty hack.
-    if len(value.child) == 1 && value.child[0].name ==# 'option' && has_key(value.child[0].attr, 'val') && value.child[0].attr.val is# "none"
-      exe s:log(printf('<value><option val="none" /></value> is skipped.'))
-      continue
-    endif
-    
     exe s:log(printf("Abandon(%s), waiting->type()(%s)", self.abandon, type(self.waiting)))
 
     exe s:assert('self.abandon >= 0')
