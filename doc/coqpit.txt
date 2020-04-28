@@ -2,7 +2,7 @@
 
 Coqpit.vim brings features to Vim8 and Neovim for coq like CoqIDE with asynchronous.
 
-Version: 2.1
+Version: 3.0.0
 License: ISC License
 
 ==============================================================================
