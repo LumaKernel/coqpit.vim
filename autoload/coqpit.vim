@@ -298,5 +298,5 @@ function! coqpit#coq_version() abort
 endfunction
 
 function! coqpit#version()
-  return 'v2.0.0'
+  return '3.0.0'
 endfunction
