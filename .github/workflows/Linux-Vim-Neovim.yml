@@ -15,7 +15,6 @@ on:
 
 jobs:
   test:
-    needs: [install-coq]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -63,9 +62,11 @@ jobs:
     steps:
     - name: Install Coq
       run: |
+        mkdir -p $HOME/coq
+        cd $HOME/coq
         wget https://github.com/LumaKernel/coq/releases/download/gha-${{ matrix.coq-release }}-${{ matrix.coq-version }}/coq-${{ matrix.coq-version }}.zip
         unzip coq-${{ matrix.coq-version }}.zip
-        ./coq-${{ matrix.coq-version }}/coq/coqc --version
+        ./bin/coqc --version
     - name: Install Vim
       if: startsWith(matrix.name, 'vim')
       run: |
@@ -88,9 +89,9 @@ jobs:
       if: startsWith(matrix.name, 'vim')
       timeout-minutes: 10
       run: |
-        export PATH=~/vim/bin:$PATH
-        export PATH=~/themis/bin:$PATH
-        export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
+        export PATH=$HOME/vim/bin:$PATH
+        export PATH=$HOME/themis/bin:$PATH
+        export PATH=$HOME/coq/bin:$PATH
         export THEMIS_VIM=vim
         export TEST_PROFILE=${{ matrix.name }}.profile
         vim --version
@@ -101,9 +102,9 @@ jobs:
       if: startsWith(matrix.name, 'neovim')
       timeout-minutes: 10
       run: |
-        export PATH=~/nvim/bin:$PATH
-        export PATH=~/themis/bin:$PATH
-        export PATH=~/bin/coq/${{ matrix.coq-version }}/bin:$PATH
+        export PATH=$HOME/nvim/bin:$PATH
+        export PATH=$HOME/themis/bin:$PATH
+        export PATH=$HOME/coq/bin:$PATH
         export THEMIS_VIM=nvim
         export TEST_PROFILE=${{ matrix.name }}.profile
         nvim --version
