@@ -88,7 +88,7 @@ function! s:is_executable(cmd, callback) abort
       return a:callback(0, 'Not recoginizable XML : ' .. a:msg)
     endif
     if !len(coq_info.child)
-      return a:callback(0, 'Not recoginizable XML : ' .. a:mas)
+      return a:callback(0, 'Not recoginizable XML : ' .. a:msg)
     endif
     call a:callback(coqpit#xml#2str(coq_info.child[0]), '')
   endfunction
