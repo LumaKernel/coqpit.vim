@@ -20,7 +20,7 @@ let s:possibles = join(s:possibly_end, '\|')
 "
 " return Pos
 function! coqpit#annotate#associate(xml, content, from_pos) abort
-  " count non-space characters with pairing and return last positoin
+  " count non-space characters with pairing and return last position
 
   let sentence = coqpit#xml#2str(a:xml)
   let now_pos = a:from_pos
