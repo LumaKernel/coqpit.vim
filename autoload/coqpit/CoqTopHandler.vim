@@ -81,7 +81,7 @@ function! s:CoqTopHandler._make_restart_next(args) abort
 
     let self.coq_version = a:data
 
-    if !g:coqpit#options#get('silent') >= 1
+    if !(g:coqpit#options#get('silent') >= 1)
       echo '[coqpit.vim / CoqTop Handler] CoqTop version ' .. self.coq_version .. ' started running.'
     endif
 
