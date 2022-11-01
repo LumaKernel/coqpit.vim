@@ -347,12 +347,21 @@ function! s:CoqTopHandler.send_sentence(sentence, ...) abort
     \<call val="Add">
       \<pair>
         \<pair>
-          \<string>' .. coqpit#xml#escape(a:sentence) .. '</string>
-          \<int>-1</int>
+          \<pair>
+            \<pair>
+              \<string>' .. coqpit#xml#escape(a:sentence) .. '</string>
+              \<int>-1</int>
+            \</pair>
+            \<pair>
+              \<state_id val="' .. state_id .. '" />
+              \<bool val="false" />
+            \</pair>
+          \</pair>
+          \<int>0</int>
         \</pair>
         \<pair>
-          \<state_id val="' .. state_id .. '" />
-          \<bool val="false" />
+          \<int>0</int>
+          \<int>0</int>
         \</pair>
       \</pair>
     \</call>
